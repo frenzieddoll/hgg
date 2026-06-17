@@ -1,0 +1,3 @@
+# 実行時に生成・即削除される一時/出力ファイル (= R4DS の write_csv や inline read のデモ)。
+_inline.csv
+students-clean.csv

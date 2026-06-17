@@ -1,0 +1,4 @@
+# §6.2.3 のワークフロー実演で生成される成果物 (= R4DS の diamonds.png / data/diamonds.csv)。
+# 実行のたびに再生成されるため git 管理しない (図なし運用章)。
+diamonds-carat-price.svg
+data/

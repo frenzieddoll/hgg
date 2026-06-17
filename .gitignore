@@ -1,0 +1,10 @@
+# R4DS チュートリアルの生データセット (大容量・配布対象外)
+# 取得元は docs/tutorials/_data/_raw/SOURCE.md を参照
+docs/tutorials/_data/_raw/*.csv
+
+# ミラー変換ツール (内部用・公開対象外。source からの再同期に使う)
+scripts/
+
+# OS / editor
+.DS_Store
+*~
