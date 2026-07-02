@@ -313,8 +313,8 @@ main = do
   sect "batters |> filter(n > 100)  → batters.svg"
   print (DF.dimensions battersBig)
   saveSVGBoundStats "batters.svg" $
-    battersBig |>> layer (scatter "n" "performance" <> colorStatic "#000000" <> size 3 <> alpha 0.1)
-               <> layer (statSmooth "n" "performance" 8 <> colorStatic "#3366FF" <> stroke 2)
+    battersBig |>> theme ThemeGrey <> layer (scatter "n" "performance" <> color (fromHex "#000000") <> alpha 0.1)
+               <> layer (statSmooth "n" "performance" 8 <> color (fromHex "#3366FF"))
                <> xLabel "n" <> yLabel "performance"
 
   -- R: batters |> arrange(desc(performance))

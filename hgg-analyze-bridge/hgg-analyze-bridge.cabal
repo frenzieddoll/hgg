@@ -1,0 +1,88 @@
+cabal-version:      3.0
+name:               hgg-analyze-bridge
+version:            0.1.0.0
+synopsis:           Bridge from hanalyze (Hanalyze.Model.HBM.ModelGraph) to hgg DAG rendering
+description:
+  hanalyze の HBM ModelGraph を、 hgg 経由で SVG / PNG / PDF
+  に直接描画する bridge package。 graphviz CLI / Mermaid CDN 依存ゼロで
+  production アプリ組込みや offline batch に向く。
+  .
+  既存 analyze 側の Mermaid HTML (Hanalyze.Viz.ModelGraph) と Graphviz DOT
+  (Hanalyze.Viz.ModelGraphDot) ルートは 撤廃せず併存。 用途に応じて使い分け。
+  .
+  Phase 2 (= hgg/specification/phases/phase-2-analyze-direct-plot-bridge.md)
+  の実体。
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             frenzieddoll
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Hgg
+category:           Graphics
+build-type:         Simple
+
+common warnings
+  ghc-options:        -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wpartial-fields
+                      -Wredundant-constraints
+
+library
+  import:           warnings
+  exposed-modules:  Hgg.Plot.Bridge.Analyze
+                    Hgg.Plot.Bridge.Analyze.Internal
+                    Hgg.Plot.Bridge.Stat
+  hs-source-dirs:   src
+  build-depends:    base                 >= 4.17 && < 5
+                  , text                 >= 2.0  && < 2.2
+                  , containers           >= 0.6  && < 0.8
+                  , vector               >= 0.12 && < 0.14
+                  , dataframe            >= 1.3  && < 2
+                  , hgg-core    ^>= 0.1
+                  , hgg-frame   ^>= 0.1
+                  , hgg-svg     ^>= 0.1
+                  , hanalyze
+                  , hmatrix              >= 0.20 && < 0.21
+  default-language: Haskell2010
+
+executable three-routes-demo
+  import:           warnings
+  main-is:          ThreeRoutesDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , text
+                  , containers
+                  , directory
+                  , hgg-analyze-bridge
+                  , hanalyze
+  default-language: Haskell2010
+
+executable stat-in-demo
+  import:           warnings
+  main-is:          StatInDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , vector               >= 0.12 && < 0.14
+                  , containers
+                  , text
+                  , directory
+                  , hgg-analyze-bridge
+                  , hgg-core
+                  , hgg-frame
+                  , hgg-svg
+  default-language: Haskell2010
+
+test-suite hgg-analyze-bridge-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   test
+  build-depends:    base
+                  , text
+                  , containers
+                  , vector               >= 0.12 && < 0.14
+                  , dataframe            >= 1.3  && < 2
+                  , hgg-analyze-bridge
+                  , hgg-core
+                  , hgg-frame
+                  , hanalyze
+                  , hspec                >= 2.10 && < 2.12
+  default-language: Haskell2010

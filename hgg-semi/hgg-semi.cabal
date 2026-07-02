@@ -1,0 +1,53 @@
+cabal-version:      3.0
+name:               hgg-semi
+version:            0.1.0.0
+synopsis:           Semiconductor-domain charts for hgg (WaferMap / ControlChart / ProbabilityPlot / ParetoChart / BoxCoxPlot)
+description:
+  hgg のドメイン特化 add-on。 半導体製造で多用するチャート
+  (WaferMap / ControlChart / ProbabilityPlot / ParetoChart / BoxCoxPlot) を
+  実装する。 backend (SVG / PDF / Rasterific / Canvas) には依存せず、
+  hgg-core の backend 非依存 'Primitive' 列を生成するだけ。 出力は
+  既存 backend package が consume する (= 半導体特化機能のみを上乗せ)。
+  .
+  Phase NN「半導体ドメイン特化チャート」 (旧 Phase 26 §F) の実体。
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             frenzieddoll
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Hgg
+category:           Graphics
+build-type:         Simple
+extra-source-files: README.md
+
+common warnings
+  ghc-options:        -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wpartial-fields
+                      -Wredundant-constraints
+
+library
+  import:           warnings
+  exposed-modules:  Hgg.Plot.Semi.WaferMap
+                    Hgg.Plot.Semi.ControlChart
+                    Hgg.Plot.Semi.ProbabilityPlot
+                    Hgg.Plot.Semi.ParetoChart
+                    Hgg.Plot.Semi.BoxCoxPlot
+  hs-source-dirs:   src
+  build-depends:    base             >= 4.17 && < 5
+                  , text             >= 2.0  && < 2.2
+                  , containers       >= 0.6  && < 0.8
+                  , vector           >= 0.13 && < 0.14
+                  , hgg-core
+  default-language: Haskell2010
+
+test-suite hgg-semi-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   test
+  build-depends:    base
+                  , text
+                  , hgg-core
+                  , hgg-semi
+                  , hgg-svg
+                  , hspec            >= 2.10 && < 2.12
+  default-language: Haskell2010

@@ -1,31 +1,27 @@
 # hgg ドキュメント
 
 Haskell / PureScript 両対応の宣言型 plot library。 ここは利用者向けドキュメントの入口。
+読み物は 2 つ ── **学ぶならチュートリアル、 引くなら API リファレンス** に集約している。
 
-## 読む順番
+## チュートリアル (学習導線)
 
-0. **[tutorials/](./tutorials/README.md)** ─ R for Data Science 2e ベースの実践チュートリアル
-   (mpg データで 読込→確認→変換→整形→可視化→モデル を 17 章で・タスク指向の入口)
-1. **[getting-started.md](./getting-started.md)** ─ インストール、 最短で 1 枚出す Quick Start、 backend の選び方
-2. **[API リファレンス (api-guide/)](./api-guide/README.md)** ─ 公開 API を topic 別に網羅 (layer/mark・装飾・backend・df・analyze・3D)
-3. **[modules.md](./modules.md)** ─ パッケージ構成と「何ができるか」 の一覧 (chart 種・座標系・テーマ等)
-4. **[comparison.md](./comparison.md)** ─ matplotlib / ggplot2 との対応・差分
-5. **[migration-from-ggplot.md](./migration-from-ggplot.md)** ─ ggplot2 ユーザ向け逐語移行ガイド (関数の対応表)
-6. **[comparison-vega-lite.md](./comparison-vega-lite.md)** ─ Vega-Lite との比較 (DataFrame 連携・hanalyze 統計エンジン連携の軸)
-7. **[vega-lite-gallery.md](./vega-lite-gallery.md)** ─ Vega-Lite 例ギャラリーの再現 (コード付き 28 例 + 描けない例の分類)
-8. **../design/gallery/README.md** ─ 視覚ギャラリー (SVG 30+、 各 chart の 1 行コード例付き)
+**[tutorials/](./tutorials/README.md)** ─ R for Data Science 2e ベースの実践チュートリアル。
+読込 → 確認 → 変換 → 整形 → 可視化 → モデル をタスク指向で各章をなぞる。 まずここから。
 
-## 実行可能サンプル
+- [01 データ可視化 (R4DS Ch.1)](./tutorials/01-visualize/README.md) ─ penguins 全 24 図 + 再現コード
 
-`hgg-svg/examples/` 配下に番号付きチュートリアルがある。 いずれも 1 ファイルで
-完結し、 SVG を 1〜2 枚出力する:
+## API リファレンス (辞書)
 
-| 実行コマンド | 内容 | doc |
-|---|---|---|
-| `cabal run tutorial-01-easy` | Easy API で散布図を 1 枚 | [api-guide §Easy](./api-guide/01-quickstart.md#easy) |
-| `cabal run tutorial-02-grammar` | Grammar (ggplot 風) で色分け + scale | [api-guide §Grammar](./api-guide/01-quickstart.md#grammar) |
-| `cabal run tutorial-03-overlay` | 複数 layer の重畳 | [api-guide §重畳](./api-guide/03-decoration.md#overlay) |
-| `cabal run tutorial-04-distribution` | violin / box (群比較) | [modules §分布](./modules.md) |
-| `cabal run tutorial-05-theme` | テーマ明/暗の出し分け | [modules §テーマ](./modules.md) |
+**[api-guide/](./api-guide/README.md)** ─ 公開 API を topic 別に網羅する辞書。 用語・網羅性重視。
 
-> 出力先はカレントディレクトリ。 リポジトリでは `design/tutorial/` で実行した出力を参照用に置いている。
+| ページ | 内容 |
+|---|---|
+| [01 quickstart](./api-guide/01-quickstart.md) | 30 秒で 1 枚 + 書き方の 3 層 (Easy / Grammar / DataFrame) |
+| [02 layers](./api-guide/02-layers.md) | レイヤとマーク (mark カタログ) |
+| [03 encoding & scale](./api-guide/03-encoding-scale.md) | channel (色 / サイズ / 形) + scale / palette + 軸 |
+| [04 decoration](./api-guide/04-decoration.md) | ラベル / theme / facet / subplot / 座標 / 参照線 / 重畳 |
+| [05 backends](./api-guide/05-backends.md) | backend (SVG / PDF / PNG / Jupyter) と保存関数 |
+| [06 dataframe](./api-guide/06-dataframe.md) | DataFrame 連携 (`df \|>> layer …`・nullable 列) |
+| [07 analyze](./api-guide/07-analyze.md) | analyze 連携 (`toPlot` / `statLm` / HBM 抽出子) |
+| [08 3d](./api-guide/08-3d.md) | 3D (別型系・応答曲面・汎用 3D) |
+| [09 appendix](./api-guide/09-appendix.md) | 付録 (層・ページ選択 / ggplot 移行 / 拡張) + API 早見表 |

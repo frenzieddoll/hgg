@@ -1,0 +1,182 @@
+cabal-version:      3.0
+name:               hgg-svg
+version:            0.1.0.0
+synopsis:           SVG backend for hgg (純 Haskell、 OSS の主用途)
+description:
+  ブラウザ非依存の SVG 出力 backend。 OSS ユーザの大半がこの package を経由
+  して plot を生成する想定。 Phase 26 §B の実体。
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             frenzieddoll
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Hgg
+category:           Graphics
+build-type:         Simple
+
+common warnings
+  ghc-options:        -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wpartial-fields
+                      -Wredundant-constraints
+
+library
+  import:           warnings
+  exposed-modules:  Hgg.Plot.Backend.SVG
+                    Hgg.Plot.Quick
+  hs-source-dirs:   src
+  build-depends:    base               >= 4.17 && < 5
+                  , text               >= 2.0  && < 2.2
+                  , vector             >= 0.13 && < 0.14
+                  , hgg-core  ^>= 0.1
+                  , hgg-frame ^>= 0.1
+  default-language: Haskell2010
+
+executable scatter-demo
+  import:           warnings
+  main-is:          ScatterDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , text
+                  , vector
+                  , hgg-core
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable vega-lite-gallery
+  import:           warnings
+  main-is:          VegaLiteGallery.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , vector
+                  , directory
+                  , hgg-core
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable df-plot-demo
+  import:           warnings
+  main-is:          DfPlotDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , containers
+                  , directory
+                  , text
+                  , vector
+                  , hgg-core
+                  , hgg-frame
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable gallery-demo
+  import:           warnings
+  main-is:          GalleryDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , text
+                  , vector
+                  , directory
+                  , aeson
+                  , bytestring
+                  , hgg-core
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable dag-comparison-demo
+  import:           warnings
+  main-is:          DagComparisonDemo.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , text
+                  , hgg-core
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable dag-parity-bench
+  import:           warnings
+  main-is:          DagParityBench.hs
+  hs-source-dirs:   examples
+  -- 安全網 (2026-06-24): large ケースの routing が heap を食い潰し WSL を OOM で
+  -- 落とす事故が起きたため、 heap を 2.5G で頭打ちにする。 超過時は WSL クラッシュ
+  -- ではなく GHC RTS の "heap overflow" 例外で綺麗に死ぬ。 routing 修正後も保険で残す。
+  ghc-options:      -rtsopts "-with-rtsopts=-M2500m"
+  build-depends:    base
+                  , text
+                  , directory
+                  , hgg-core
+                  , hgg-svg
+  default-language: Haskell2010
+
+executable json-dump
+  import:           warnings
+  main-is:          JsonDump.hs
+  hs-source-dirs:   examples
+  build-depends:    base
+                  , bytestring
+                  , aeson
+                  , hgg-core
+  default-language: Haskell2010
+
+-- docs/ チュートリアル用の実行可能サンプル群 (docs/getting-started.md / api-guide.md から参照)
+executable tutorial-01-easy
+  import:           warnings
+  main-is:          Tutorial01Easy.hs
+  hs-source-dirs:   examples
+  build-depends:    base, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+executable tutorial-02-grammar
+  import:           warnings
+  main-is:          Tutorial02Grammar.hs
+  hs-source-dirs:   examples
+  build-depends:    base, text, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+executable tutorial-03-overlay
+  import:           warnings
+  main-is:          Tutorial03Overlay.hs
+  hs-source-dirs:   examples
+  build-depends:    base, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+executable tutorial-04-distribution
+  import:           warnings
+  main-is:          Tutorial04Distribution.hs
+  hs-source-dirs:   examples
+  build-depends:    base, text, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+executable tutorial-05-theme
+  import:           warnings
+  main-is:          Tutorial05Theme.hs
+  hs-source-dirs:   examples
+  build-depends:    base, text, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+-- docs/ に埋め込む図を生成 (cabal run doc-figures、 repo root から)
+executable doc-figures
+  import:           warnings
+  main-is:          DocFigures.hs
+  hs-source-dirs:   examples
+  other-modules:    DocFig.Common
+                  , DocFig.Quickstart
+                  , DocFig.Layers
+                  , DocFig.EncodingScale
+                  , DocFig.Decoration
+  build-depends:    base, text, vector, directory, hgg-core, hgg-svg
+  default-language: Haskell2010
+
+-- Phase 14 A3: BoundPlot (df |>> spec) → SVG の smoke test。
+-- frame:test に置くと cabal が frame↔svg をパッケージ循環と見なすため svg 側に置く。
+test-suite hgg-svg-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   test
+  build-depends:    base
+                  , text
+                  , vector
+                  , containers
+                  , hgg-core
+                  , hgg-frame
+                  , hgg-svg
+                  , hspec      >= 2.10 && < 2.12
+  default-language: Haskell2010

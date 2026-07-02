@@ -1,0 +1,16 @@
+-- hgg: Haskell Grammar of Graphics (sync-from-source.sh 生成)
+packages:
+  ./hgg-core
+  ./hgg-frame
+  ./hgg-dataframe
+  ./hgg-svg
+  ./hgg-pdf
+  ./hgg-rasterific
+  ./hgg-ihaskell
+  ./hgg-3d
+  ./hgg-semi
+  ./hgg-doe
+
+-- hanalyze 依存 (公開後に有効化):
+  -- ./hgg-analyze-bridge
+  -- ./hgg-tutorials

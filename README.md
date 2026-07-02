@@ -24,8 +24,6 @@ fit 済みモデルをそのまま図に重ねられます。
 
 - 📚 **[API リファレンス](docs/api-guide/README.md)** — topic 別の網羅リファレンス
 - [チュートリアル](docs/tutorials/README.md) — *R for Data Science 2e* の再現
-- [Getting Started](docs/getting-started.md) ／ [ggplot2 移行ガイド](docs/migration-from-ggplot.md)
-- [Vega-Lite との比較](docs/comparison-vega-lite.md) ／ [モジュール構成](docs/modules.md)
 
 ## ライセンス
 

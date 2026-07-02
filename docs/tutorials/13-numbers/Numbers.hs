@@ -44,7 +44,9 @@ import qualified Hanalyze.Stat.Descriptive as D
 import qualified Hanalyze.Data.Transform   as Tr
 import           Hanalyze.Data.Wrangle
 -- plot
-import           Hgg.Plot.Easy
+-- ★ Phase 36: Plot の groupBy (群配置 aesthetic) は Data.Wrangle.groupBy (データ動詞)
+--   と同名。 この章はデータ側を使うので Plot 側を hiding (qualified 方針)。
+import           Hgg.Plot.Easy         hiding (groupBy)
 import           Hgg.Plot.Frame        ((|>>), toResolver)
 import           Hgg.Plot.Backend.SVG  (saveSVGBound, saveSVG)
 import           Hgg.Plot.DataFrame    ()
@@ -222,7 +224,7 @@ main = do
                   , ("prop_cancelled", DF.fromList [ b | (_,b,_) <- cancRows ])
                   , ("n",              DF.fromList [ c | (_,_,c) <- cancRows ]) ]
   saveSVGBound "fig1-prop-cancelled.svg" $
-    cancViz |>> layer (line "hour" "prop_cancelled" <> colorStatic "#808080")
+    cancViz |>> theme ThemeGrey <> layer (line "hour" "prop_cancelled" <> color (fromHex "#808080"))
             <> layer (scatter "hour" "prop_cancelled" <> sizeBy "n")
   putStrLn "[図] fig1-prop-cancelled.svg を生成 (キャンセル率は 19 時頃まで増加・点サイズ=便数)"
 
@@ -295,7 +297,7 @@ main = do
   -- R4DS の geom_abline(slope=1,intercept=0) = y=x 参照線。 plot の公開 API
   -- `refIdentity` (= refLine RefIdentity) でそのまま描ける (api-guide 03-decoration の参照線)。
   saveSVGBound "fig2-mean-vs-median.svg" $
-    dayDelay |>> layer (scatter "mean" "median") <> refIdentity
+    dayDelay |>> theme ThemeGrey <> layer (scatter "mean" "median") <> refIdentity
   putStrLn "[図] fig2-mean-vs-median.svg を生成 (点は対角線 y=x の下 = median < mean・右に歪んだ遅延)"
 
   sect "13.5.2 最小・最大・分位点"
@@ -335,8 +337,8 @@ main = do
       ddZoom = flights |> DF.filterJust  "dep_delay"
                        |> DF.filterWhere (F.col @Int "dep_delay" .< (120 :: DF.Expr Int))
   saveSVG "fig3-dist.svg" $ subplots
-    [ bakeSpec (toResolver flights) (layer (histogram "dep_delay" <> binWidth 15) <> title "全体 (binwidth 15)")
-    , bakeSpec (toResolver ddZoom)  (layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
+    [ bakeSpec (toResolver flights) (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 15) <> title "全体 (binwidth 15)")
+    , bakeSpec (toResolver ddZoom)  (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
     <> subplotCols 2
   putStrLn "[図] fig3-dist.svg (本流: flights 直接 + DF.filterWhere・左 全体 / 右 <120 拡大)"
 
@@ -353,9 +355,9 @@ main = do
       freqLine vs = let cnt = M.fromListWith (+) [ (binIdx v, 1 :: Double) | v <- vs ]
                     in [ M.findWithDefault 0 k cnt | k <- [0 .. length centers - 1] ]
       polyLayers = mconcat
-        [ layer (lineXY centers (freqLine vs) <> colorStatic "#000000" <> alpha 0.2)
+        [ layer (lineXY centers (freqLine vs) <> color (fromHex "#000000") <> alpha 0.2)
         | (_, vs) <- dayGroups ]
-  saveSVGBound "fig4-freqpoly-365.svg" $ ddZoom |>> polyLayers
+  saveSVGBound "fig4-freqpoly-365.svg" $ ddZoom |>> theme ThemeGrey <> polyLayers
   putStrLn $ "[図] fig4-freqpoly-365.svg (" ++ show (length dayGroups)
            ++ " 日の頻度ポリゴンを単色 alpha で重畳 → 太い黒帯・共通パターン)"
 

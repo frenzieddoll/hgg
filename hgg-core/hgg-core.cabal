@@ -1,0 +1,75 @@
+cabal-version:      3.0
+name:               hgg-core
+version:            0.1.0.0
+synopsis:           Layer 1-3 of hgg: VisualSpec / PlotData / Layout / Render primitives
+description:
+  hgg の OSS 核。 backend 非依存の VisualSpec ADT、 PlotData (Vector
+  ベース)、 Layout 計算 (純粋関数)、 Renderer 抽象 (Primitive 列) を提供する。
+  .
+  Phase 26 §A 「hgg-core 設計と Layer 1-3 実装」 の実体。
+  依存は base / vector / text / containers のみに抑え、 backend (SVG / PDF /
+  Rasterific / Canvas) は別 package で実装。
+license:            BSD-3-Clause
+license-file:       LICENSE
+author:             frenzieddoll
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Hgg
+category:           Graphics
+build-type:         Simple
+extra-source-files: README.md
+
+common warnings
+  ghc-options:        -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wpartial-fields
+                      -Wredundant-constraints
+
+library
+  import:           warnings
+  exposed-modules:  Hgg.Plot.Unit
+                    Hgg.Plot.Spec
+                    Hgg.Plot.Validate
+                    Hgg.Plot.Layout
+                    Hgg.Plot.Layout.RangeOf
+                    Hgg.Plot.Layout.Grid
+                    Hgg.Plot.Math.Griddata
+                    Hgg.Plot.Math.Special
+                    Hgg.Plot.Render
+                    Hgg.Plot.Render.Common
+                    Hgg.Plot.Render.Basic
+                    Hgg.Plot.Render.Distribution
+                    Hgg.Plot.Render.Statistical
+                    Hgg.Plot.Render.MCMC
+                    Hgg.Plot.Render.Special
+                    Hgg.Plot.Render.EdgeRoute
+                    Hgg.Plot.Render.Layer
+                    Hgg.Plot.Easy
+                    Hgg.Plot.DAG
+                    Hgg.Plot.DAG.Internal.Sugiyama
+                    Hgg.Plot.Palette
+                    Hgg.Plot.Color
+                    Hgg.Plot.Color.Named
+  hs-source-dirs:   src
+  build-depends:    base       >= 4.17 && < 5
+                  , vector     >= 0.13 && < 0.14
+                  , text       >= 2.0  && < 2.2
+                  , containers >= 0.6  && < 0.8
+                  , aeson      >= 2.0  && < 2.3
+                  , time       >= 1.12 && < 1.15
+  default-language: Haskell2010
+
+test-suite hgg-core-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   test
+  build-depends:    base
+                  , hgg-core
+                  , vector
+                  , text
+                  , containers
+                  , hspec      >= 2.10 && < 2.12
+                  , aeson
+                  , bytestring
+                  , directory
+                  , filepath
+  default-language: Haskell2010

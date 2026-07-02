@@ -1,11 +1,14 @@
 # クイックスタート ─ 30 秒で 1 枚 + 書き方の 3 層
 
-> [📚 索引](README.md) ｜ **01 quickstart** ｜ [02 layers](02-layers.md) ｜ [03 decoration](03-decoration.md) ｜ [04 backends](04-backends.md) ｜ [05 dataframe](05-dataframe.md) ｜ [06 analyze](06-analyze.md) ｜ [07 3d](07-3d.md) ｜ [08 appendix](08-appendix.md)
+> [📚 索引](README.md) ｜ **01 quickstart** ｜ [02 layers](02-layers.md) ｜ [03 encoding & scale](03-encoding-scale.md) ｜ [04 decoration](04-decoration.md) ｜ [05 backends](05-backends.md) ｜ [06 dataframe](06-dataframe.md) ｜ [07 analyze](07-analyze.md) ｜ [08 3d](08-3d.md) ｜ [09 appendix](09-appendix.md)
 
 hgg で 1 枚出すための最短経路と、 **書き方の 3 層** (Easy / Grammar / DataFrame) を示す。
-設定の一覧は [02 layers](02-layers.md) / [03 decoration](03-decoration.md)、 backend の選択は
-[04 backends](04-backends.md)、 列名で書く DataFrame 連携は [05 dataframe](05-dataframe.md)、
-回帰・GLM・HBM を描くなら [06 analyze](06-analyze.md) が辞書になる。
+設定の一覧は [02 layers](02-layers.md) / [03 encoding & scale](03-encoding-scale.md) / [04 decoration](04-decoration.md)、 backend の選択は
+[05 backends](05-backends.md)、 列名で書く DataFrame 連携は [06 dataframe](06-dataframe.md)、
+回帰・GLM・HBM を描くなら [07 analyze](07-analyze.md) が辞書になる。
+
+このページの構成:
+**[30 秒で 1 枚 (Quick 層)](#quickstart-30s)** ｜ **[Easy 層](#easy)** ｜ **[Grammar 層](#grammar)**
 
 > **2 つの黄金律 (これだけ先に覚える)**
 >
@@ -13,7 +16,7 @@ hgg で 1 枚出すための最短経路と、 **書き方の 3 層** (Easy / Gr
 >    (`mark` = `scatter`/`line`/`bar`/… の描画種。 型は `MarkKind`)。
 > 2. `<>` には **2 種類**ある。 mark・見た目は **`Layer`** を返し `layer (…)` の**中**で `<>`、
 >    タイトル・テーマ・facet 等は **`VisualSpec`** を返し `layer (…)` の**外**で `<>`。
->    → 型を見れば置き場所が分かる ([重畳の仕組み](03-decoration.md#overlay) で詳説)。
+>    → 型を見れば置き場所が分かる ([重畳の仕組み](04-decoration.md#overlay) で詳説)。
 
 | 層 | モジュール | 立ち位置 |
 |---|---|---|
@@ -56,12 +59,13 @@ main = do
 ```haskell
 import Hgg.Plot.Easy
 import Hgg.Plot.Backend.SVG (saveSVG)
+import Hgg.Plot.Unit (px, (*~))   -- px サイズ指定用 (既定単位は mm・省略時 6.5×4in)
 
 main :: IO ()
 main = saveSVG "easy.svg" $
      overlay [ points [1,2,3,4,5] [1,4,9,16,25] ]
   <> title "y = x²" <> xLabel "x" <> yLabel "y"
-  <> width 600 <> height 400
+  <> widthUnit (600 *~ px) <> heightUnit (400 *~ px)
 ```
 
 ![Easy 層の出力](images/lesson1-easy.svg)
@@ -89,7 +93,7 @@ main = do
       gs = inlineCat (concatMap (replicate 4) (["alpha","beta"] :: [Text]))
   saveSVG "grammar.svg" $
        purePlot
-    <> layer (scatter xs ys <> color gs <> size 6)   -- ← aesthetic は layer の中
+    <> layer (scatter xs ys <> colorBy gs <> size 6)   -- ← aesthetic は layer の中
     <> scaleColorManual [("alpha","#1B9E77"), ("beta","#D95F02")]  -- ← scale は外
     <> legend
     <> title "scale_color_manual"

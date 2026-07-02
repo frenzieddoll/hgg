@@ -142,7 +142,7 @@ write_csv(diamonds, "data/diamonds.csv")
 Haskell での等価ワークフロー:
 
 ```haskell
-let dPlot = diamonds |>> layer (scatter "carat" "price" <> size 2 <> alpha 0.05)
+let dPlot = diamonds |>> theme ThemeGrey <> layer (scatter "carat" "price" <> alpha 0.05)
 saveSVGBound "diamonds-carat-price.svg" dPlot     -- = ggsave("diamonds.png")
 createDirectoryIfMissing False "data"             -- = Files ペインの New Folder
 DF.writeCsv "data/diamonds.csv" diamonds          -- = write_csv(diamonds, "data/diamonds.csv")

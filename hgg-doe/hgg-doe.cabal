@@ -1,0 +1,37 @@
+cabal-version:      3.0
+name:               hgg-doe
+version:            0.1.0.0
+synopsis:           DoE (Design of Experiments) chart helpers built on hgg-core
+description:
+  Hgg の半導体ドメイン特化向けに、 DoE (実験計画) 用の
+  MainEffects / Interaction / ResponseSurface 等の chart を、 hgg-core
+  の汎用 API (= MContour / vsSubplots / 既存 layer) の合成 helper として提供。
+  .
+  Phase 26 S5-e (2026-05-25): C+ 案 で、 基盤 (MContour / vsSubplots) は
+  hgg-core に置き、 doe package は **薄い semantic layer** のみ持つ。
+  将来 正式版 リリース後の OSS 化判断を core と独立にするため別 package。
+license:            BSD-3-Clause
+license-file:       ../LICENSE
+author:             frenzieddoll
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Hgg
+category:           Graphics
+build-type:         Simple
+
+common warnings
+  ghc-options:        -Wall -Wcompat -Widentities -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns -Wpartial-fields
+                      -Wredundant-constraints
+
+library
+  import:           warnings
+  exposed-modules:  Hgg.Plot.DoE
+                    Hgg.Plot.DoE.MainEffects
+                    Hgg.Plot.DoE.Interaction
+                    Hgg.Plot.DoE.ResponseSurface
+  build-depends:    base             >= 4.16 && < 5
+                  , hgg-core
+                  , text             >= 1.2 && < 3
+  hs-source-dirs:   src
+  default-language: Haskell2010
+  default-extensions: OverloadedStrings
