@@ -50,7 +50,7 @@ executable three-routes-demo
   build-depends:    base
                   , text
                   , containers
-                  , directory
+                  , directory            >= 1.3  && < 1.4
                   , hgg-analyze-bridge
                   , hanalyze >= 0.2 && < 0.3
   default-language: Haskell2010
@@ -63,7 +63,7 @@ executable stat-in-demo
                   , vector               >= 0.12 && < 0.14
                   , containers
                   , text
-                  , directory
+                  , directory            >= 1.3  && < 1.4
                   , hgg-analyze-bridge
                   , hgg-core
                   , hgg-frame
