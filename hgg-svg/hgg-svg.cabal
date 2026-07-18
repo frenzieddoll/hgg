@@ -1,7 +1,8 @@
 cabal-version:      3.0
 name:               hgg-svg
 version:            0.1.0.0
-synopsis:           SVG backend for hgg (純 Haskell、 OSS の主用途)
+extra-doc-files:    CHANGELOG.md
+synopsis:           SVG backend for hgg (pure Haskell)
 description:
   ブラウザ非依存の SVG 出力 backend。 OSS ユーザの大半がこの package を経由
   して plot を生成する想定。 Phase 26 §B の実体。

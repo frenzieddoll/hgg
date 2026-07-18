@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-rasterific
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           PNG backend for hgg (Rasterific + JuicyPixels)
 description:
   raster PNG backend (Phase 22)。 plot-core の [Primitive] を Rasterific

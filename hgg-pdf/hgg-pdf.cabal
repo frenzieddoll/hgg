@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-pdf
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           PDF backend for hgg (HPDF)
 description:
   ベクタ PDF backend (Phase 17)。 plot-core の [Primitive] を HPDF

@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-latex
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           LaTeX (TikZ) backend for hgg
 description:
   LaTeX backend (Phase 54)。 plot-core の [Primitive] を TikZ 命令の

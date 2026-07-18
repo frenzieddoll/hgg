@@ -1,7 +1,8 @@
 cabal-version:      3.0
 name:               hgg-frame
 version:            0.1.0.0
-synopsis:           DataFrame 抽象 (class PlotData) + df |>> spec バインド for hgg
+extra-doc-files:    CHANGELOG.md
+synopsis:           DataFrame abstraction (class PlotData) and the df |>> spec binding for hgg
 description:
   hgg を「データフレーム + 列名」 で書くための df 非依存抽象。
   .
@@ -35,7 +36,7 @@ library
                   , vector     >= 0.13 && < 0.14
                   , text       >= 2.0  && < 2.2
                   , containers >= 0.6  && < 0.8
-                  , hgg-core
+                  , hgg-core ^>= 0.1
   default-language: Haskell2010
 
 test-suite hgg-frame-tests

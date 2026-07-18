@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-core
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           Layer 1-3 of hgg: VisualSpec / PlotData / Layout / Render primitives
 description:
   hgg の OSS 核。 backend 非依存の VisualSpec ADT、 PlotData (Vector

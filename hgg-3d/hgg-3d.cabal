@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-3d
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           3D plot (CPU projection) for hgg; works with all 2D backends
 description:
   matplotlib mplot3d 同等の 3D plot library。 CPU-based projection + painter's

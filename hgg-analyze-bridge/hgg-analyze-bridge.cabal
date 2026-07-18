@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-analyze-bridge
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           Bridge from hanalyze (Hanalyze.Model.HBM.ModelGraph) to hgg DAG rendering
 description:
   hanalyze の HBM ModelGraph を、 hgg 経由で SVG / PNG / PDF

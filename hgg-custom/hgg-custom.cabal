@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-custom
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           Non-standard / advanced custom marks for hgg (dendrogram, ...)
 description:
   通常の統計プロット以外の「custom mark」 (Phase 51 の customMark 拡張点で作る新プロット型) を
@@ -27,7 +28,7 @@ library
   import:           warnings
   exposed-modules:  Hgg.Plot.Custom.Dendrogram
   build-depends:    base             >= 4.16 && < 5
-                  , hgg-core
+                  , hgg-core ^>= 0.1
                   , aeson            >= 2.0 && < 3
                   , text             >= 1.2 && < 3
                   , vector           >= 0.12 && < 0.14

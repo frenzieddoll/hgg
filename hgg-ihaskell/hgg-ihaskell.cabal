@@ -1,6 +1,7 @@
 cabal-version:      3.0
 name:               hgg-ihaskell
 version:            0.1.0.0
+extra-doc-files:    CHANGELOG.md
 synopsis:           iHaskell (Jupyter) inline display backend for hgg
 description:
   Jupyter (iHaskell kernel) のセルで hgg の図をインライン描画する
