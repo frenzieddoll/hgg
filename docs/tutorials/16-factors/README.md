@@ -1,95 +1,80 @@
-# 16. 因子 (R4DS 2e Ch.16 "Factors")
+# 16. Factors (R4DS 2e Ch.16 "Factors")
 
-> 一次情報: **R for Data Science 2e, Ch.16 "Factors"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.16 "Factors"**
 > <https://r4ds.hadley.nz/factors>
-> データ: **gss_cat**(General Social Survey 抽出・21,483 行 × 9 列。
-> `../_data/_raw/gss_cat.csv`)。 forcats 同梱。
+> Data: **gss_cat** (General Social Survey sample · 21,483 rows × 9 columns · `../_data/_raw/gss_cat.csv`).
 
-factor は「取りうる値が固定されたカテゴリ変数」 を表す型です。 R では **forcats**
-(tidyverse) の `fct_*` 関数群で、 水準 (levels) の**順序**や**中身**を操作します。
-本章は R4DS 第 16 章の全節(16.2 基礎 / 16.3 GSS / 16.4 順序変更 / 16.5 水準変更 /
-16.6 順序付き因子)を実データで忠実に再現します。 **解説 → コード → 図** を並べた
-walkthrough です。 完全な実行コードは [`Factors.hs`](Factors.hs)。
+A factor is a type representing a categorical variable with fixed possible values. R's **forcats** (tidyverse) `fct_*` functions manipulate factor **levels** (the categories' order and content). This chapter faithfully reproduces all sections of R4DS Ch.16 (16.2 basics / 16.3 GSS / 16.4 reordering / 16.5 modifying levels / 16.6 ordered factors) with real data. It's a **explanation → code → plot** walkthrough. Complete code: [`Factors.hs`](Factors.hs).
 
-forcats の `fct_*` は analyze 側 module **`Hanalyze.Data.Factor`**(Phase 28 Ch16)に
-実装済みです。 `Factor` 型は `facLevels`(水準ラベルの順序付きリスト)+ `facCodes`
-(各観測の水準コード・0 始まり・NA = `-1`)を持ち、 forcats と同じ「水準順序」 概念を表します。
+forcats's `fct_*` are implemented in analyze-side module **`Hanalyze.Data.Factor`** (Phase 28 Ch16). The `Factor` type holds `facLevels` (ordered list of level labels) + `facCodes` (0-indexed code per observation; NA = `-1`), representing the same "level order" concept as forcats.
 
 ```sh
 cd docs/tutorials/16-factors
-cabal run tut-16-factors   # 01-…svg .. 05-marital-bar.svg + 各節の表出力を生成
+cabal run tut-16-factors   # generates 01-…svg .. 05-marital-bar.svg + table output per section
 ```
 
-## 忠実性メモ(R4DS との差異を実測して honest 記録)
+## Fidelity notes (documented differences from R4DS via measurement)
 
-- **横向き dot plot(`aes(x=値, y=カテゴリ)`)**: hgg の `scatter` は categorical
-  位置を直接描けないため、 水準を数値 index にして `axisBreaksLabeled` で y 軸ラベルを
-  差します(`saveDotH` ヘルパ)。 見た目は R の `geom_point` + 離散 y 軸と同等です。
-- **線の配色**: R4DS の §16.4 折れ線は `scale_color_brewer(palette="Set1")`。 本章は
-  hgg 既定の hue palette を使います(色は違いますが**系列の順序**は
-  `fct_reorder2` で R と一致)。
-- **count() の 0 件水準**: R の `count()` は既定で 0 件水準を落とします(本章も同様)。
-  `fctCount` 自体は 0 件水準も返します(`scale_x_discrete(drop=FALSE)` 相当)。
-- **数値は捏造しません**: count 表・reorder 後の水準順・lump 結果はすべて gss_cat 実データから
-  算出し、 R4DS の出力と突合済みです(各節に値を併記)。
+- **Horizontal dot plot** (`aes(x=value, y=category)`): hgg's `scatter` can't directly position categoricals, so we convert levels to numeric indices and use `axisBreaksLabeled` for y-axis labels (via `saveDotH` helper). Visually identical to R's `geom_point` + discrete y-axis.
+- **Line colors**: R4DS §16.4 uses `scale_color_brewer(palette="Set1")`. We use hgg's default hue palette (colors differ but **series order** matches R via `fct_reorder2`).
+- **count() zero-level behavior**: R's `count()` drops empty levels by default (we match this). `fctCount` itself returns empty levels (like `scale_x_discrete(drop=FALSE)`).
+- **No fabricated numbers**: count tables, reorder level orders, and lump results all computed from gss_cat real data, cross-checked against R4DS outputs (values shown per section).
 
 ---
 
 ## 16.2 Factor basics
 
-文字ベクトルには 2 つの問題があります。 (1) 打ち間違いに気づけない、 (2) 並びが
-アルファベット順になる。 factor は **取りうる水準を固定**してこれを解決します。
+Character vectors have two problems: (1) typos go unnoticed, (2) they sort alphabetically. Factors fix this by **fixing possible levels**.
 
 ```r
 # R (forcats)
 x1 <- c("Dec", "Apr", "Jan", "Mar")
 month_levels <- c("Jan","Feb","Mar","Apr","May","Jun",
                   "Jul","Aug","Sep","Oct","Nov","Dec")
-factor(x1)                      # 水準はアルファベット順
-factor(x1, levels = month_levels)   # 意味的順序を与える
-fct(x1)                         # 出現順 (forcats・誤値はエラーにできる安全版)
+factor(x1)                      # levels sorted alphabetically
+factor(x1, levels = month_levels)   # meaningful order
+fct(x1)                         # order of appearance (forcats · safe version)
 ```
 
 ```haskell
 -- hgg (Hanalyze.Data.Factor)
-levels (factor x1)                    -- ["Apr","Dec","Jan","Mar"]  (sort)
-levels (factorWith monthLevels x1)    -- monthLevels の順を保持
-levels (fct x1)                       -- ["Dec","Apr","Jan","Mar"]  (出現順)
-asTexts (factorWith monthLevels x1)   -- ["Dec","Apr","Jan","Mar"]  (元の値へ)
+levels (factor x1)                    -- ["Apr","Dec","Jan","Mar"]  (sorted)
+levels (factorWith monthLevels x1)    -- preserves monthLevels order
+levels (fct x1)                       -- ["Dec","Apr","Jan","Mar"]  (appearance order)
+asTexts (factorWith monthLevels x1)   -- ["Dec","Apr","Jan","Mar"]  (back to values)
 ```
 
-`factor` は水準をソート、 `factorWith` は明示水準、 `fct`(forcats)は出現順です。
-`facCodes` は 0 始まりの整数コードで、 `asTexts` でラベルへ戻せます(NA は `Nothing`)。
+`factor` sorts levels, `factorWith` uses explicit levels, `fct` (forcats) uses appearance order. `facCodes` are 0-indexed integers; `asTexts` converts back to labels (NA → `Nothing`).
 
 ## 16.3 General Social Survey
 
-gss_cat は総合社会調査 (GSS) の抽出で、 factor 列 6(marital / race / rincome / partyid /
-relig / denom)と整数列 3(year / age / tvhours)を持ちます。 水準の頻度は `count()` で見ます。
+gss_cat is a GSS sample with 6 factor columns (marital / race / rincome / partyid / relig / denom) and 3 integer columns (year / age / tvhours). Level frequencies are seen via `count()`.
 
 ```r
 gss_cat |> count(race)
 ```
 
 ```haskell
-fctCount (factorWith raceLevels race)   -- (水準, 件数)。0 件水準は drop
+fctCount (factorWith raceLevels race)   -- (level, count). empty levels dropped
 ```
 
-実データの出力(R4DS と一致):
+Real data output (matches R4DS):
 
 ```
 Other   1959
 Black   3129
-White  16395            -- Not applicable は 0 件ゆえ drop
+White  16395            -- Not applicable has 0 count, dropped
 ```
 
-最多の水準: **relig = Protestant(10,846)**、 **partyid = Independent(4,119)**。
+Most frequent levels: **relig = Protestant (10,846)** · **partyid = Independent (4,119)**.
 
 ## 16.4 Modifying factor order
 
-### 並べ替え前 — 解釈しにくい
+### Before reordering — hard to interpret
 
-`relig` ごとに 1 日のテレビ視聴時間 `tvhours` の平均を出して点で描きます。 水準が
-gss_cat の定義順のままだと、 点が上下に散らばって傾向が読めません。
+Plot mean `tvhours` (daily TV viewing) by `relig`. Points scatter up and down without clear trend when levels keep gss_cat's default order.
 
 ```r
 relig_summary <- gss_cat |>
@@ -99,16 +84,15 @@ ggplot(relig_summary, aes(x = tvhours, y = relig)) + geom_point()
 ```
 
 ```haskell
--- relig 別 tvhours 平均を Data.Factor の既定水準順で描く
+-- plot mean tvhours by relig in Data.Factor default level order
 saveDotH "01-…svg" religPresent religMeanMap "tvhours" "relig" "…"
 ```
 
-![relig vs tvhours(並べ替え前)](01-relig-tvhours-unordered.svg)
+![relig vs tvhours (before reordering)](01-relig-tvhours-unordered.svg)
 
-### `fct_reorder` で並べ替え
+### Reordering with `fct_reorder`
 
-`fct_reorder(relig, tvhours)` は各水準を `tvhours` の値で**昇順**に並べ替えます。
-すると傾向が一目で読めます — "Don't know" が最も視聴し、 Hindu や Other eastern が最少です。
+`fct_reorder(relig, tvhours)` reorders levels **ascending** by `tvhours` value. Trend is now obvious — "Don't know" views most, Hindu and Other eastern least.
 
 ```r
 ggplot(relig_summary, aes(x = tvhours, y = fct_reorder(relig, tvhours))) +
@@ -116,17 +100,16 @@ ggplot(relig_summary, aes(x = tvhours, y = fct_reorder(relig, tvhours))) +
 ```
 
 ```haskell
--- fctReorder で水準を tvhours 平均の昇順へ (集約は中央値 = 各水準 1 値ゆえ恒等)
+-- fctReorder levels by mean tvhours ascending (summary aggregates to median = one value per level, identity)
 let religReord = levels (fctReorder medianD (factorWith religPresent religPresent) religMeans)
 saveDotH "02-…svg" religReord religMeanMap "tvhours" "fct_reorder(relig, tvhours)" "…"
 ```
 
-![relig vs tvhours(fct_reorder 後)](02-relig-tvhours-reorder.svg)
+![relig vs tvhours (after fct_reorder)](02-relig-tvhours-reorder.svg)
 
-### `fct_relevel` で特定水準を先頭へ
+### Moving a level to front with `fct_relevel`
 
-収入 `rincome` 別の平均年齢を描くとき、 既定の水準順(金額順)は妥当です。 ただ
-"Not applicable" だけは金額ではないので、 `fct_relevel` で**先頭**(= y 軸の下端)へ移します。
+Plotting mean age by `rincome`: default order (amount) makes sense, except "Not applicable" isn't an amount, so we use `fct_relevel` to move it **to the front** (y-axis bottom).
 
 ```r
 ggplot(rincome_summary,
@@ -139,13 +122,11 @@ let rincomeReleveled = levels (fctRelevel ["Not applicable"]
 saveDotH "03-…svg" rincomeReleveled rincomeMeanMap "age" "fct_relevel(…)" "…"
 ```
 
-![rincome vs age(fct_relevel)](03-rincome-age-relevel.svg)
+![rincome vs age (fct_relevel)](03-rincome-age-relevel.svg)
 
-### `fct_reorder2` で凡例順を線の右端に合わせる
+### Legend order matches line endpoint with `fct_reorder2`
 
-年齢ごとの婚姻状態 `marital` の構成比を折れ線で描きます。 `fct_reorder2(marital, age, prop)`
-は**最大の `age` における `prop`** で水準を**降順**に並べ替えるので、 凡例の色順が
-グラフ右端の線の高さ順と一致して読みやすくなります。
+Plot `marital` (marital status) composition over age as line chart. `fct_reorder2(marital, age, prop)` reorders levels **descending** by `prop` at **max `age`**, so legend color order matches the line heights at graph right, improving readability.
 
 ```r
 by_age <- gss_cat |> filter(!is.na(age)) |> count(age, marital) |>
@@ -162,15 +143,13 @@ DF.empty |>> theme ThemeGrey <> layer (line (inline longAge) (inline longProp)
    <> xLabel "age" <> yLabel "prop" <> legendTitle "marital"
 ```
 
-![marital prop by age(fct_reorder2)](04-marital-age-line.svg)
+![marital prop by age (fct_reorder2)](04-marital-age-line.svg)
 
-> 配色は R の Set1 と異なりますが、 凡例の順序(Widowed → Married → …)は線の右端の
-> 高さ順で R と一致します。
+> Colors differ from R's Set1, but legend order (Widowed → Married → …) matches R's line heights at right endpoint.
 
-### `fct_infreq` |> `fct_rev` で棒を頻度順に
+### Frequency order with `fct_infreq` |> `fct_rev`
 
-棒グラフは頻度順に並べると見やすくなります。 `fct_infreq` で頻度**降順**、 続けて
-`fct_rev` で反転すると頻度**昇順**になります。
+Bars are easier to read in frequency order. `fct_infreq` sorts **descending** by frequency; then `fct_rev` reverses to **ascending**.
 
 ```r
 gss_cat |> mutate(marital = marital |> fct_infreq() |> fct_rev()) |>
@@ -183,14 +162,13 @@ DF.empty |>> theme ThemeGrey <> layer (bar (inlineCat names) (inline counts))
    <> scaleXDiscreteLimits maritalOrder
 ```
 
-![marital 棒(fct_infreq |> fct_rev)](05-marital-bar.svg)
+![marital bars (fct_infreq |> fct_rev)](05-marital-bar.svg)
 
 ## 16.5 Modifying factor levels
 
-### `fct_recode` — ラベルの改名
+### Relabel with `fct_recode`
 
-`fct_recode` は水準ラベルを読みやすく改名します。 複数の旧ラベルを同じ新ラベルに
-向ければ**併合**されます。
+`fct_recode` renames level labels for clarity. Mapping multiple old labels to one new label **merges** them.
 
 ```r
 gss_cat |> mutate(partyid = fct_recode(partyid,
@@ -211,11 +189,11 @@ fctRecode [ ("Republican, strong", "Strong republican")
           , ("Democrat, strong",   "Strong democrat") ] partyFac
 ```
 
-出力(R4DS と一致): No answer 154 / Don't know 1 / Other party 393 /
+Output (matches R4DS): No answer 154 / Don't know 1 / Other party 393 /
 Republican, strong 2314 / Republican, weak 3032 / Independent, near rep 1791 /
-Independent 4119 / Independent, near dem 2499 / Democrat, weak 3690 / Democrat, strong 3490。
+Independent 4119 / Independent, near dem 2499 / Democrat, weak 3690 / Democrat, strong 3490.
 
-### `fct_collapse` — 複数水準を併合
+### Combine levels with `fct_collapse`
 
 ```r
 gss_cat |> mutate(partyid = fct_collapse(partyid,
@@ -232,12 +210,12 @@ fctCollapse [ ("other", ["No answer","Don't know","Other party"])
             , ("dem",   ["Not str democrat","Strong democrat"]) ] partyFac
 ```
 
-出力(R4DS と一致): **other 548 / rep 5346 / ind 8409 / dem 7180**。
+Output (matches R4DS): **other 548 / rep 5346 / ind 8409 / dem 7180**.
 
-### `fct_lump_*` — 小さい水準を "Other" にまとめる
+### Lump small levels into "Other" with `fct_lump_*`
 
-`fct_lump_lowfreq` は、 "Other" が最小水準のままでいられる範囲で低頻度水準をまとめます。
-relig では Protestant 以外がすべて Other に入ります。
+`fct_lump_lowfreq` combines rare levels while keeping "Other" as the smallest level.
+For relig, everything except Protestant becomes Other.
 
 ```r
 gss_cat |> mutate(relig = fct_lump_lowfreq(relig)) |> count(relig)
@@ -248,23 +226,19 @@ gss_cat |> mutate(relig = fct_lump_lowfreq(relig)) |> count(relig)
 fctCount (fctLumpLowfreq (factorWith religLevels relig))   -- Protestant 10846 / Other 10637
 ```
 
-`fct_lump_n(relig, n = 10)` は頻度上位 10 水準を残します。 ただし relig には**もともと
-"Other"(224 件)という水準があり**、 まとめ先の "Other" と併合されるため、 結果は
-「9 個の固有水準 + Other」 になります(R4DS 演習 16.5.1 Q3 の論点)。
+`fct_lump_n(relig, n = 10)` keeps top-10 frequent levels. However, relig **already has an "Other" level** (224), which merges with the lump target, yielding "9 distinct + merged Other" (R4DS exercise 16.5.1 Q3 point).
 
 ```haskell
 sortBy (Down . snd) (fctCount (fctLumpN 10 (factorWith religLevels relig)))
 ```
 
-出力(R4DS と一致): Protestant 10846 / Catholic 5124 / None 3523 / Christian 689 /
-**Other 458**(= 元 224 + lump 234)/ Jewish 388 / Buddhism 147 /
-Inter-nondenominational 109 / Moslem/islam 104 / Orthodox-christian 95。
+Output (matches R4DS): Protestant 10846 / Catholic 5124 / None 3523 / Christian 689 /
+**Other 458** (= original 224 + lumped 234) / Jewish 388 / Buddhism 147 /
+Inter-nondenominational 109 / Moslem/islam 104 / Orthodox-christian 95.
 
 ## 16.6 Ordered factors
 
-`ordered()` は水準間に `<` 順序を持つ因子を作ります。 ggplot2 では viridis 連続配色、
-線形モデルでは多項式 contrast が当たります(本実装は順序フラグ `facOrdered` を保持・
-配色/contrast 連動は概念のみ)。
+`ordered()` creates a factor with `<` ordering between levels. ggplot2 uses viridis continuous colors; linear models apply polynomial contrasts (implementation holds `facOrdered` flag; color/contrast linkage is conceptual only).
 
 ```r
 ordered(c("a", "b", "c"))    #> Levels: a < b < c
@@ -278,53 +252,31 @@ isOrdered oz  -- True
 
 ## 16.7 Summary
 
-forcats は因子の水準順序と中身を扱う道具一式を与えます。 順序変更(`fct_reorder` /
-`fct_relevel` / `fct_reorder2` / `fct_infreq` / `fct_rev`)、 水準変更(`fct_recode` /
-`fct_collapse` / `fct_lump_*`)はいずれも `Hanalyze.Data.Factor` の対応関数で
-再現できます。 さらに学ぶなら McNamara & Horton のカテゴリデータ整形の論文が薦められています。
+forcats provides a complete toolkit for handling factor levels (order and content). Reordering (`fct_reorder` / `fct_relevel` / `fct_reorder2` / `fct_infreq` / `fct_rev`) and level modification (`fct_recode` / `fct_collapse` / `fct_lump_*`) are all reproducible with `Hanalyze.Data.Factor` equivalents. For further study, McNamara & Horton's categorical data wrangling paper is recommended.
 
 ---
 
-## 演習
+## Exercises
 
 ### 16.3.1
 
-1. **`rincome` の分布を探り、 既定の棒グラフの何が悪いか?** — `rincome` は金額順の
-   ordered factor だが、 既定の棒では水準ラベルが長く重なる。 `coordFlip`(横棒)に
-   するか、 ラベルを回転すると読める。 また "Not applicable" が他と混じるので
-   `fct_relevel` で端へ寄せると良い。
-2. **最も多い `relig` / `partyid` は?** — relig = **Protestant**(10,846)、
-   partyid = **Independent**(4,119)。 `fctCount` の最大要素で確認できる。
-3. **`denom` はどの `relig` に対応するか?** — `denom`(教派)はキリスト教系
-   (relig = Protestant / Catholic 等)にのみ意味を持つ。 relig×denom のクロス集計
-   (両列を組にした `fctCount`)で、 非キリスト教では denom が "Not applicable" に
-   集中することが確認できる。
+1. **Explore `rincome` distribution; what's wrong with the default bar plot?** — `rincome` is an ordered amount factor, but default bars have long overlapping labels. Use `coordFlip` (horizontal bars) or rotate labels. Also "Not applicable" mixes with amounts; `fct_relevel` moves it to the edge.
+2. **Most frequent `relig` / `partyid`?** — relig = **Protestant** (10,846) · partyid = **Independent** (4,119). Confirm by max element of `fctCount`.
+3. **Which `relig` corresponds to `denom`?** — `denom` (denomination) applies only to Christian groups (relig = Protestant / Catholic etc.). Cross-tabulating relig×denom shows non-Christian `denom` concentrated in "Not applicable".
 
 ### 16.4.1
 
-1. **`tvhours` に不審な値は? 平均は妥当か?** — 1 日 24 時間に近い極端値が混じる。
-   外れ値に弱いので、 平均より**中央値**(`fctReorder` の集約関数を `medianD` に)が
-   頑健。 本章の `summarizeMean` は平均だが、 集約関数を差し替えれば中央値版になる。
-2. **各 factor の水準順は恣意的か原理的か?** — `marital`(No answer→Married)や
-   `rincome`(金額順)・`partyid`(政党スペクトル)は**原理的**。 `relig` / `denom` は
-   おおむね恣意的(頻度や意味で並べ直す価値がある)。
-3. **"Not applicable" を先頭にすると、 なぜグラフの一番下に来るのか?** — 離散軸は
-   **第 1 水準を原点(下端)** に置くため。 `fct_relevel(…, "Not applicable")` は
-   それを第 1 水準にするので、 y 軸の最下段に描かれる。
+1. **Suspicious `tvhours` values? Is mean reasonable?** — Extreme values near 24 hours/day appear. Mean is outlier-sensitive; **median** (change `fctReorder` aggregation to `medianD`) is more robust. This chapter uses `summarizeMean`, but swapping the aggregation function gives median version.
+2. **Is each factor's level order arbitrary or principled?** — `marital` (No answer→Married), `rincome` (amount order), `partyid` (political spectrum) are **principled**. `relig` / `denom` are mostly arbitrary (worth reordering by frequency or meaning).
+3. **Why does moving "Not applicable" to front place it at the graph bottom?** — Discrete axes pin **level 1 at the origin (bottom)**. `fct_relevel(…, "Not applicable")` makes it level 1, so it plots at the y-axis bottom.
 
 ### 16.5.1
 
-1. **民主/共和/無党派の割合は時系列でどう動いたか?** — `partyid` を `fct_collapse` で
-   3 群(dem/rep/ind)にまとめ、 `year` ごとに割合を出して折れ線にすると推移が見える
-   (§16.4 の `by_age` と同じ手順で x を `year` に替える)。
-2. **`rincome` をどう少数カテゴリに畳むか?** — `fct_collapse` で
-   "$20000 - 24999"〜"$25000 or more" を "High"、 低額帯を "Low"、 残りを "Other/NA" に
-   まとめる。 金額順を壊さないようまとまりごとに括る。
-3. **`fct_lump` の例でなぜ 10 でなく 9 群なのか?** — `fct_lump_n(relig, n=10)` の
-   まとめ先 "Other" が、 relig に**元からある "Other" 水準**(224 件)と併合されるため。
-   結果は「固有 9 + 併合 Other」 になる(上記 §16.5 参照)。
+1. **How do Democrat/Republican/Independent shares trend over time?** — Collapse `partyid` via `fct_collapse` into 3 groups (dem/rep/ind), compute proportions per `year`, plot as line. Trend becomes visible (same approach as §16.4's `by_age`, replacing x with `year`).
+2. **How to lump `rincome` into few categories?** — Use `fct_collapse` to group "$20000–24999"–"$25000 or more" as "High", low amounts as "Low", rest as "Other/NA". Keep amount order intact by grouping coherently.
+3. **Why 9 levels instead of 10 in the `fct_lump` example?** — `fct_lump_n(relig, n=10)` lump target is "Other", which merges with relig's **existing "Other" level** (224). Result is "9 distinct + merged Other" (see §16.5 above).
 
 ---
 
-前章 → [`15-regexps`](../15-regexps/)。
-次章 → [`17-datetimes`](../17-datetimes/)(Ch17 Dates and times)。
+Previous → [`15-regexps`](../15-regexps/).
+Next → [`17-datetimes`](../17-datetimes/) (Ch17 Dates and times).

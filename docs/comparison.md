@@ -1,24 +1,26 @@
-# matplotlib / ggplot2 との比較
+# matplotlib / ggplot2 Comparison
 
-> 宣言的 spec の類縁である **Vega-Lite** との比較 (とくに DataFrame 連携・hanalyze 統計
-> エンジン連携の軸) は [comparison-vega-lite.md](comparison-vega-lite.md) を参照。
+> 🌐 **English** | [日本語](comparison.ja.md)
 
-## ひとことで
+> For comparison with **Vega-Lite** (especially on DataFrame integration and hanalyze statistical
+> engine integration), see [comparison-vega-lite.md](comparison-vega-lite.md).
 
-- **思想は ggplot2 寄り** ─ 「データ + aesthetic mapping + geom + scale」 の文法 (grammar of graphics)。
-  `<>` での合成は ggplot2 の `+` に対応する。
-- **matplotlib との違いは「状態を持たない」 こと** ─ matplotlib pyplot のような暗黙の
-  「アクティブな figure」 は無い。 図は純粋値 (`VisualSpec`) で、 副作用は最後の保存だけ。
-- **カバー範囲** ─ matplotlib 全機能の再現を狙うものではなく、 **統計プロットの定番ワークフロー**
-  (scatter/line/bar/dist/regression/facet/3D 等) のカバーを目標とする。
+## In One Sentence
+
+- **Philosophy is ggplot2-oriented** ─ "data + aesthetic mapping + geom + scale" grammar.
+  Composition with `<>` corresponds to `+` in ggplot2.
+- **Unlike matplotlib: stateless** ─ No implicit "current figure" like matplotlib's pyplot.
+  Plots are pure values (`VisualSpec`), with side effects only at final save.
+- **Coverage** ─ Not aiming to recreate all matplotlib features, but to cover **standard statistical workflow**
+  (scatter/line/bar/distribution/regression/facet/3D etc.).
 
 ---
 
-## 同じ図を 3 つの流儀で
+## Same Plot, Three Styles
 
-「群で色分けした散布図 + 軸ラベル + タイトル」 を書く。
+Draw a "scatter plot grouped by category + axis labels + title."
 
-### matplotlib (命令型・状態機械)
+### matplotlib (imperative, stateful)
 
 ```python
 import matplotlib.pyplot as plt
@@ -29,7 +31,7 @@ plt.xlabel("x"); plt.ylabel("y")
 plt.savefig("out.svg")
 ```
 
-### ggplot2 (宣言型・文法)
+### ggplot2 (declarative, grammar-based)
 
 ```r
 ggplot(df, aes(x, y, color=group)) +
@@ -38,7 +40,7 @@ ggplot(df, aes(x, y, color=group)) +
   labs(title="by group", x="x", y="y")
 ```
 
-### hgg (宣言型・純関数)
+### hgg (declarative, pure)
 
 ```haskell
 purePlot
@@ -52,42 +54,42 @@ purePlot
 
 ---
 
-## 概念対応表
+## Concept Mapping
 
-| やりたいこと | matplotlib | ggplot2 | hgg |
+| Goal | matplotlib | ggplot2 | hgg |
 |---|---|---|---|
-| 図の土台 | `plt.figure()` (暗黙) | `ggplot(d, aes())` | `purePlot` |
-| 散布図 | `plt.scatter` | `geom_point` | `scatter` / `points` |
-| 折れ線 | `plt.plot` | `geom_line` | `line` / `lineXY` |
-| 棒 | `plt.bar` | `geom_col` | `bar` / `bars` |
-| ヒストグラム | `plt.hist` | `geom_histogram` | `histogram` / `hist` |
-| 群で色分け | `c=`, ループ | `aes(color=g)` | `<> color (inlineCat gs)` |
-| 重畳 | 連続 `plt.*` 呼び出し | `+ geom_*()` | `<> layer (...)` |
-| 色 scale | `cmap=` | `scale_color_*` | `scaleColorManual` / `scaleColorGradient2` |
-| 小分割 | `plt.subplots` | `facet_wrap` / `facet_grid` | `facet*` |
-| テーマ | `plt.style.use` | `theme_*` | `theme Theme*` |
-| 軸ラベル | `plt.xlabel` | `labs(x=)` | `xLabel` |
-| 座標反転/極座標 | 個別 API | `coord_flip` / `coord_polar` | `coordFlip` / `coordPolar` |
-| 保存 | `plt.savefig` | `ggsave` | `saveSVG` |
-| 3D | `mplot3d` | (限定) | `hgg-3d` + `showBrowser` |
+| Plot foundation | `plt.figure()` (implicit) | `ggplot(d, aes())` | `purePlot` |
+| Scatter plot | `plt.scatter` | `geom_point` | `scatter` / `points` |
+| Line plot | `plt.plot` | `geom_line` | `line` / `lineXY` |
+| Bar plot | `plt.bar` | `geom_col` | `bar` / `bars` |
+| Histogram | `plt.hist` | `geom_histogram` | `histogram` / `hist` |
+| Group by color | `c=`, loop | `aes(color=g)` | `<> color (inlineCat gs)` |
+| Overlay | Consecutive `plt.*` calls | `+ geom_*()` | `<> layer (...)` |
+| Color scale | `cmap=` | `scale_color_*` | `scaleColorManual` / `scaleColorGradient2` |
+| Small multiples | `plt.subplots` | `facet_wrap` / `facet_grid` | `facet*` |
+| Theme | `plt.style.use` | `theme_*` | `theme Theme*` |
+| Axis label | `plt.xlabel` | `labs(x=)` | `xLabel` |
+| Flip/polar coords | Separate API | `coord_flip` / `coord_polar` | `coordFlip` / `coordPolar` |
+| Save | `plt.savefig` | `ggsave` | `saveSVG` |
+| 3D | `mplot3d` | (limited) | `hgg-3d` + `showBrowser` |
 
 ---
 
-## どこが強み / どこが未整備か
+## Strengths / What's Not Yet Ready
 
-### 強み
+### Strengths
 
-- **純粋・合成可能** ─ 部分 spec (テーマだけ、 軸設定だけ) を値として使い回せる。 テストしやすい。
-- **HS / PS 同一 ADT** ─ backend (Haskell) と frontend (PureScript) が同じ spec を共有し、
-  JSON で round-trip。 サーバ生成図とブラウザ対話図が一致する。
-- **3D が browser interactive** ─ WebGL2 で orbit/zoom/pan。 mplot3d の静的投影を超える。
-- **統計プロットの幅** ─ violin / raincloud / ridge / trace / ESS / forest / DAG など、
-  matplotlib では追加ライブラリが要る図を core で持つ。
+- **Pure & composable** ─ Partial specs (theme-only, axes-only) are reusable values. Easier to test.
+- **HS / PS same ADT** ─ Backend (Haskell) and frontend (PureScript) share the same spec,
+  round-tripping via JSON. Server-generated and browser-interactive plots match exactly.
+- **3D is browser-interactive** ─ WebGL2 orbit/zoom/pan. Beyond mplot3d's static projection.
+- **Statistical plot breadth** ─ violin / raincloud / ridge / trace / ESS / forest / DAG and more,
+  built-in (matplotlib requires extra libraries for these).
 
-### 未整備 (Planned / Experimental)
+### Not Yet Ready (Planned / Experimental)
 
-- PDF / PNG backend は placeholder (SVG / Canvas / WebGL が実用)。
-- sqrt / time 軸は spec 定義済だが Layout 完全対応は wip。
-- matplotlib のような微細な低レベル artist 操作は Layer 4 (`Primitive`) 直書きが必要。
+- PDF / PNG backends are placeholders (SVG / Canvas / WebGL are production).
+- sqrt / time axes are spec-defined but full Layout support is in progress.
+- matplotlib-style low-level artist manipulation requires direct `Primitive` layer writing (Layer 4).
 
-> backend / chart 別の実装状況の単一情報源は `design/parity-table.md`。
+> Single source of truth for per-backend/chart implementation status: `design/parity-table.md`.

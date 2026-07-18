@@ -1,53 +1,52 @@
-# 06. スクリプトとプロジェクト (R4DS 2e Ch.6 "Workflow: scripts and projects")
+# 06. Workflow: Scripts and Projects (R4DS 2e Ch.6 "Workflow: scripts and projects")
 
-> 一次情報: **R for Data Science 2e, Ch.6 "Workflow: scripts and projects"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.6 "Workflow: scripts and projects"**
 > <https://r4ds.hadley.nz/workflow-scripts>
-> データ: ggplot2 の **diamonds**(全量 53,940 行)。
+> Data: ggplot2 **diamonds** (full 53,940 rows).
 
-R4DS 第 6 章は **図を描かない** 運用章です(本文の R 例はすべて `eval: false` の見本、
-図は RStudio のスクリーンショットのみ)。 主題は次の 2 つ:
+R4DS Ch.6 is an **operations** chapter with **no plots** (all R examples in text are `eval: false`
+demonstrations; plots are RStudio screenshots only). Two main topics:
 
-1. **スクリプト (script)**: コードをコンソール直打ちでなくファイルにまとめ、 編集し、 実行する。
-2. **プロジェクト (project)**: 解析に関わるファイル一式(入力データ・スクリプト・結果・図)を
-   1 つのディレクトリにまとめる。
+1. **Scripts**: Instead of typing directly into console, write code to a file, edit, and run.
+2. **Projects**: Organize all analysis files (input data, scripts, results, plots) in one directory.
 
-どちらも **RStudio 固有の運用** なので、 ここでは近似や置換ではなく
-「**R/RStudio の概念 → Haskell(cabal / GHCi / cabal project)の等価運用**」という
-honest な対応づけで示します。 実行コードは [`WorkflowScripts.hs`](WorkflowScripts.hs)
-(等価ワークフローを実際に動かして確認)。
+Both are **RStudio-specific operations**, so rather than approximate or substitute, we show
+a **faithful Haskell equivalent** (cabal / GHCi / cabal project as the R/RStudio counterpart).
+Executable code is [`WorkflowScripts.hs`](WorkflowScripts.hs) (run the equivalent workflow).
 
 ```sh
 cd docs/tutorials/06-workflow-scripts
 cabal run tut-06-workflow-scripts
 ```
 
-★このファイル群自体が R4DS のいう「スクリプト」と「命名 3 原則」の見本です
-(先頭に import をまとめ、 セクションを `-- ===` 罫線で区切り、 連番・kebab-case・
-中身を表す名前を付けています)。
+★ This file set itself exemplifies R4DS's idea of a "script" and the three naming principles
+(imports grouped at top, sections marked with `-- ===` lines, numbered, kebab-case, descriptive names).
 
 ---
 
-## §6.1 スクリプト(Scripts)
+## §6.1 Scripts
 
-R: コンソールに直打ちする代わりにスクリプトエディタにコードを書き、 編集して再実行する。
-保存すれば後から戻れる。 Haskell の等価運用:
+R: Instead of typing into console, write code in script editor, edit, and rerun.
+Saving lets you return to earlier versions. Haskell equivalents:
 
-| R / RStudio | Haskell の等価運用 |
+| R / RStudio | Haskell Equivalent |
 |---|---|
-| スクリプトエディタにコードを書く | `.hs` ファイルにコードを書く(この `WorkflowScripts.hs`) |
-| 1 式ずつ実行(Cmd/Ctrl + Enter) | GHCi で `:load WorkflowScripts.hs` → 式を 1 つずつ評価 |
-| スクリプト全体を実行(Cmd/Ctrl + Shift + S) | `cabal run tut-06-workflow-scripts`(= このファイルを通し実行) |
-| 即席の 1 ファイル実行 | `runghc WorkflowScripts.hs` |
+| Write code in script editor | Write code in `.hs` file (this `WorkflowScripts.hs`) |
+| Run one expression (Cmd/Ctrl + Enter) | GHCi `:load WorkflowScripts.hs` → evaluate expressions one by one |
+| Run entire script (Cmd/Ctrl + Shift + S) | `cabal run tut-06-workflow-scripts` (run file through) |
+| One-off file execution | `runghc WorkflowScripts.hs` |
 
-R4DS の推奨「スクリプトは必要なパッケージから始める」は Haskell でも同じで、
-**先頭に `import` をまとめる** と相手がどの依存が要るか一目で分かります。 ただし
-**共有スクリプトに install 系(R の `install.packages()` / `cabal install`)は書かない**
-— 相手の環境を勝手に変えてしまうからです。 Haskell では依存は `.cabal` の
-`build-depends` で宣言し、 `import` はその利用宣言にあたります。
+R4DS's recommendation—"start scripts with required packages"—applies to Haskell too:
+**group `import`s at the top** so anyone can see which dependencies are needed. However,
+**don't write install commands** (R's `install.packages()` / Haskell's `cabal install`)
+in shared scripts—they alter others' environments without consent. In Haskell, dependencies
+are declared in `.cabal`'s `build-depends`, and `import` is the usage declaration.
 
-### §6.1.1 コードの実行(Running code)
+### §6.1.1 Running Code
 
-R4DS の例(欠損を除いてから集計する典型パイプ)を、 本章のデータ diamonds で同型に示します。
+R4DS's example (typical pipe: filter missing, then aggregate) applied to diamonds:
 
 ```haskell
 -- R: not_cancelled <- flights |> filter(!is.na(dep_delay), !is.na(arr_delay))
@@ -58,133 +57,131 @@ smallIdeal =
     |> DF.filterWhere (F.col @Text   "cut"   .== F.lit ("Ideal" :: Text))
 ```
 
-`filter |> … |> summarize` の流れは dataframe でも同じです(1 行 1 動詞・`|>` 行末)。
-実行すると carat < 1 かつ Ideal の 15,681 行・平均価格 `1546.21` が出ます
-(`../_data/_raw/diamonds.csv` を `awk` で突合済の実測値)。
+The `filter |> … |> summarize` flow is identical in dataframe (one verb per line, `|>` at end).
+Running yields 15,681 rows (carat < 1 and cut = Ideal) with mean price `1546.21`
+(verified against `../_data/_raw/diamonds.csv` with `awk`).
 
-### §6.1.2 診断(Diagnostics)
+### §6.1.2 Diagnostics
 
-R: RStudio はエディタ上で構文エラー(赤波線)や潜在的問題(黄!)をその場で指摘する。
+R: RStudio flags syntax errors (red squiggles) and potential issues (yellow !) in-editor.
 
-Haskell の等価は **GHC の型検査 + コンパイラ警告**、 エディタ上では **HLS
-(haskell-language-server)** が赤波線・hover でメッセージを出します。 R は実行して
-初めて気づく誤りも、 Haskell ではより早い段階(コンパイル時)に多くが捕まります。
+Haskell's equivalent: **GHC type checking + compiler warnings**, in-editor via **HLS
+(haskell-language-server)** (red squiggles, hover messages). Many errors R catches only at runtime,
+Haskell catches earlier (compile time).
 
-### §6.1.3 保存と命名(Saving and naming)
+### §6.1.3 Saving and Naming
 
-R4DS の命名 3 原則は、 そのまま Haskell のファイルにも当てはまります:
+R4DS's three naming principles apply directly to Haskell files:
 
-1. **機械可読**: 空白・記号・特殊文字を避ける。 大文字小文字だけの区別に頼らない。
-2. **人間可読**: 中身が分かる名前を付ける。
-3. **既定の並び順と相性良く**: 連番で始め、 アルファベット順 = 実行順 にする。
+1. **Machine-readable**: Avoid spaces, symbols, special chars. Don't rely on case alone.
+2. **Human-readable**: Name clearly conveys content.
+3. **Sort-friendly**: Start with numbers; alphabetical order = execution order.
 
-R4DS の「悪い例 → 良い例」 と同じ整理:
+R4DS's "bad → good" examples:
 
 ```
-# 避ける                          # こう付ける
+# Avoid                          # Do this
 alternative model.R               01-load-data.R
 code for exploratory analysis.r   02-exploratory-analysis.R
 finalreport.qmd / FinalReport.qmd 03-model-approach-1.R
 run-first.r / temp.txt            04-model-approach-2.R
 ```
 
-★**このチュートリアル群のディレクトリ名**(`01-visualize` / `02-workflow-basics` /
-… / `06-workflow-scripts`)がまさにこの 3 原則の実例です(連番・kebab-case・中身を表す)。
+★ **This tutorial series' directory names** (`01-visualize` / `02-workflow-basics` /
+… / `06-workflow-scripts`) exemplify all three principles (numbers, kebab-case, descriptive).
 
 ---
 
-## §6.2 プロジェクト(Projects)
+## §6.2 Projects
 
-R: 解析に関わるファイル一式を 1 ディレクトリにまとめ、 RStudio はそれを project
-(`.Rproj`)として支援する。 Haskell の等価:
+R: Collect all analysis files in one directory; RStudio treats it as a project (`.Rproj`).
+Haskell's equivalent:
 
-| R / RStudio | Haskell の等価運用 |
+| R / RStudio | Haskell Equivalent |
 |---|---|
-| RStudio project(`.Rproj`) | cabal の **package**(`.cabal`)/ **project**(`cabal.project`) |
-| project ディレクトリ = 解析の home | この `hgg/` リポジトリ(`../../cabal.project` が全 package を束ねる) |
-| `File > New Project` | `cabal init` / `.cabal` を書く |
+| RStudio project (`.Rproj`) | cabal **package** (`.cabal`) / **project** (`cabal.project`) |
+| project directory = analysis home | This `hgg/` repo (`../../cabal.project` bundles all packages) |
+| `File > New Project` | `cabal init` / write `.cabal` |
 
-### §6.2.1 真実の源(source of truth)
+### §6.2.1 Source of Truth
 
-R: 真実の源は環境(Environment)ではなく **R スクリプト**。 スクリプト + データから
-環境は再生成できるが、 逆は難しい。 RStudio はセッション間でワークスペースを保存しない
-設定(clean slate)を推奨。
+R: Source of truth is the **R script**, not the environment. From script + data,
+environment is reproducible; the reverse is hard. RStudio recommends never saving
+workspace between sessions (clean slate).
 
-Haskell の等価: 真実の源は GHCi の REPL 状態ではなく **`.hs` ソース**。 GHCi を
-再起動(`:reload` / 終了して `cabal repl`)しても、 ソースから常に同じ結果を
-再生成できます。 **REPL に積み上げた束縛に依存しない** — これが R の clean slate と
-同じ規律です。 R の「R 再起動 → スクリプト再実行」のショートカット運用は、 Haskell では
-「`cabal repl` 再起動 → `:reload`」 あるいは「`cabal run` で通し実行」 に対応します。
+Haskell's equivalent: Source of truth is **`.hs` source**, not GHCi REPL state.
+Restart GHCi (`:reload` / exit and `cabal repl`) and source always regenerates the same result.
+**Don't depend on REPL bindings accumulated** —this matches R's clean-slate discipline.
+R's "restart R → rerun script" workflow corresponds to Haskell's "`cabal repl` restart → `:reload`"
+or "run via `cabal run`."
 
-### §6.2.2 作業ディレクトリ(working directory)
+### §6.2.2 Working Directory
 
 | R | Haskell |
 |---|---|
 | `getwd()` | `System.Directory.getCurrentDirectory` |
-| `setwd("/path")`(**非推奨**) | `System.Directory.setCurrentDirectory`(同様に**非推奨**) |
+| `setwd("/path")` (**not recommended**) | `System.Directory.setCurrentDirectory` (equally **not recommended**) |
 
-R も Haskell も、 作業ディレクトリを **コード中で `setwd` / `setCurrentDirectory`
-して固定するのは非推奨**(スクリプトが場所依存になり共有を妨げる)。 代わりに project の
-home を作業ディレクトリにして、 以降は相対パスで書きます。
+Both R and Haskell advise against hardcoding working directory via `setwd` / `setCurrentDirectory`
+in code—it makes scripts location-dependent and hampers sharing. Instead, treat the project's
+home as working directory and use relative paths thereafter.
 
-### §6.2.3 相対パスで保存する(RStudio projects)
+### §6.2.3 Save via Relative Paths (RStudio Projects)
 
-R4DS の toy 例(`diamonds.R`, `eval: false`)の眼目は **図と CSV をコードで
-(マウス/クリップボードでなく)相対パスに保存する** ことです:
+R4DS's toy example (`diamonds.R`, `eval: false`) emphasizes **saving plots and CSVs via code**
+(not mouse/clipboard) **to relative paths**:
 
 ```r
-# R (R4DS の見本)
+# R (R4DS example)
 ggplot(diamonds, aes(x = carat, y = price)) + geom_hex()
 ggsave("diamonds.png")
 write_csv(diamonds, "data/diamonds.csv")
 ```
 
-Haskell での等価ワークフロー:
+Haskell's equivalent workflow:
 
 ```haskell
 let dPlot = diamonds |>> theme ThemeGrey <> layer (scatter "carat" "price" <> alpha 0.05)
 saveSVGBound "diamonds-carat-price.svg" dPlot     -- = ggsave("diamonds.png")
-createDirectoryIfMissing False "data"             -- = Files ペインの New Folder
+createDirectoryIfMissing False "data"             -- = Files pane's New Folder
 DF.writeCsv "data/diamonds.csv" diamonds          -- = write_csv(diamonds, "data/diamonds.csv")
 ```
 
-実行すると、 作業ディレクトリ(= この章ディレクトリ)に `diamonds-carat-price.svg` と
-`data/diamonds.csv` が生成されます。 R4DS の教えどおり、 **図はマウスでなくコードで保存**
-すれば、 後から「この図はどのコードが作ったか」 を必ず辿れます。
+Running this creates `diamonds-carat-price.svg` and `data/diamonds.csv` in the chapter directory
+(the working directory). Following R4DS's principle, **save plots via code**, not mouse clicks,
+so you can always trace "which code made this plot?"
 
-> ★相違(honest に記録):
-> R の **`geom_hex`**(六角ビニングで過密散布を要約)は hgg に **未実装** です。
-> 矩形ビンの `geom_bin2d` 相当(`bin2d`)はありますが、 これは **各セルの z 平均を色にする**
-> もので、 **件数密度**を塗る `geom_hex` とは別物です(六角ビンも未実装)。 本章の眼目は
-> 六角ビン自体ではなく「コードで相対パスに保存する」 ワークフローなので、 図は実装済の
-> `scatter`(過密は `alpha` で緩和)で代替しました。 六角/件数ビンの実装と本格再現は
-> 過密データを扱う EDA / Layers 章に回します。
+> ★ Honest note on differences:
+> R's **`geom_hex`** (hexagonal binning to summarize dense scatterplots) is **not implemented** in hgg.
+> The rectangular-bin equivalent `bin2d` exists, but it colors cells by **mean z value**,
+> not by **count density** (and hexagonal bins aren't implemented). Since this chapter's point is
+> the "save via code to relative paths" workflow, not hexagonal binning per se, we use the
+> implemented `scatter` (+ `alpha` to reduce overplotting) instead. Hex/count binning and a full
+> reproduction belong to later chapters (EDA / Layers) dealing with dense data.
 >
-> ※生成物(`diamonds-carat-price.svg`・`data/`)は実行のたびに再生成されるため
-> [`.gitignore`](.gitignore) で git 管理から外しています(図なし運用章)。
+> ※Generated files (`diamonds-carat-price.svg`, `data/`) are regenerated each run,
+> so [`.gitignore`](.gitignore) excludes them from git (operations chapter with no permanent plots).
 
-### §6.2.4 相対パスと絶対パス(Relative and absolute paths)
+### §6.2.4 Relative and Absolute Paths
 
-R: project の中では **常に相対パス** を使う(絶対パスは共有を妨げる)。 区切りは
-Mac/Linux のスラッシュ `/` を使う(Windows のバックスラッシュは避ける)。
+R: Within a project, **always use relative paths** (absolute paths prevent sharing).
+Use `/` (Mac/Linux slash), never Windows backslash.
 
-Haskell の等価: `System.FilePath` は `/` 区切りで全 OS 可搬です。 上で書いた
-`"data/diamonds.csv"` のように **相対・スラッシュ区切り** で書けば、 project を
-どこに置いても動きます。 絶対パス(`/home/...` や `C:\...`)は self の環境にしか
-通じないので、 共有するコードには **絶対に書かない** のが鉄則です。
+Haskell's equivalent: `System.FilePath` is `/`-separated and portable across OS.
+Write `"data/diamonds.csv"` **relative with `/`**, and the project works anywhere.
+Absolute paths (`/home/...` or `C:\...`) only work in your environment—**never write them in
+shared code**.
 
 ---
 
-## できないこと / 近似せず記録した相違
+## What We Can't Do / Faithfully Recorded Differences
 
-- **△ `geom_hex`(六角ビニング)未実装**: §6.2.3 の toy 例の図マークは、 件数密度を塗る
-  `geom_hex` が未実装のため `scatter`(+ `alpha`)で代替しました(`bin2d` はセル平均 z 用で
-  別物)。 本章の眼目は保存ワークフローなので図は代替で問題なし。 六角/件数ビンの実装は
-  EDA / Layers 章へ。
-- **R/RStudio 固有の UI**: スクリプトエディタの 4 ペイン・診断の赤波線・`.Rproj` の
-  「New Project」 ウィザード等の **スクリーンショットは R4DS 固有** で、 本章では
-  対応する Haskell の運用(GHCi / HLS / cabal project)を表で示すにとどめます
-  (R4DS でも本文に出る図はこれらのスクショだけ = 解析図はゼロ)。
-- **`writeCsv` の欠損列制限**: この版の `dataframe` の `writeCsv` は欠損(`Nothing`)を
-  含む列を直列化できません(Ch4 import 章に既記)。 diamonds は欠損なしのため §6.2.3 は
-  そのまま書けています。
+- **△ `geom_hex` (hexagonal binning) not implemented**: §6.2.3's toy plot uses the implemented
+  `scatter` (+ `alpha`) instead of unimplemented count-density `geom_hex` (`bin2d` is for cell-mean z,
+  a different operation). The chapter's focus is save-to-relative-path workflow, not hex binning,
+  so substitution is fine. Hex/count bin implementation and full reproduction belong to EDA / Layers.
+- **R/RStudio UI details**: The **4-pane script editor, red diagnostics, `.Rproj` "New Project"
+  wizard** are **R4DS-specific screenshots**. Here we show Haskell's equivalent operations
+  (GHCi / HLS / cabal project) in tables instead (R4DS itself shows only these screenshots in the text—no analysis plots).
+- **`writeCsv` with nullable columns**: This version of `dataframe`'s `writeCsv` can't serialize
+  columns with missing values (see Ch.4 Import). Since diamonds has no missing values, §6.2.3 works as-is.

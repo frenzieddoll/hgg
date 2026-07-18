@@ -1,97 +1,78 @@
-# 19. 結合 — Joins
+# 19. Joins
 
-> 一次情報: **R for Data Science 2e, Ch.19 "Joins"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.19 "Joins"**
 > <https://r4ds.hadley.nz/joins>
-> データ: **nycflights13** の 5 表 — `flights`(全 336,776 行)/ `airlines` /
-> `airports`(1,458)/ `planes`(3,322)/ `weather`(26,115)。すべて実データ全量。
+> Data: **nycflights13** 5 tables — `flights` (all 336,776 rows) / `airlines` / `airports` (1,458) / `planes` (3,322) / `weather` (26,115). Complete real data.
 
-複数のデータフレームを **キー**(両表をつなぐ変数)で結合する方法を学びます。
-この章で扱う join は 2 系統です。
+Learn methods to combine multiple dataframes by **key** (variable connecting tables). This chapter covers two join families:
 
-- **mutating join**(`left_join` / `inner_join` / `right_join` / `full_join`):
-  一致する観測から**変数を足す**。
-- **filtering join**(`semi_join` / `anti_join`):一致の有無で**行を絞る**。
+- **mutating join** (`left_join` / `inner_join` / `right_join` / `full_join`): **Add variables** from matching observations.
+- **filtering join** (`semi_join` / `anti_join`): **Filter rows** by match presence.
 
-最後に **non-equi join**(`==` 以外で照合する join)も扱います。実行コードは
-[`Joins.hs`](Joins.hs)。
+Finally, **non-equi join** (matching by operators other than `==`) is covered. Run code: [`Joins.hs`](Joins.hs).
 
 ```sh
 cd docs/tutorials/19-joins
 cabal run tut-19-joins
 ```
 
-> **この章は表操作が主役です。** R4DS Ch19 の図はすべて join の概念を説明する
-> 手描きの**解説イラスト**(ER 図・ドット対応図・Venn 図)で、実データから描く
-> ggplot 図は **1 枚もありません**。本章はその概念を散文で説明し、各 join の
-> **表出力を実データで忠実に再現**します(概念イラストは plot ライブラリの対象外)。
+> **This chapter emphasizes table operations.** All R4DS Ch19 figures are **hand-drawn conceptual diagrams** (ER, dot plots, Venn diagrams) explaining joins; no ggplot figures from real data appear. This chapter explains concepts in prose and faithfully **reproduces table outputs with real data** per join type (conceptual diagrams are outside plot scope).
 
-> **join はなぜ自前実装か。** Hackage `dataframe` にも `leftJoin` / `innerJoin` 等は
-> ありますが、重複する非キー列を `These` 型に畳む・`fullOuterJoin` が nullable キーを
-> 要求する等、dplyr とは意味論が異なります。R4DS の表出力(`year.x`/`year.y` の
-> 曖昧性解消、未一致を `NA` で補填)を忠実再現するため、join を Haskell で自前実装
-> しました(CLAUDE.md「機能不足は実装で埋める」)。インデックス計算
-> (`leftIdx`/`innerIdx`/`fullIdx`/`rightIdx`/`semiIdx`/`antiIdx`)と
-> 列の引き直し(`pickJust`/`pickFlat`)に分けてあります。
+> **Why implement join ourselves?** Hackage `dataframe` has `leftJoin` / `innerJoin` etc., but they fold duplicate non-key columns into `These` type, require nullable keys for `fullOuterJoin`, and differ semantically from dplyr. To faithfully reproduce R4DS table output (disambiguating `year.x`/`year.y`, padding unmatched with `NA`), we self-implemented join in Haskell (CLAUDE.md principle: "fill gaps by implementing"). Split into index computation (`leftIdx`/`innerIdx`/`fullIdx`/`rightIdx`/`semiIdx`/`antiIdx`) and column re-selection (`pickJust`/`pickFlat`).
 
 ---
 
-## 1. キー(Keys)
+## 1. Keys
 
-join には必ず **主キー**(各観測を一意に決める変数)と、別表でそれを指す
-**外部キー**が対になって関わります。nycflights13 では:
+Joins always pair a **primary key** (variable uniquely identifying each observation) with a **foreign key** (pointing to it in another table). In nycflights13:
 
-| 表 | 主キー | 説明 |
+| Table | Primary key | Description |
 |---|---|---|
-| `airlines` | `carrier` | 2 文字の航空会社コード |
-| `airports` | `faa` | 3 文字の空港コード |
-| `planes` | `tailnum` | 機体番号 |
-| `weather` | `origin` + `time_hour` | **複合主キー**(場所と時刻) |
+| `airlines` | `carrier` | 2-letter airline code |
+| `airports` | `faa` | 3-letter airport code |
+| `planes` | `tailnum` | Aircraft tail number |
+| `weather` | `origin` + `time_hour` | **Composite key** (location + time) |
 
-外部キーの例:`flights$tailnum` → `planes$tailnum`、`flights$carrier` →
-`airlines$carrier`、`flights$origin`/`flights$dest` → `airports$faa`。
+Foreign key examples: `flights$tailnum` → `planes$tailnum`, `flights$carrier` → `airlines$carrier`, `flights$origin`/`flights$dest` → `airports$faa`.
 
-### 主キーの検証
+### Verifying primary keys
 
-主キーが本当に一意かは、キーで `count()` して `n > 1` を探せば確かめられます。
-
-| R | hgg |
-|---|---|
-| `planes \|> count(tailnum) \|> filter(n>1)` | `counts` で重複キーを数える |
-| `weather \|> count(time_hour, origin) \|> filter(n>1)` | 複合キーで同様 |
-
-`planes` も `weather` も重複 **0 件**(主キーとして妥当)。欠損キーも同様に 0 件です。
-ただし「重複が無い」だけでは主キーの保証になりません。たとえば `airports` の
-`(alt, lat)` は **1 件**の重複があり、主キーには不適です。
-
-### 代理キー
-
-`flights` には主キーがありませんが、`time_hour`・`carrier`・`flight` の 3 つで一意に
-決まります(重複 0 件)。とはいえ、行番号による単純な**代理キー**を足すのが扱いやすい:
+Check if keys are truly unique by `count()` on key and filtering for `n > 1`:
 
 | R | hgg |
 |---|---|
-| `flights \|> mutate(id = row_number(), .before = 1)` | `insertVector "id" [1..n]` + `select` で先頭へ |
+| `planes \|> count(tailnum) \|> filter(n>1)` | Count duplicates |
+| `weather \|> count(time_hour, origin) \|> filter(n>1)` | Composite key same way |
+
+Both `planes` and `weather` have **0 duplicates** (valid primary keys). Missing keys also 0. However, "no duplicates" alone doesn't guarantee primary key status. For example, `airports`'s `(alt, lat)` has **1 duplicate**, unfit for primary key.
+
+### Surrogate keys
+
+`flights` has no primary key, but `time_hour`·`carrier`·`flight` together are unique (0 duplicates). Still, adding a simple **row-number surrogate key** is convenient:
+
+| R | hgg |
+|---|---|
+| `flights \|> mutate(id = row_number(), .before = 1)` | `insertVector "id" [1..n]` + `select` to front |
 
 ---
 
-## 2. mutating join — `left_join`
+## 2. Mutating join — `left_join`
 
-4 つの mutating join のうち、ほぼ常に使うのが `left_join` です。出力は必ず **`x`
-(左表)と同じ行**を保ち、一致する右表の変数を**右端に足します**。まず見やすいよう
-6 変数に絞った `flights2` を作ります。
+Of 4 mutating joins, `left_join` is almost always used. Output always keeps **`x` (left table) rows**, appending **matching right variables to the right**. First, narrow to 6 columns for clarity:
 
 ```haskell
 flights2 = DF.select ["year","time_hour","origin","dest","tailnum","carrier"] flights
 ```
 
-### メタデータを足す
+### Add metadata
 
 | R | hgg |
 |---|---|
-| `flights2 \|> left_join(airlines)` | `leftIdx (carrier) (carrier)` → `name` を `insertVector` |
+| `flights2 \|> left_join(airlines)` | `leftIdx (carrier) (carrier)` → insert `name` column |
 
-`carrier` をキーに航空会社名 `name` が右端に付きます。同様に `weather` から気温・
-風速を、`planes` から機材情報を足せます。
+Join on `carrier` adds airline name `name` to the right. Similarly add temperature/wind from `weather`, aircraft info from `planes`.
 
 ```
 year  time_hour             origin dest tailnum  carrier  name
@@ -100,65 +81,60 @@ year  time_hour             origin dest tailnum  carrier  name
 ...
 ```
 
-一致しない行は新変数が `NA` になります。たとえば `tailnum == "N3ALAA"` は `planes`
-に無いので、`type`・`engines`・`seats` がすべて `Nothing`(= `NA`)。
+Unmatched rows get `NA` for new variables. For example, `tailnum == "N3ALAA"` isn't in `planes`, so `type`·`engines`·`seats` all become `Nothing` (= `NA`).
 
-### キーを明示する — `join_by`
+### Explicit keys with `join_by`
 
-既定の `left_join` は**両表に共通する全変数**をキーにします(**自然結合**)。これが
-裏目に出る例:`flights2 |> left_join(planes)` は `year` も `tailnum` も共通なので、
-両方を複合キーにしてしまいます。ところが `flights$year`(出発年)と `planes$year`
-(製造年)は**意味が違う**ため一致せず、`NA` だらけになります。
+Default `left_join` uses **all common variables as keys** (**natural join**). This backfires: `flights2 |> left_join(planes)` shares both `year` and `tailnum`, so both become composite key. But `flights$year` (departure year) and `planes$year` (manufacture year) **differ in meaning**, so no matches; result is all `NA`.
 
-`tailnum` だけで結合したいので `join_by(tailnum)` を明示します:
+To join on `tailnum` only, specify explicitly with `join_by(tailnum)`:
 
 | R | hgg |
 |---|---|
-| `flights2 \|> left_join(planes, join_by(tailnum))` | キー列だけで `leftIdx`・`year` を `year.x`/`year.y` に改名 |
+| `flights2 \|> left_join(planes, join_by(tailnum))` | Use only `tailnum`; rename `year` to `year.x`/`year.y` |
 
-出力では `year` が `year.x`(flights)と `year.y`(planes)に**曖昧性解消**されます
-(R の `suffix` と同じ)。異なる列名どうしのキー指定も `join_by` で書けます:
+Output **disambiguates** `year` into `year.x` (flights) and `year.y` (planes) (R's `suffix` equivalent). Different column name keys also work via `join_by`:
 
 | R | hgg |
 |---|---|
 | `left_join(airports, join_by(dest == faa))` | `leftIdx (dest) (faa)` |
 | `left_join(airports, join_by(origin == faa))` | `leftIdx (origin) (faa)` |
 
-`dest == faa` 版では、`airports` に無い就航先(`BQN` 等)は `name` が `NA` になります。
+In `dest == faa`, destinations not in `airports` (like `BQN`) get `NA` for `name`.
 
 ---
 
-## 3. filtering join — `semi_join` / `anti_join`
+## 3. Filtering join — `semi_join` / `anti_join`
 
-filtering join は変数を足さず、一致の有無で **`x` の行を絞る**だけです。
+Filtering joins add no variables, just **filter `x` rows** by match status:
 
-- **semi_join**:`y` に一致がある `x` の行を残す。
-- **anti_join**:`y` に一致が**無い** `x` の行を残す。
+- **semi_join**: Keep `x` rows with matches in `y`.
+- **anti_join**: Keep `x` rows with **no match** in `y`.
 
 | R | hgg |
 |---|---|
-| `airports \|> semi_join(flights2, join_by(faa == origin))` | `semiIdx (faa) (origin)` → 行を再選択 |
-| `airports \|> semi_join(flights2, join_by(faa == dest))` | `semiIdx (faa) (dest)`(就航先 101 空港) |
+| `airports \|> semi_join(flights2, join_by(faa == origin))` | `semiIdx (faa) (origin)` → reselect rows |
+| `airports \|> semi_join(flights2, join_by(faa == dest))` | `semiIdx (faa) (dest)` (101 destination airports) |
 | `flights2 \|> anti_join(airports, join_by(dest == faa)) \|> distinct(dest)` | `antiIdx` + `nub` |
 
-`faa == origin` の semi_join は出発 3 空港(EWR / JFK / LGA)だけに絞ります。
-anti_join は**暗黙の欠損**を見つけるのに便利です。`airports` に無い就航先は 4 つ:
+`faa == origin` semi_join narrows to 3 departure airports (EWR / JFK / LGA).
+anti_join is handy for finding **implicit missing**. Destinations not in `airports`: 4
 
 ```
 dest
-BQN    ← Aguadilla (プエルトリコ)
+BQN    ← Aguadilla (Puerto Rico)
 SJU    ← San Juan
-STT    ← St. Thomas (米領ヴァージン諸島)
+STT    ← St. Thomas (US Virgin Islands)
 PSE    ← Ponce
 ```
 
-`planes` に無い機体番号は **722 件**(うち 1 件は `tailnum` 自体が `NA`)。
+Aircraft not in `planes`: **722** (1 has `tailnum` itself NA).
 
 ---
 
-## 4. join の仕組み(How do joins work?)
+## 4. How joins work
 
-小さな 2 表 `x`・`y`(キー `key`、値 `val_x`/`val_y`)で各 join の行の動きを見ます。
+Small 2-table example with `x`·`y` (key, `val_x`/`val_y`):
 
 ```
 x: key val_x      y: key val_y
@@ -167,80 +143,74 @@ x: key val_x      y: key val_y
    3   x3            4   y3
 ```
 
-| join | 残る行 | 結果 |
+| join | Kept rows | Result |
 |---|---|---|
-| `inner_join` | 両方にあるキーのみ | `key` 1, 2 |
-| `left_join` | `x` を全保持 | 1,2,3(`key=3` の `val_y` = `NA`) |
-| `right_join` | `y` を全保持 | 1,2,4(`key=4` の `val_x` = `NA`) |
-| `full_join` | `x` か `y` にある全行 | 1,2,3,4(欠けた側が `NA`) |
+| `inner_join` | Keys in both | Keys 1, 2 |
+| `left_join` | All `x` rows | 1,2,3 (`key=3`'s `val_y` = `NA`) |
+| `right_join` | All `y` rows | 1,2,4 (`key=4`'s `val_x` = `NA`) |
+| `full_join` | All rows from `x` or `y` | 1,2,3,4 (missing side = `NA`) |
 
-外部 join(left/right/full)は「どのキーにも一致しなければ一致する仮想行(値は
-`NA`)」を相手側に足す、と考えると統一的に理解できます。
+Outer joins (left/right/full) are unified: imagine adding virtual rows (values `NA`) matching no keys to the other side.
 
-### 行の対応は 1 対 1 とは限らない
+### Rows aren't always 1-to-1
 
-`x` の 1 行が `y` の**複数行**に一致すると、その行は一致数だけ**複製**されます。
-両表でキーが重複すると **多対多**になり、組合せ爆発が起こります:
+When `x`'s 1 row matches `y`'s **multiple rows**, that row **duplicates** by match count. Duplicate keys in both tables yield **many-to-many**, causing combinatorial explosion:
 
 ```
-df1: key=1,2,2   df2: key=1,2,2   →   inner_join は 5 行 (key=2 が 2×2)
+df1: key=1,2,2   df2: key=1,2,2   →   inner_join yields 5 rows (key=2 is 2×2)
 ```
 
 | R | hgg |
 |---|---|
-| `df1 \|> inner_join(df2, join_by(key))` | `innerIdx` が 1 対多を自然に展開 |
+| `df1 \|> inner_join(df2, join_by(key))` | `innerIdx` naturally expands 1-to-many |
 
 ---
 
-## 5. 非等値 join(Non-equi joins)
+## 5. Non-equi joins
 
-`==` の代わりに不等号などで照合する join です。等値でないと両キーの値が違うため、
-出力には常に**両キー**を残します(`keep = TRUE` 相当・`key.x`/`key.y`)。
+Joins matching by operators other than `==`. When not equality, both keys' values differ, so output always **keeps both keys** (`keep = TRUE` equivalent · `key.x`/`key.y`).
 
-### cross join — 全組合せ
+### Cross join — all combinations
 
-`nrow(x) * nrow(y)` 行のデカルト積。名前の全ペア生成(自己結合)に使えます。
-
-| R | hgg |
-|---|---|
-| `df \|> cross_join(df)` | リスト内包の全組合せ(4×4 = 16 行) |
-
-### 不等号 join
-
-`<`・`<=`・`>=`・`>` で一致集合を絞ります。cross join を不等号で制限すると、
-「全**順列**」でなく「全**組**」が得られます:
+Cartesian product: `nrow(x) * nrow(y)` rows. Useful for generating all name pairs (self-join).
 
 | R | hgg |
 |---|---|
-| `df \|> inner_join(df, join_by(id < id))` | `[(i,j) \| a < b]`(6 行) |
+| `df \|> cross_join(df)` | List comprehension all pairs (4×4 = 16 rows) |
 
-### rolling join — 最も近い 1 件
+### Inequality join
 
-不等号を満たす行の中から**最も近い 1 件**だけを取ります。日付がぴったり揃わない
-2 表で「ある日付以前で最も近い日」を探すのに便利です。
-
-四半期パーティの例:各従業員に「誕生日以前で最も近いパーティ」を割り当てます。
+Operators `<`·`<=`·`>=`·`>` narrow the match set. Restricting cross join by inequality yields "all **combinations**" not "all **permutations**":
 
 | R | hgg |
 |---|---|
-| `employees \|> left_join(parties, join_by(closest(birthday >= party)))` | 各誕生日に対し `party <= birthday` の最大を取る |
+| `df \|> inner_join(df, join_by(id < id))` | `[(i,j) \| a < b]` (6 rows) |
+
+### Rolling join — closest match
+
+From rows satisfying the inequality, take **only the closest 1**. Useful when dates don't align exactly; find "closest date before a given date".
+
+Employee birthday / party quarter example: assign each employee "closest prior party".
+
+| R | hgg |
+|---|---|
+| `employees \|> left_join(parties, join_by(closest(birthday >= party)))` | For each birthday, take max `party <= birthday` |
 
 ```
 name   birthday    q   party
-Hazel  2022-01-03  NA  NA          ← 1/10 より前 → パーティ無し
+Hazel  2022-01-03  NA  NA          ← Before 1/10 → no party
 Lily   2022-02-14  1   2022-01-10
 Ada    2022-04-04  2   2022-04-04
 ...
 ```
 
-1/10 より前の誕生日にはパーティが付きません(`anti_join` で確認できる)。
+Birthdays before 1/10 have no party (confirmable via `anti_join`).
 
-### overlap join — 期間の重なり
+### Overlap join — interval overlap
 
-区間どうしを扱う不等号 join のヘルパ(`between` / `within` / `overlaps`)です。
+Helper predicates for interval joins: `between` / `within` / `overlaps`.
 
-まずパーティに**期間**(`start`〜`end`)を持たせます。自己結合で期間の重なりを
-検査すると、入力ミスで Q2 と Q3 が境界で重なっているのが見つかります:
+First, parties have **period** (`start`–`end`). Self-join for overlaps finds input error: Q2 and Q3 boundaries overlap:
 
 | R | hgg |
 |---|---|
@@ -248,39 +218,32 @@ Ada    2022-04-04  2   2022-04-04
 
 ```
 start.x     end.x       start.y     end.y
-2022-04-04  2022-07-11  2022-07-11  2022-10-02   ← Q2 の終わりと Q3 の始まりが重なる
+2022-04-04  2022-07-11  2022-07-11  2022-10-02   ← Q2 end and Q3 start overlap
 ```
 
-`end` を修正(Q2 を 07-10 に)したうえで、`between` で各従業員をパーティに割り当て
-ます。`start` を年初(1/1)から取るので、今度は 1 月初旬の誕生日も漏れません:
+Fix `end` (Q2 to 07-10), then use `between` to assign employees to parties. With `start` from year-start (1/1), early January birthdays no longer miss:
 
 | R | hgg |
 |---|---|
 | `employees \|> inner_join(parties, join_by(between(birthday, start, end)))` | `start <= birthday <= end` |
 
-> **乱数入力についての正直な注記。** R 原文は `set.seed(123)` と `babynames` で
-> 従業員 100 名をランダム生成します。R の乱数生成器は外部から完全再現できないため、
-> 本章は**代表的な固定ロスター 10 名**で同じ join ロジックを示します。置き換えたのは
-> 乱数の入力データだけで、rolling / overlap join の**方式そのものは R4DS と同一**です。
+> **Honest note on random input.** R source uses `set.seed(123)` + `babynames` to randomly generate 100 employees. R's RNG can't be perfectly reproduced externally, so we show rolling/overlap join logic with **fixed roster of 10 representative employees**. Only input data changed (not random); rolling/overlap **join methodology is identical to R4DS**.
 
 ---
 
-## この章で出てきた対応表(まとめ)
+## Reference table (summary of correspondence)
 
 | dplyr | hgg |
 |---|---|
-| `left_join(y)` / `inner_join` / `right_join` / `full_join` | `leftIdx`/`innerIdx`/`rightIdx`/`fullIdx` + 列引き直し |
-| `join_by(a == b)` | 異名キーを `leftIdx (a) (b)` |
-| `semi_join` / `anti_join` | `semiIdx` / `antiIdx` + 行再選択 |
-| `cross_join` | 全組合せ内包 |
-| `join_by(a < b)` | 不等号で組を絞る |
-| `join_by(closest(a >= b))` | 条件を満たす最大/最小を 1 件 |
-| `join_by(between/overlaps(...))` | 区間の包含・重なり判定 |
+| `left_join(y)` / `inner_join` / `right_join` / `full_join` | `leftIdx`/`innerIdx`/`rightIdx`/`fullIdx` + column re-selection |
+| `join_by(a == b)` | Different column names as `leftIdx (a) (b)` |
+| `semi_join` / `anti_join` | `semiIdx` / `antiIdx` + row re-select |
+| `cross_join` | List comprehension all pairs |
+| `join_by(a < b)` | Restrict pairs by inequality |
+| `join_by(closest(a >= b))` | Max/min satisfying condition, 1 only |
+| `join_by(between/overlaps(...))` | Interval containment / overlap test |
 
-> **正直な制約。** (1) Ch19 の概念イラスト(ER 図・Venn 図等)は実データ図でないため
-> 描画していません(散文で説明)。(2) rolling / overlap の従業員データは R の乱数を
-> 再現できないため固定ロスターで代替(join 方式は同一)。(3) `dataframe` の join は
-> dplyr と意味論が異なるため join を自前実装(本文冒頭参照)。
+> **Honest limitations.** (1) Ch19 conceptual diagrams (ER, Venn) aren't real-data figures, so we omit visualizations (explained in prose). (2) rolling/overlap employee data can't reproduce R's random seed, so we use fixed roster (join method identical). (3) `dataframe` join semantics differ from dplyr, so we self-implemented (see chapter intro).
 
-前章 → [`18-missing`](../18-missing/)。
-次章 → `11-modeling`(R4DS 2e 範囲外・補足)。
+Previous → [`18-missing`](../18-missing/).
+Next → `11-modeling` (beyond R4DS 2e scope · bonus).

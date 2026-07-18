@@ -1,19 +1,18 @@
-# 10 custom marks — 自作の mark を足す
+# 10 custom marks — Add your own marks
 
-組み込み mark (`scatter` / `line` / `bar` / `box` / …) に無いプロット型を、**ライブラリ本体
-(`MarkKind` の列挙) を一切編集せず**自分で定義するための拡張点が **custom mark** (`customMark`)。
-このページだけ読めば、 新しい mark を最後まで組めるようにする。
+> 🌐 **English** | [日本語](10-custom-marks.ja.md)
 
-> **いつ使うか**: 既存 mark で描けない図 (dendrogram・独自の annotation・専用ダイアグラム等) を
-> 描きたいとき。 scale / legend / color と深く統合したい本格 mark は core への追加が要る
-> ([09 appendix](09-appendix.md) のライブラリ拡張) が、 「線と文字を自分で置くだけ」の型は
-> custom mark が最短。 ggplot の "Extending ggplot2"・matplotlib の Artist helper
-> (`scipy…dendrogram` 等) と同じ発想。
+For plot types not supported by built-in marks (`scatter` / `line` / `bar` / `box` / …), **custom mark** (`customMark`) is the extension point to define your own **without editing the library core** (`MarkKind` enum).
+Reading this page alone, you can build new marks from start to finish.
 
-## 1. 30 秒版 — 最小の custom mark
+> **When to use**: When you want to draw plots not supported by existing marks (dendrogram, custom annotations, specialized diagrams, etc.).
+> Serious marks needing deep integration with scale / legend / color require core additions ([09 appendix](09-appendix.md) library extension),
+> but types like "just place lines and text yourself" benefit most from custom marks. Same philosophy as ggplot's "Extending ggplot2" and matplotlib's Artist helpers (`scipy…dendrogram` etc.).
 
-`customMark id drawFn` が `Layer` を返す。 `drawFn :: RenderCtx -> [Primitive]` が本体で、
-「文脈 (`RenderCtx`) を受け取り、 図形 (`Primitive`) の列を返す」だけ。
+## 1. 30-second version — Minimal custom mark
+
+`customMark id drawFn` returns `Layer`. `drawFn :: RenderCtx -> [Primitive]` is the core —
+"receive context (`RenderCtx`), return list of shapes (`Primitive`)."
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
@@ -21,73 +20,73 @@ import Hgg.Plot.Easy
 import Hgg.Plot.Primitive (Primitive(..), Point(..), solid)
 import Hgg.Plot.Spec      (RenderCtx(..), customMark)
 
--- 左下 (0,0) から右上 (1,1) へ対角線を 1 本引くだけの mark
+-- Just draw one diagonal from bottom-left (0,0) to top-right (1,1)
 diagonal :: RenderCtx -> [Primitive]
 diagonal ctx =
-  let p x y = uncurry Point (rcProjectXY ctx x y)   -- data 座標 → 画面 px
+  let p x y = uncurry Point (rcProjectXY ctx x y)   -- data coords → screen px
   in [ PLine (p 0 0) (p 1 1) (solid (rcColor ctx) 1.5) ]
 
 main :: IO ()
 main = saveSVG "diag.svg" $
      purePlot
-  <> layer (scatter (inline [0,1]) (inline [0,1]) <> alpha 0.0)  -- 軸 range を確保 (後述)
-  <> layer (customMark "diagonal" diagonal)                       -- ★ core 無改造
+  <> layer (scatter (inline [0,1]) (inline [0,1]) <> alpha 0.0)  -- Reserve axis range (see below)
+  <> layer (customMark "diagonal" diagonal)                       -- ★ no core edits
   <> title "my first custom mark"
 ```
 
-要点は 3 つ:
+Three key points:
 
-1. **`rcProjectXY ctx x y`** で data 座標を画面 px に変換する (scale・log・polar・flip に自動追従)。
-2. `Primitive` 構築子 (`PLine` 等) で図形を作る。
-3. `customMark "id" drawFn` を `layer (…)` に入れて他の layer と `<>` で合成する。
+1. **`rcProjectXY ctx x y`** converts data coords to screen px (auto-follows scale, log, polar, flip).
+2. `Primitive` constructors (`PLine` etc.) create shapes.
+3. Put `customMark "id" drawFn` in `layer (…)` and compose with other layers via `<>`.
 
-## 2. RenderCtx — draw 関数に渡る文脈
+## 2. RenderCtx — Context passed to draw function
 
-`drawFn` が受け取る唯一の引数。 描画に必要なものはすべてここから取る。
+The only argument `drawFn` receives. Everything needed for drawing comes from here.
 
-| フィールド | 型 | 用途 |
+| Field | Type | Purpose |
 |---|---|---|
-| `rcProjectXY` | `Double -> Double -> (Double, Double)` | **data 座標 (x,y) → device px**。 軸 scale / 座標系に追従。 ほぼ必ず使う |
-| `rcPlotArea` | `Rect` | plot 描画領域 (px)。 `Rect {rX,rY,rW,rH}`。 clip や領域基準の配置に |
-| `rcResolver` | `Resolver` | 列名 → データ。 layer に束縛した列を引く (§5) |
-| `rcColor` | `Text` | theme 既定の線 / 点色 |
-| `rcFill` | `Text` | theme 既定の塗り色 |
-| `rcTextColor` | `Text` | theme 既定の文字色 |
-| `rcAxisColor` | `Text` | theme 既定の軸色 |
+| `rcProjectXY` | `Double -> Double -> (Double, Double)` | **Data coords (x,y) → device px**. Follows axis scale / coordinate system. Nearly always used |
+| `rcPlotArea` | `Rect` | Plot drawing area (px). `Rect {rX,rY,rW,rH}`. For clipping or area-relative placement |
+| `rcResolver` | `Resolver` | Column name → data. Fetch columns bound to layer (§5) |
+| `rcColor` | `Text` | Theme default line / point color |
+| `rcFill` | `Text` | Theme default fill color |
+| `rcTextColor` | `Text` | Theme default text color |
+| `rcAxisColor` | `Text` | Theme default axis color |
 
-`RenderCtx(..)` は `Hgg.Plot.Spec` から import する。
+`RenderCtx(..)` imported from `Hgg.Plot.Spec`.
 
-## 3. Primitive — 使える図形の語彙
+## 3. Primitive — Drawing shape vocabulary
 
-`drawFn` が返す backend 非依存の描画命令。 `Hgg.Plot.Primitive` (または再 export する
-`Hgg.Plot.Render`) から import する。 座標はすべて **device px** (= `rcProjectXY` の出力)。
+Backend-agnostic drawing commands returned by `drawFn`. Import from `Hgg.Plot.Primitive` (or re-export from `Hgg.Plot.Render`).
+All coordinates are **device px** (= `rcProjectXY` output).
 
-| 構築子 | 引数 | 意味 |
+| Constructor | Arguments | Meaning |
 |---|---|---|
-| `PLine` | `Point Point LineStyle` | 線分 |
-| `PPath` | `[PathSegment] FillStyle (Maybe StrokeStyle)` | 折れ線 / 曲線 / 多角形 (`MoveTo`/`LineTo`/`CurveTo`/`ClosePath`) |
-| `PRect` | `Rect FillStyle (Maybe StrokeStyle)` | 矩形 |
-| `PCircle` | `Point Double FillStyle (Maybe StrokeStyle) (Maybe Text)` | 円 (最後は hover ラベル・不要なら `Nothing`) |
-| `PText` | `Point Text TextStyle` | 文字 |
+| `PLine` | `Point Point LineStyle` | Line segment |
+| `PPath` | `[PathSegment] FillStyle (Maybe StrokeStyle)` | Polyline / curve / polygon (`MoveTo`/`LineTo`/`CurveTo`/`ClosePath`) |
+| `PRect` | `Rect FillStyle (Maybe StrokeStyle)` | Rectangle |
+| `PCircle` | `Point Double FillStyle (Maybe StrokeStyle) (Maybe Text)` | Circle (last is hover label, `Nothing` if not needed) |
+| `PText` | `Point Text TextStyle` | Text |
 
-スタイル構築子:
+Style constructors:
 
 ```haskell
-solid :: Text -> Double -> LineStyle          -- 実線: solid "#333" 1.5
+solid :: Text -> Double -> LineStyle          -- Solid line: solid "#333" 1.5
 FillStyle   { fsColor :: Text, fsOpacity :: Double }
 StrokeStyle { ssColor :: Text, ssWidth   :: Double }
 TextStyle   { tsColor, tsSize, tsFamily, tsAnchor, tsRotate, tsWeight, tsItalic }
-Point x y                                     -- device px の点
+Point x y                                     -- Point in device px
 ```
 
-`TextStyle` の例: `TextStyle (rcTextColor ctx) 10 "sans-serif" AnchorMiddle 0 "normal" False`
-(`AnchorMiddle`/`AnchorStart`/`AnchorEnd`・`tsRotate` は degrees CCW)。
+`TextStyle` example: `TextStyle (rcTextColor ctx) 10 "sans-serif" AnchorMiddle 0 "normal" False`
+(`AnchorMiddle` / `AnchorStart` / `AnchorEnd`, `tsRotate` in degrees CCW).
 
-## 4. 手順で作る — dendrogram を「普通の mark」として作る
+## 4. Step-by-step — Build dendrogram as a "normal mark"
 
-`"leaf"` (葉の x 位置) と `"height"` (節の高さ) の 2 列から、 併合を「Π 字」の elbow で描く簡易
-dendrogram を作る。 最終形は **`dendrogram "leaf" "height"`** と `scatter x y` と同じ書き味で使える。
-完成例は `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`)。
+Build a simple dendrogram from two columns: `"leaf"` (x position of leaves) and `"height"` (node height).
+Draw merges as Π-shaped elbows. Final form: **`dendrogram "leaf" "height"`** used like `scatter x y`.
+Complete example at `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`).
 
 ```haskell
 import Hgg.Plot.Easy
@@ -95,13 +94,13 @@ import Hgg.Plot.Primitive (Primitive(..), Point(..), TextStyle(..), TextAnchor(.
 import Hgg.Plot.Spec (RenderCtx(..), ColRef, ColData(..), customMark, encX, encY, resolveNum)
 import qualified Data.Vector as V
 
--- ① draw: "leaf"/"height" 列を rcResolver で読み、 elbow を組む (簡単のため 4 葉固定)
+-- ① draw: Read "leaf"/"height" columns via rcResolver, build elbows (4-leaf fixed for simplicity)
 dendroDraw :: RenderCtx -> [Primitive]
 dendroDraw ctx =
-  let num nm = maybe [] V.toList (resolveNum (rcResolver ctx) nm)  -- 列を読む
+  let num nm = maybe [] V.toList (resolveNum (rcResolver ctx) nm)  -- Read column
       p x y  = uncurry Point (rcProjectXY ctx x y)                 -- data→px
       ls     = solid (rcColor ctx) 1.5
-      -- 子を高さ hy で併合する Π 字 (子の基準高さ by1/by2 から立てる)
+      -- Π-shaped elbow merging children at height hy (from base heights by1/by2)
       elbow cx1 by1 cx2 by2 hy =
         [ PLine (p cx1 by1) (p cx1 hy) ls
         , PLine (p cx2 by2) (p cx2 hy) ls
@@ -111,55 +110,55 @@ dendroDraw ctx =
        ([x0,x1,x2,x3], [_,h1,h2]) ->               -- leaf=[0,1,2,3], height=[0,1,2]
          let m01 = (x0+x1)/2; m23 = (x2+x3)/2
          in concat
-              [ elbow x0 0 x1 0 h1                  -- 葉0,1 → 高さ h1
-              , elbow x2 0 x3 0 h1                  -- 葉2,3 → 高さ h1
-              , elbow m01 h1 m23 h1 h2              -- (0,1) と (2,3) → 高さ h2 = root
+              [ elbow x0 0 x1 0 h1                  -- Leaves 0,1 → height h1
+              , elbow x2 0 x3 0 h1                  -- Leaves 2,3 → height h1
+              , elbow m01 h1 m23 h1 h2              -- (0,1) and (2,3) → height h2 = root
               , [ PText (p x (-0.12)) nm ts
                 | (x, nm) <- zip [x0,x1,x2,x3] ["A","B","C","D"] ] ]
        _ -> []
 
--- ② 名前付き combinator = 普通の mark 化。 x/y 列を束ねて軸 range を自動化する。
+-- ② Named combinator = first-class mark. Bundle x/y columns, auto-compute axis range.
 dendrogram :: ColRef -> ColRef -> Layer
 dendrogram x y = customMark "dendrogram" dendroDraw <> encX x <> encY y
 
--- ③ 使う側 = scatter x y と同じ。 列は resolver (ここでは dat) / df |>> で供給。
+-- ③ Usage side = like scatter x y. Columns supplied via resolver (here: dat) / df |>>.
 main :: IO ()
 main = saveSVGWith "dendro.svg" dat $
      purePlot
   <> layer (dendrogram "leaf" "height")
   <> xLabel "leaf" <> yLabel "merge height"
-  where dat "leaf"   = Just (NumData (V.fromList [0,1,2,3]))  -- 葉の x 位置
-        dat "height" = Just (NumData (V.fromList [0,1,2]))    -- 節の高さ (葉基準0 / 1段 / root)
+  where dat "leaf"   = Just (NumData (V.fromList [0,1,2,3]))  -- Leaf x positions
+        dat "height" = Just (NumData (V.fromList [0,1,2]))    -- Node heights (leaf baseline 0 / 1 level / root)
         dat _        = Nothing
 ```
 
-要点:
+Key points:
 
-- **`dendrogram "leaf" "height"` は `scatter x y` と同じ形**。 中身は `customMark … <> encX <> encY`。
-- draw は列を **`rcResolver`** で読む (§5)。 データは `saveSVGWith` の resolver や `df |>>` から流れる。
-- **`encX`/`encY` が軸 range を自動化**する (下記 §4.1)。 無いと既定 `[0,1]` で図形が枠外に出る。
+- **`dendrogram "leaf" "height"` has same shape as `scatter x y`**. Inside: `customMark … <> encX <> encY`.
+- Draw reads columns via **`rcResolver`** (§5). Data flows from `saveSVGWith` resolver or `df |>>`.
+- **`encX`/`encY` auto-compute axis range** (§4.1 below). Without them, default `[0,1]` puts shapes outside frame.
 
-### 4.1 一級 mark 化の仕組み — `encX` / `encY`
+### 4.1 How first-class marks work — `encX` / `encY`
 
-`encX` / `encY` は **mark 種別に依らず x/y 列を束ねる単独 setter** (`Hgg.Plot.Spec`):
+`encX` / `encY` are **mark-independent x/y column bundlers** (`Hgg.Plot.Spec`):
 
 ```haskell
-encX :: ColRef -> Layer          -- x encoding 列だけを束ねる
-encY :: ColRef -> Layer          -- y encoding 列だけを束ねる
+encX :: ColRef -> Layer          -- Bundle x column only
+encY :: ColRef -> Layer          -- Bundle y column only
 ```
 
-`customMark id draw <> encX x <> encY y` と合成すると、 軸 range が `lyEncX`/`lyEncY` から自動計算
-され (`RangeOf` が走査)、 `df |>>` (§5) でデータが流れる。 各 custom mark は固有の `draw` を持つので、
-上の `dendrogram` のように **mark ごとに専用 combinator を書く**のが自然 (汎用の束ねヘルパーは不要)。
+Composing `customMark id draw <> encX x <> encY y`, axis range auto-computes from `lyEncX` / `lyEncY` (`RangeOf` scans),
+data flows via `df |>>` (§5). Each custom mark has its own `draw`, so like `dendrogram` above,
+**write mark-specific wrapper per mark** (no need for generic bundler helpers).
 
-`encX`/`encY` を束ねると **軸 range が自動計算**され (`RangeOf` が `lyEncX`/`lyEncY` を走査)、
-`df |>>` (§5) でデータが流れる。 各 custom mark は固有の `draw` を持つので、 このように
-**mark ごとに専用 wrapper を書く**のが自然 (汎用の束ねヘルパーは不要)。
+When `encX` / `encY` bundled, **axis range auto-computes** (`RangeOf` scans `lyEncX` / `lyEncY`),
+data flows via `df |>>` (§5). Each custom mark has unique `draw`, so naturally
+**write per-mark wrapper** (no generic bundle helper needed).
 
-## 5. データを流し込む 2 通り
+## 5. Two ways to feed data
 
-- **closure に閉じ込める** (上の例): 葉座標を draw 関数に直接書く。 HS の強み。 最短。
-- **列から引く**: layer に束縛した列を `rcResolver` で読む。 スクリーン上のデータ駆動に。
+- **Closures** (example above): Write leaf coords directly in draw function. Haskell strength. Shortest.
+- **From columns**: Read column bound to layer via `rcResolver`. Data-driven on screen.
 
 ```haskell
 import Hgg.Plot.Spec (resolveNum)
@@ -172,61 +171,59 @@ fromCols ctx =
                 (FillStyle (rcColor ctx) 1) Nothing Nothing
       | (x, y) <- zip (V.toList xs) (V.toList ys) ]
     _ -> []
--- 列は resolver 経由で渡す:
+-- Pass columns via resolver:
 --   saveSVGWith "out.svg" myResolver (… customMark "c" fromCols …)
--- DataFrame なら df |>> がそのまま resolver を供給する (§4.1 の一級 mark 化と併用):
+-- DataFrame: df |>> supplies resolver directly (combine with §4.1 first-class mark):
 --   saveSVGBound "out.svg" (df |>> (purePlot <> layer (dendrogram "leaf" "height")))
 ```
 
-`df |>>` は df の列を読む resolver (`dfResolver df`) を図に束ねる。 custom mark の `draw` が
-`rcResolver` で同じ列名を読めば、 追加配線なしで DataFrame のデータが流れる。
+`df |>>` bundles df's column resolver (`dfResolver df`) into the plot. When custom mark's `draw` reads the same column names
+via `rcResolver`, DataFrame data flows with no extra wiring.
 
-## 6. canvas (PureScript) でも描く — parity
+## 6. Also draw on canvas (PureScript) — Parity
 
-custom mark の描画 closure は **HS 専用** (関数は JSON 化できない)。 図を JSON にして canvas
-(PureScript) に渡すと `id` と option だけが送られ、 closure は落ちる。 canvas でも同じ mark を
-描きたいときは、 **同じ `id` で PureScript 側の registry に draw 関数を手登録**する
-(HS↔PS を手でミラーする現行の作法どおり)。 登録しなければ canvas では **skip** される
-(= HS 専用 = SVG / PDF / Rasterific のみ)。
+Custom mark closures are **Haskell-only** (functions can't JSON-serialize). Serializing plot to JSON for canvas (PureScript)
+sends only `id` and options; closure drops. To draw same mark on canvas too, **hand-register draw function in PureScript registry** with same `id`
+(current HS↔PS hand-mirroring practice). Unregistered → canvas **skips** (= Haskell-only = SVG / PDF / Rasterific only).
 
 ```purescript
-import Hgg.Plot.Custom (registerMark)          -- RenderCtx もここから
+import Hgg.Plot.Custom (registerMark)          -- RenderCtx also from here
 import Hgg.Plot.Render.Common (Primitive(..), Point(..))
 
--- HS の drawFn と同じ図形を返すよう手で書く
+-- Hand-write to return same shapes as HS drawFn
 dendroDrawPS :: Json -> RenderCtx -> Array Primitive
 dendroDrawPS _opts ctx =
-  let p x y = case ctx.projectXY x y of { r -> Point r.x r.y }  -- projection は {x,y}
+  let p x y = case ctx.projectXY x y of { r -> Point r.x r.y }  -- projection returns {x,y}
   in [ PLine (p 0.0 0.0) (p 0.0 1.0) (solid ctx.color 1.5), … ]
 
 main = do
-  registerMark "dendrogram" dendroDrawPS   -- アプリ起動時に一度
+  registerMark "dendrogram" dendroDrawPS   -- Once at app startup
   …
 ```
 
-PS の `RenderCtx` は HS と同じ項目 (`projectXY` / `plotArea` / `resolver` / `color` / `fill` /
-`textColor` / `axisColor`)。 違いは **projection が `{ x, y }` レコードを返す**点だけ (PS 慣例)。
-option (`customMarkWith` で渡した JSON) は draw 関数の第 1 引数 `Json` に来る。
+PureScript `RenderCtx` has same fields as HS (`projectXY` / `plotArea` / `resolver` / `color` / `fill` /
+`textColor` / `axisColor`). Only difference: **projection returns `{ x, y }` record** (PS convention).
+Options (`customMarkWith` JSON) become draw function's first arg `Json`.
 
-## 7. core への昇格 (promotion)
+## 7. Promote to core
 
-出来が良く「組み込みにしたい」ときは、 **登録をライブラリ内に移すだけ**で済むよう設計されている:
+When well-designed and "you want it built-in," promotion is designed to cost nothing:
 
-- HS: draw 関数をライブラリの module に置き、 `customMark "id"` 呼び出しをそのライブラリ関数にする
-  (公開 API・`id` 不変ゆえ利用側コード非破壊)。
-- PS: `registerMark "id" drawPS` をライブラリ初期化で呼ぶ。
+- HS: Place draw function in library module, swap `customMark "id"` call with that library function
+  (public API, `id` unchanged, so user code stays compatible).
+- PS: Call `registerMark "id" drawPS` in library initialization.
 
-scale / legend / color と本格統合したい場合のみ core の `MarkKind` に constructor + renderer を足す
-(従来経路)。 custom mark はそこまで要らない型のための軽量チャネル。
+Add constructor + renderer to core `MarkKind` only if deep integration with scale / legend / color is needed (traditional path).
+Custom marks are a lightweight channel for types not needing that.
 
-## 8. API 早見
+## 8. API quick reference
 
 ```haskell
--- Hgg.Plot.Spec (Easy でも可)
+-- Hgg.Plot.Spec (Easy also OK)
 customMark     :: Text -> (RenderCtx -> [Primitive]) -> Layer
-customMarkWith :: Text -> Value -> (RenderCtx -> [Primitive]) -> Layer   -- PS へ渡す option 付き
-encX           :: ColRef -> Layer   -- x 列を束ねる (mark 非依存・一級 mark 化 / 軸 range 自動)
-encY           :: ColRef -> Layer   -- y 列を束ねる
+customMarkWith :: Text -> Value -> (RenderCtx -> [Primitive]) -> Layer   -- With options for PS
+encX           :: ColRef -> Layer   -- Bundle x column (mark-independent, first-class mark / auto axis range)
+encY           :: ColRef -> Layer   -- Bundle y column
 
 data RenderCtx = RenderCtx
   { rcProjectXY :: Double -> Double -> (Double, Double)
@@ -241,12 +238,12 @@ registerMark :: String -> (Json -> RenderCtx -> Array Primitive) -> Effect Unit
 type RenderCtx = { projectXY :: Number -> Number -> { x :: Number, y :: Number }
                  , plotArea :: Rect, resolver :: Resolver
                  , color, fill, textColor, axisColor :: String }
--- PureScript でも同型の customMark / customMarkWith が Hgg.Plot.Spec にある
+-- PureScript also has isomorphic customMark / customMarkWith in Hgg.Plot.Spec
 ```
 
-## 関連
+## Related
 
-- 最小作例: `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`)。
-- 設計背景 (なぜ closure・なぜ Primitive を leaf に): `specification/phases/phase-51-custom-mark-extension.md`。
-- 参考: ggplot "Extending ggplot2" / matplotlib Artist / scipy dendrogram (helper 関数方式)。
-- 本格 mark を core に足す場合: [09 appendix](09-appendix.md) のライブラリ拡張。
+- Minimal example: `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`).
+- Design rationale (why closures, why Primitive as leaf): `specification/phases/phase-51-custom-mark-extension.md`.
+- References: ggplot "Extending ggplot2" / matplotlib Artist / scipy dendrogram (helper function style).
+- Adding serious marks to core: [09 appendix](09-appendix.md) library extension.

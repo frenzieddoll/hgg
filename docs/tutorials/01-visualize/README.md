@@ -1,67 +1,71 @@
-# 01. データ可視化 (R4DS 2e Ch.1 "Data visualization")
+# 01. Data Visualization (R4DS 2e Ch.1 "Data visualization")
 
-> 一次情報: **R for Data Science 2e, Ch.1 "Data visualization"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.1 "Data visualization"**
 > <https://r4ds.hadley.nz/data-visualize>
-> データ: **palmerpenguins** の `penguins`(344 個体。 出所は
+> Data: **palmerpenguins** `penguins` (344 individuals. Source in
 > [`../_data/_raw/SOURCE.md`](../_data/_raw/SOURCE.md))
 >
-> 使う mark の詳細仕様(シグネチャ・encoding・全オプション)は
-> [API リファレンス 02 layers](../../api-guide/02-layers.md) に。
+> Detailed specifications for marks used (signature, encoding, all options) are in
+> [API Reference 02 layers](../../api-guide/02-layers.md).
 
-> 「単純なグラフは、 他のどんな道具よりも多くの情報をデータ分析者の頭にもたらす。」
+> "The simple graph has brought more information to the data analyst's mind than any other device."
 > — John Tukey
 
-hgg は **グラフィックスの文法 (grammar of graphics)** —— グラフを記述し
-組み立てるための一貫した体系 —— を実装しています。 中心になる考え方は 1 つだけ:
-**可視化とは、 データの変数を位置・色・大きさ・形といった視覚属性 (aesthetic) へ
-写像することだ** というものです。 この 1 つの体系を覚えれば、 さまざまな図を
-同じ書き方で速く作れます。
+hgg implements the **grammar of graphics** —— a unified system for describing and composing
+visualizations. At its core is a single idea: **visualization is the process of mapping
+variables in data to visual attributes (aesthetics) such as position, color, size, and shape**.
+Once you master this one system, you can create a wide variety of plots using the same approach
+and quickly iterating.
 
-この章では、 まず散布図を作りながら **aesthetic (視覚属性へのマッピング)** と
-**mark (図形要素)** という 2 つの基本部品を導入し、 続いて 1 変数の分布、
-2 変数以上の関係を可視化し、 最後に図の保存とつまずきどころを扱います。
+In this chapter, we first build a scatter plot while introducing two fundamental components:
+**aesthetics** (mapping data to visual attributes) and **marks** (graphical elements). We then
+visualize distributions of a single variable and relationships among two or more variables,
+ending with plot saving and common pitfalls.
 
-penguins 全量(344 行)を使い、 R4DS 各図の見た目(mark の種類・色や形のマッピング・
-binwidth/position/facet 等の設定)を hgg の `layer (mark …)` で同じ図になるよう
-写しています。 hgg では data を `|>>` で束ね、 `scatter`/`bar`/`boxplot` 等の
-**mark** を `layer` で重ねて図を作り、 色・形・大きさは mark 内の `colorBy`/`shapeBy`/…
-で与えます。 以下は R4DS の流れに沿って、 **解説 → コード → 図** を順に並べた
-walkthrough です。 完全な実行コードは [`Visualize.hs`](Visualize.hs)。
+Using the complete penguins dataset (344 rows), we reproduce R4DS plots by configuring mark
+types, color and shape mappings, and parameters (binwidth, position, facet) using hgg's
+`layer (mark ...)` to match each R4DS figure. In hgg, we bind data with `|>>`, layer marks
+like `scatter`/`bar`/`boxplot` using `layer`, and specify colors and shapes via `colorBy`/`shapeBy`
+within the mark. Below is a walkthrough following R4DS's progression with **explanation →
+code → plot** laid out in sequence. The complete executable code is in [`Visualize.hs`](Visualize.hs).
 
 ```sh
 cd docs/tutorials/01-visualize
-cabal run tut-01-visualize    # 01-teaser.svg .. 24-facet-island.svg を生成
+cabal run tut-01-visualize    # generates 01-teaser.svg ... 24-facet-island.svg
 ```
 
-## 欠損値(最初に 1 つだけ)
+## Missing Values (One Subtlety First)
 
-`flipper_length_mm` と `body_mass_g` には欠損(2 行)があり、 dataframe では
-`Maybe Int` として読まれます。 hgg は **`Maybe` 列を列名でそのまま読め、
-mark も stat(回帰線など)も `Nothing`(NA)を自動で落とします**(= R の `na.rm`)。
-なので以降の図は `raw` を直読し、 明示的なフィルタは要りません。
+`flipper_length_mm` and `body_mass_g` have missing values (2 rows), represented in dataframe
+as `Maybe Int`. hgg **reads `Maybe` columns by name directly, and both marks and stats
+(like regression lines) automatically drop `Nothing` (NA)** (equivalent to R's `na.rm`).
+Thus subsequent plots read `raw` directly without explicit filtering.
 
-明示的に欠損行を落としたいときは `DF.filterJust` も使えます(= R4DS の
-*"removing 2 rows containing missing values"* に相当):
+To explicitly drop missing rows, you can use `DF.filterJust` (equivalent to R4DS's
+*"removing 2 rows containing missing values"*):
 
 ```haskell
--- 明示除去 (任意): NA 行を落として plain な Int 列にする
+-- Explicit removal (optional): drop NA rows to get a plain Int column
 let cleaned = raw |> DF.filterJust "flipper_length_mm"
                   |> DF.filterJust "body_mass_g"
--- ただし以降の図は raw を直読する (mark/stat が NA を自動除外するため)
+-- But subsequent plots read raw directly (mark/stat auto-exclude NA)
 ```
 
 ---
 
-## §1.1 完成図(章扉の motivating plot)
+## §1.1 Teaser Plot (Chapter Opening Motivating Plot)
 
-R4DS は章の冒頭で「この章を終えると描けるようになる図」を見せます。 体重と
-フリッパー長の関係を、 種で色分け・形分けし、 回帰直線(`statLm`)と
-タイトル・整形ラベルを添えた完成図です(`09-final.svg` と同一)。
+R4DS opens each chapter with "this is what you'll be able to create by chapter's end."
+It's a complete plot showing the relationship between body mass and flipper length,
+colored and shaped by species, with a regression line (`statLm`) and formatted title/labels
+(same as `09-final.svg`).
 
-配色には colorblind-safe な **Okabe-Ito パレット**(`palette okabeIto`)を使います。
-本章では、 この完成図と最後の仕上げ図の **2 枚だけ** が整形ラベルと colorblind
-パレットを持ち、 途中の図は軸ラベル=変数名そのまま・配色=既定のままにします
-(R4DS が `labs()` と `scale_color_colorblind()` をこの 2 枚にだけ付けるのに合わせ)。
+We use a colorblind-safe **Okabe-Ito palette** (`palette okabeIto`).
+In this chapter, only this teaser and the final figure have formatted labels and colorblind palette;
+intermediate plots use axis labels as-is and default coloring (matching how R4DS applies `labs()`
+and `scale_color_colorblind()` only to these two).
 
 ```haskell
 saveSVGBoundStats "01-teaser.svg" $
@@ -80,14 +84,15 @@ saveSVGBoundStats "01-teaser.svg" $
 
 ---
 
-## §1.2 散布図を一歩ずつ組み立てる
+## §1.2 Building a Scatter Plot Step by Step
 
-hgg では、 データを `|>>` で束ねた spec に `layer (mark …)` を重ねて図を作ります。
-mark を 1 つも足さなければ空のキャンバスのままです。 R4DS の「空パネル → 軸 → 図」
-の流れに対応させて、 まず mark 無しの状態から見ていきます。
+In hgg, we create a plot by binding data with `|>>` to a spec and layering `layer (mark ...)`
+on top of it. Without any marks, the canvas remains empty. Corresponding to R4DS's progression
+from "empty panel → axes → plot", we start with no marks.
 
-**mark 無し(`purePlot` = 空 spec)** — 何も重ねなければ空のパネルだけ。 列を
-指定していないので、 軸は既定レンジ(0–1)になります(= hgg が空 spec で出す姿)。
+**No marks (`purePlot` = empty spec)** — With nothing layered, we get an empty panel only.
+Since no columns are specified, axes default to the range 0–1 (this is what hgg shows for an
+empty spec).
 
 ```haskell
 saveSVG "02-empty.svg" $
@@ -96,10 +101,10 @@ saveSVG "02-empty.svg" $
 
 ![empty](02-empty.svg)
 
-**軸ラベルだけ付ける(まだ mark 無し)** — `xLabel`/`yLabel` で軸名を付けても、
-列・スケールは mark が決めるので、 mark を足すまでは目盛は既定レンジ(0–1)のまま・
-点もありません(R4DS の「軸だけ・図は無し」 に対応する step。 hgg は mark を
-足して初めて列が定まる点が違います)。
+**Axis labels only (still no marks)** — Adding `xLabel`/`yLabel` labels the axes, but scale
+is determined by marks, so ticks remain at default (0–1) and no points appear until we add a mark
+(this corresponds to R4DS's "axes only, no plot" step; hgg differs in that columns are only
+determined once a mark is added).
 
 ```haskell
 saveSVGBound "03-empty-axes.svg" $
@@ -109,8 +114,9 @@ saveSVGBound "03-empty-axes.svg" $
 
 ![empty axes](03-empty-axes.svg)
 
-**`layer (scatter …)` を足す** — 最初の散布図。
-列名を与えた scatter mark がデータ範囲の軸と点を生みます。 体重とフリッパー長は正の相関。
+**Adding `layer (scatter ...)`** — Our first scatter plot.
+A scatter mark given column names creates axes spanning the data range and produces points.
+Body mass and flipper length show positive correlation.
 
 ```haskell
 saveSVGBound "04-scatter.svg" $
@@ -121,10 +127,11 @@ saveSVGBound "04-scatter.svg" $
 
 ![scatter](04-scatter.svg)
 
-**`colorBy "species"` を足す** — 種ごとに色分け。 カテゴリ変数を色 channel へ
-写像すると、 hgg は各水準に自動で色を割り当て、 凡例も自動生成します
-(= ggplot の scaling)。 色・x 軸・点の形・facet の **水準順はすべてアルファベット順**
-(ここでは Adelie / Chinstrap / Gentoo)で、 配色は既定の hue パレット(3 色)です。
+**Adding `colorBy "species"`** — Color-coding by species. When a categorical variable is
+mapped to the color channel, hgg automatically assigns a color to each level and generates
+a legend (equivalent to ggplot's scaling). **Levels for color, x-axis, point shape, and
+facet are all alphabetically ordered** (here: Adelie / Chinstrap / Gentoo), using the default
+hue palette (3 colors).
 
 ```haskell
 saveSVGBound "05-color.svg" $
@@ -137,8 +144,9 @@ saveSVGBound "05-color.svg" $
 
 ![color](05-color.svg)
 
-**回帰直線 `layer (statLm …)` を重ねる** — `colorBy "species"` を散布と回帰の
-両 layer に付けると、 群が両方に効くので **種ごとに 3 本**の回帰直線が引かれます。
+**Overlaying regression line `layer (statLm ...)`** — Applying `colorBy "species"` to both
+scatter and regression layers means the grouping affects both, so **3 regression lines appear,
+one for each species**.
 
 ```haskell
 saveSVGBoundStats "06-smooth-species.svg" $
@@ -152,9 +160,9 @@ saveSVGBoundStats "06-smooth-species.svg" $
 
 ![smooth species](06-smooth-species.svg)
 
-**`colorBy` を散布 layer だけに付ける** — 回帰直線は全データで **1 本**(ggplot 既定の青)。
-このように同じ aesthetic を **どの layer に置くか** で図の意味が変わります(全 layer に
-効かせるか、 特定の mark だけに効かせるか)。
+**Applying `colorBy` to scatter layer only** — The regression line spans all data as **1 line**
+(ggplot's default blue). This shows how placing the same aesthetic **on different layers
+changes the plot's meaning** (applying globally to all layers vs. to a specific mark only).
 
 ```haskell
 saveSVGBoundStats "07-smooth-global.svg" $
@@ -168,7 +176,8 @@ saveSVGBoundStats "07-smooth-global.svg" $
 
 ![smooth global](07-smooth-global.svg)
 
-**`colorBy "species"` + `shapeBy "species"`** — 色に加えて点の形でも種を区別。
+**`colorBy "species"` + `shapeBy "species"`** — In addition to color, distinguish species
+by point shape.
 
 ```haskell
 saveSVGBoundStats "08-shape.svg" $
@@ -182,8 +191,8 @@ saveSVGBoundStats "08-shape.svg" $
 
 ![shape](08-shape.svg)
 
-**完成図に仕上げる** — `title`/`subtitle`/`xLabel`/`legendTitle` でラベルを整え、
-colorblind-safe パレット(Okabe-Ito)を `palette okabeIto` で添えます(= teaser)。
+**Finishing the plot** — Polish with `title`/`subtitle`/`xLabel`/`legendTitle`, and apply
+the colorblind-safe Okabe-Ito palette via `palette okabeIto` (same as teaser).
 
 ```haskell
 saveSVGBoundStats "09-final.svg" $
@@ -202,46 +211,45 @@ saveSVGBoundStats "09-final.svg" $
 
 ---
 
-## §1.3 hgg の書き方
+## §1.3 The hgg Pattern
 
-ここまでで散布図の組み立て方を見てきました。 以降の図でくり返し現れる **書き方の型**
-を一度まとめておきます(R4DS が §1.3 でコードを簡潔形へ移行するのに対応する節です)。
+Now that we've seen how to build a scatter plot, let's consolidate the **recurring pattern**
+we'll see in subsequent plots (corresponding to §1.3 in R4DS where code transitions to
+concise form).
 
-hgg の図は、 つねに次の形をしています:
+An hgg plot always takes this shape:
 
 ```haskell
-データ |>> layer (mark 列… <> aesthetic…) <> 装飾…
+data |>> layer (mark columns… <> aesthetic…) <> decoration…
 ```
 
-- **`|>>`** — DataFrame と spec を束ねる(plot bind)演算子。 左にデータ、 右に
-  spec を置きます。 データ変換に使う `|>`(DataFrame の前方パイプ、 R4DS の `|>` と
-  同型)とは別物です。
-- **`layer (mark …)`** — 1 つの図形レイヤー。 `scatter`/`bar`/`histogram`/… の
-  **mark** に列名と aesthetic を与えます。 `layer` を `<>` で重ねれば多層の図に
-  なります。
-- **`<>`** — mark 内の aesthetic どうし、 layer どうし、 装飾どうしを結合する演算子
-  (モノイド結合)。 `colorBy "species" <> alpha 0.85` のように属性を足し合わせます。
-- **装飾** — `xLabel`/`title`/`legendTitle`/`theme`/`palette` 等。 layer の外側に
-  `<>` で足します。
+- **`|>>`** — Plot bind operator combining DataFrame and spec. Data on the left, spec on the right.
+  Different from `|>` (DataFrame's forward pipe, equivalent to R4DS's `|>`).
+- **`layer (mark ...)`** — A single graphical layer. Give a **mark** like `scatter`/`bar`/`histogram`
+  column names and aesthetics. Layering multiple `layer`s with `<>` builds multipart plots.
+- **`<>`** — Monoid combining operator joining aesthetics within a mark, between layers, and
+  between decorations. Combine attributes like `colorBy "species" <> alpha 0.85`.
+- **Decorations** — Functions like `xLabel`/`title`/`legendTitle`/`theme`/`palette`. Added
+  outside layers with `<>`.
 
-図を出力する関数は、 図の中身に応じて 3 つを使い分けます:
+Depending on the plot's contents, use one of three output functions:
 
-| 関数 | いつ使うか |
+| Function | When to use |
 |---|---|
-| `saveSVG` | 列名を使わない(値を直接埋め込んだ inline データの)図 |
-| `saveSVGBound` | `df \|>> spec` で **列名** を使う図(本章の基本) |
-| `saveSVGBoundStats` | 上に加えて回帰線など **stat**(`statLm`/`statSmooth`)を含む図 |
+| `saveSVG` | Plots without column names (inline data with literal values) |
+| `saveSVGBound` | `df \|>> spec` using **column names** (typical for this chapter) |
+| `saveSVGBoundStats` | Plus **stats** like `statLm`/`statSmooth` |
 
-この型さえ覚えれば、 あとは mark と aesthetic を差し替えるだけで、 散布図・棒・
-ヒストグラム・箱ひげ…と同じ書き方のまま作り分けられます。 以降の節はすべて
-この型で書かれています。
+Remembering this pattern, you simply swap out marks and aesthetics to create scatter,
+bar, histogram, boxplot—all using the same structure. All subsequent sections follow
+this pattern.
 
 ---
 
-## §1.4 1 変数の分布
+## §1.4 Single Variable Distributions
 
-**`bar` mark(種ごとの件数)** — カテゴリ変数の件数。 棒は件数集計が要るので、
-ここでは `DF.aggregate` で先に求めます(値は不変)。 x はアルファベット順。
+**`bar` mark (count by species)** — Count for categorical variable. Since bars require
+aggregation, first compute with `DF.aggregate` (values unchanged). x is in alphabetical order.
 
 ```haskell
 let bySpecies = raw |> DF.groupBy ["species"]
@@ -255,8 +263,8 @@ saveSVGBound "10-bar-species.svg" $
 
 ![bar species](10-bar-species.svg)
 
-**件数降順に並べる** — (Adelie 152 > Gentoo 124 > Chinstrap 68)。
-`scaleXDiscreteLimits` で水準順を明示します(R4DS の `fct_infreq` 相当)。
+**Sort by descending count** — (Adelie 152 > Gentoo 124 > Chinstrap 68).
+Use `scaleXDiscreteLimits` to specify level order explicitly (equivalent to R4DS's `fct_infreq`).
 
 ```haskell
 saveSVGBound "11-bar-infreq.svg" $
@@ -268,8 +276,8 @@ saveSVGBound "11-bar-infreq.svg" $
 
 ![bar infreq](11-bar-infreq.svg)
 
-**`histogram` mark(`binWidth 200`)** — 連続変数(体重)の分布。 `binWidth`
-(= R4DS の `binwidth`)が bin の境界と棒の高さを決めます。
+**`histogram` mark (`binWidth 200`)** — Distribution of continuous variable (body mass).
+`binWidth` (R4DS's `binwidth`) determines bin boundaries and bar heights.
 
 ```haskell
 saveSVGBound "12-histogram-bw200.svg" $
@@ -280,7 +288,7 @@ saveSVGBound "12-histogram-bw200.svg" $
 
 ![histogram bw200](12-histogram-bw200.svg)
 
-**`binWidth 20`** — 細かすぎてギザギザ(過剰に解像)。
+**`binWidth 20`** — Too fine, jagged (over-resolved).
 
 ```haskell
 saveSVGBound "13-histogram-bw20.svg" $
@@ -291,7 +299,7 @@ saveSVGBound "13-histogram-bw20.svg" $
 
 ![histogram bw20](13-histogram-bw20.svg)
 
-**`binWidth 2000`** — 粗すぎて 3 bin(情報が潰れる)。
+**`binWidth 2000`** — Too coarse, 3 bins (information lost).
 
 ```haskell
 saveSVGBound "14-histogram-bw2000.svg" $
@@ -302,7 +310,7 @@ saveSVGBound "14-histogram-bw2000.svg" $
 
 ![histogram bw2000](14-histogram-bw2000.svg)
 
-**`density` mark** — 分布を滑らかな曲線で。
+**`density` mark** — Smooth curve representation of distribution.
 
 ```haskell
 saveSVGBound "15-density.svg" $
@@ -315,9 +323,9 @@ saveSVGBound "15-density.svg" $
 
 ---
 
-## §1.5 2 変数(以上)の関係
+## §1.5 Relationships Among Two or More Variables
 
-**`boxplot` mark(種 × 体重)** — カテゴリ × 連続。
+**`boxplot` mark (species × body mass)** — Categorical × continuous.
 
 ```haskell
 saveSVGBound "16-boxplot.svg" $
@@ -328,7 +336,7 @@ saveSVGBound "16-boxplot.svg" $
 
 ![boxplot](16-boxplot.svg)
 
-**`density` + `colorBy "species"`** — 種ごとに 3 本の密度曲線。
+**`density` + `colorBy "species"`** — Three density curves, one per species.
 
 ```haskell
 saveSVGBound "17-density-color.svg" $
@@ -340,7 +348,7 @@ saveSVGBound "17-density-color.svg" $
 
 ![density color](17-density-color.svg)
 
-**`densityFill True` + `alpha 0.5`** — 塗りつぶし付き密度曲線。
+**`densityFill True` + `alpha 0.5`** — Filled density curves.
 
 ```haskell
 saveSVGBound "18-density-fill.svg" $
@@ -353,8 +361,8 @@ saveSVGBound "18-density-fill.svg" $
 
 ![density fill](18-density-fill.svg)
 
-**`bar` + `colorBy "species"`(島 × 種)** — 2 カテゴリ。 既定(stack)で
-積み上げ。 第 1 水準(Adelie)を一番上に積みます。
+**`bar` + `colorBy "species"` (island × species)** — Two categorical variables.
+Default (stack) stacks bars. First level (Adelie) stacks at the top.
 
 ```haskell
 let byIslandSpecies = raw |> DF.groupBy ["island", "species"]
@@ -369,7 +377,7 @@ saveSVGBound "19-bar-stack.svg" $
 
 ![bar stack](19-bar-stack.svg)
 
-**`position PosFill`** — 各島の合計を 1 に揃える(構成比)。 y 軸ラベルは既定のまま。
+**`position PosFill`** — Normalize each island to 1 (proportions). Y-axis label remains default.
 
 ```haskell
 saveSVGBound "20-bar-fill.svg" $
@@ -381,7 +389,7 @@ saveSVGBound "20-bar-fill.svg" $
 
 ![bar fill](20-bar-fill.svg)
 
-**`yLabel "proportion"`** — y 軸ラベルを「proportion」に直す。
+**`yLabel "proportion"`** — Change y-axis label to "proportion".
 
 ```haskell
 saveSVGBound "21-bar-fill-proportion.svg" $
@@ -393,7 +401,7 @@ saveSVGBound "21-bar-fill-proportion.svg" $
 
 ![bar fill proportion](21-bar-fill-proportion.svg)
 
-**素の散布図(§1.5.3 冒頭)** — 3 変数を加える前の出発点。
+**Plain scatter plot (start of §1.5.3)** — Baseline before adding three variables.
 
 ```haskell
 saveSVGBound "22-scatter-plain.svg" $
@@ -404,7 +412,7 @@ saveSVGBound "22-scatter-plain.svg" $
 
 ![scatter plain](22-scatter-plain.svg)
 
-**`colorBy "species"` + `shapeBy "island"`** — 3 変数(色=種・形=島)。
+**`colorBy "species"` + `shapeBy "island"`** — Three variables (color = species, shape = island).
 
 ```haskell
 saveSVGBound "23-scatter-shape-island.svg" $
@@ -417,7 +425,7 @@ saveSVGBound "23-scatter-shape-island.svg" $
 
 ![scatter shape island](23-scatter-shape-island.svg)
 
-**`facetWrap "island" 3`** — 島ごとに小パネルへ分割(パネルもアルファベット順)。
+**`facetWrap "island" 3`** — Split by island into small panels (panels also alphabetically ordered).
 
 ```haskell
 saveSVGBound "24-facet-island.svg" $
@@ -433,11 +441,11 @@ saveSVGBound "24-facet-island.svg" $
 
 ---
 
-## §1.6 図を保存する
+## §1.6 Saving Plots
 
-図を作ったら、 ファイルに書き出して他の場所で使いたくなります。 それが
-`saveSVG` 系の関数の役目です。 本章ではずっと `saveSVGBound` / `saveSVGBoundStats`
-を使ってきました。 これらは渡した spec を SVG ファイルとして保存します。
+Once you've created a plot, you'll want to save it to a file for use elsewhere.
+That's what the `saveSVG` family of functions does. Throughout this chapter we've used
+`saveSVGBound` / `saveSVGBoundStats`. These save the spec to an SVG file.
 
 ```haskell
 saveSVGBound "penguin-plot.svg" $
@@ -445,9 +453,8 @@ saveSVGBound "penguin-plot.svg" $
       <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
 ```
 
-**図の寸法** は backend 引数ではなく **spec 側** で `width` / `height` /
-`aspectRatio` として持ちます。 再現可能なコードにするため、 寸法は明示するのが
-おすすめです:
+**Plot dimensions** are properties of the spec (not backend arguments), given as `width` /
+`height` / `aspectRatio`. For reproducible code, it's best to specify dimensions explicitly:
 
 ```haskell
 saveSVGBound "penguin-plot.svg" $
@@ -455,54 +462,53 @@ saveSVGBound "penguin-plot.svg" $
       <> width 640 <> height 480
 ```
 
-**出力形式** は backend を差し替えるだけで変えられます。 API は SVG/PDF/PNG で
-対称です:
+**Output format** changes by swapping the backend. The API is symmetric across SVG/PDF/PNG:
 
-| 形式 | 関数 | import |
+| Format | Functions | import |
 |---|---|---|
 | SVG | `saveSVG` / `saveSVGBound` | `Hgg.Plot.Backend.SVG` |
 | PDF | `savePDF` / `savePDFBound` | `Hgg.Plot.Backend.PDF` |
-| PNG | `savePNG` / `savePNGBound` | `Hgg.Plot.Backend.Rasterific`(日本語ラベル可) |
+| PNG | `savePNG` / `savePNGBound` | `Hgg.Plot.Backend.Rasterific` (supports Japanese labels) |
 
-詳しくは [API リファレンス 05 backends](../../api-guide/05-backends.md) を参照してください。
-
----
-
-## §1.7 よくある問題
-
-コードを書き始めると、 たいてい何かしら詰まります。 心配いりません —— 誰でも
-通る道です。 まずは自分のコードを本章のコードと **一字ずつ** 見比べてください。
-Haskell も型と構文にとても厳しく、 1 文字の取り違えで結果が変わります。
-
-- **括弧の対応**: すべての `(` に `)` が、 すべての `"` に対の `"` があるか確認します。
-- **演算子の優先順位**: `|>>` は `<>` より低い優先度です。 mark 内の aesthetic を
-  `<>` で結合し、 layer の外側に装飾を `<>` で足す —— この入れ子を間違えると型が
-  合いません。 迷ったら layer 単位で括弧を付けて切り分けます。
-- **mark に必要な列**: `scatter` は x・y の 2 列、 `histogram`/`density` は 1 列が
-  必須です。 列が足りないと型エラーになります。
-- **列名のタイプミス**: `|>>` で渡す列名(`"flipper_length_mm"` 等)が DataFrame に
-  実在するか確認します。 存在しない列名は実行時に分かります。
-- **`OverloadedStrings` / `TypeApplications`**: 文字列リテラルを列名に使うには
-  `OverloadedStrings`、 `F.col @Text` には `TypeApplications` の言語拡張が要ります
-  (`Visualize.hs` 冒頭の `{-# LANGUAGE … #-}` 参照)。
-
-それでも詰まったら、 [API リファレンス](../../api-guide/README.md)で該当 mark の
-シグネチャと例を確認し、 型エラーのメッセージを落ち着いて読んでください。 答えが
-そこに埋もれていることがよくあります。
+See [API Reference 05 backends](../../api-guide/05-backends.md) for details.
 
 ---
 
-## §1.8 まとめ
+## §1.7 Common Pitfalls
 
-この章では、 hgg によるデータ可視化の基礎を学びました。 出発点は
-**「可視化とは、 データの変数を位置・色・大きさ・形といった視覚属性へ写像することだ」**
-という考え方です。 そこから、 `layer` を `<>` で重ねて図を一段ずつ複雑に・きれいに
-していく方法を学びました。 さらに、 1 変数の分布(棒・ヒストグラム・密度)と、
-2 変数以上の関係(箱ひげ・色分け密度・積み上げ棒・3 変数散布図)を、 追加の
-aesthetic マッピングや `facetWrap` による小パネル分割で表現しました。 最後に、
-図を SVG/PDF/PNG で保存する方法を見ました。
+When you start writing code, something will usually trip you up. Don't worry ——
+everyone encounters these. Start by comparing your code to this chapter's code
+**character by character**. Haskell is strict about types and syntax;
+a single character mismatch changes the result.
 
-可視化はこのチュートリアル群を通じてくり返し登場します。 より進んだ encoding・
-scale・theme の制御は [API リファレンス 03 encoding & scale](../../api-guide/03-encoding-scale.md) /
-[04 decoration](../../api-guide/04-decoration.md) で、 統計モデルとの連携は
-[07 analyze](../../api-guide/07-analyze.md) で深掘りできます。
+- **Matching parentheses**: Check that every `(` has a closing `)` and every `"` has a closing `"`.
+- **Operator precedence**: `|>>` has lower precedence than `<>`. Combine aesthetics within
+  a mark with `<>`, add decorations outside layers with `<>` ——
+  getting this nesting wrong causes type errors. When in doubt, parenthesize at layer boundaries.
+- **Required columns for marks**: `scatter` requires two columns (x, y);
+  `histogram`/`density` require one. Missing columns cause type errors.
+- **Column name typos**: Check that column names passed to `|>>` (like `"flipper_length_mm"`)
+  actually exist in the DataFrame. Non-existent names are caught at runtime.
+- **`OverloadedStrings` / `TypeApplications`**: To use string literals as column names,
+  enable `OverloadedStrings`; for `F.col @Text`, enable `TypeApplications`
+  (see `{-# LANGUAGE ... #-}` at the top of `Visualize.hs`).
+
+Still stuck? Check the [API Reference](../../api-guide/README.md) for the mark's signature
+and examples, then carefully read the type error message. The answer is often hiding there.
+
+---
+
+## §1.8 Summary
+
+In this chapter, we learned the fundamentals of data visualization with hgg.
+Our starting point: **"Visualization is the process of mapping data variables to visual attributes
+like position, color, size, and shape."** From there, we learned to layer plots using `<>`,
+building complexity and refinement step by step. We visualized single-variable distributions
+(bars, histograms, density) and relationships among two or more variables (boxplots, colored
+density curves, stacked bars, 3-variable scatter plots) using additional aesthetic mappings
+and `facetWrap` for panel subdivision. Finally, we saw how to save plots as SVG/PDF/PNG.
+
+Visualization appears repeatedly throughout this tutorial suite. For more advanced control over
+encoding, scale, and theme, see [API Reference 03 encoding & scale](../../api-guide/03-encoding-scale.md) /
+[04 decoration](../../api-guide/04-decoration.md); for integration with statistical modeling,
+see [07 analyze](../../api-guide/07-analyze.md).

@@ -1,15 +1,14 @@
-# 18. 欠損値 — Missing values
+# 18. Missing values
 
-> 一次情報: **R for Data Science 2e, Ch.18 "Missing values"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.18 "Missing values"**
 > <https://r4ds.hadley.nz/missing-values>
-> データ: R4DS 本文の実例 **treatment / stocks / health**(本文の値をそのまま CSV 化)
+> Data: R4DS text examples **treatment / stocks / health** (CSV versions of textbook values).
 
-「明示的な欠損(`NA`)」 と「暗黙的な欠損(行そのものが無い)」 の扱いを学びます。
-表操作が中心で、R4DS が描く図は 2 枚(factor の空グループの有無)だけです。
-実行コードは [`Missing.hs`](Missing.hs)。dataframe に `fill`/`complete` 等は無いので、
-中身を Haskell で計算して結果を `DF.fromNamedColumns` で組み立てます。
+Learn handling **explicit missing** (`NA`) and **implicit missing** (rows that don't exist). Table operations dominate; R4DS has only 2 figures (factor empty groups presence/absence). Run code: [`Missing.hs`](Missing.hs). dataframe lacks `fill`/`complete` etc., so we compute in Haskell and assemble with `DF.fromNamedColumns`.
 
-## 実行
+## Running
 
 ```sh
 cd docs/tutorials/18-missing
@@ -18,92 +17,89 @@ cabal run tut-18-missing
 
 ---
 
-## 1. 明示的な欠損 — `fill`(前方補完)
+## 1. Explicit missing — `fill` (forward fill)
 
-`treatment` の `person` は、同じ人の続きでは `NA` になっています。直前の値で
-埋める「前方補完(last observation carried forward)」 を行います。
+In `treatment`, `person` is `NA` where it continues for the same person. Fill with preceding value ("last observation carried forward").
 
 | R | hgg |
 |---|---|
-| `treatment |> fill(person)` | 自前 `fillForward :: [Maybe a] -> [Maybe a]` |
+| `treatment |> fill(person)` | Custom `fillForward :: [Maybe a] -> [Maybe a]` |
 
 ```
-person            treatment response        person(fill 後)
+person            treatment response        person (after fill)
 Derrick Whitmore  1         7          →     Derrick Whitmore
 NA                2         10               Derrick Whitmore
 NA                3         NA               Derrick Whitmore
 Katherine Burke   1         4                Katherine Burke
 ```
 
-## 2. 固定値で穴埋め — `coalesce`
+## 2. Replace with constant — `coalesce`
 
-`NA` を決まった値(ここでは 0)に置き換えます。
+Replace `NA` with a fixed value (here, 0).
 
 | R | hgg |
 |---|---|
 | `coalesce(response, 0)` | `map (fromMaybe 0) responseVals` |
 
-## 3. 暗黙的な欠損 — `pivot_wider` で明示化
+## 3. Implicit missing — make explicit with `pivot_wider`
 
-`stocks` は **2020 Q4 が明示 `NA`**、**2021 Q1 は行そのものが無い**(暗黙の欠損)です。
-`qtr` を列に展開すると、無かった組み合わせが `NA` として現れます。
+`stocks` has **2020 Q4 explicitly `NA`** and **2021 Q1 missing entirely** (implicit).
+Pivoting `qtr` to columns exposes missing combinations as `NA`.
 
 | R | hgg |
 |---|---|
-| `stocks |> pivot_wider(names_from=qtr, values_from=price)` | 自前 pivot(qtr 値→列・欠損は `Nothing`) |
+| `stocks |> pivot_wider(names_from=qtr, values_from=price)` | Custom pivot (qtr→cols · missing is `Nothing`) |
 
 ```
 year   q1       q2     q3     q4
-2020   1.88     0.59   0.35   NA      ← 2020 Q4 は明示 NA
-2021   NA       0.92   0.17   2.66    ← 2021 Q1 は行が無かった → NA
+2020   1.88     0.59   0.35   NA      ← 2020 Q4 explicit NA
+2021   NA       0.92   0.17   2.66    ← 2021 Q1 row missing → NA
 ```
 
-## 4. 全組み合わせを補う — `complete`
+## 4. Fill all combinations — `complete`
 
-`(year × qtr)` の全 8 組を生成し、無い行を `NA` で補います。
+Generate all 8 `(year × qtr)` pairs, fill missing rows with `NA`.
 
 | R | hgg |
 |---|---|
-| `stocks |> complete(year, qtr)` | 全組を生成し各組の price を引く(無ければ `Nothing`) |
+| `stocks |> complete(year, qtr)` | Generate all pairs, fetch `price` per pair (missing → `Nothing`) |
 
-これで `2021 Q1 = NA` が 1 行として明示化されます。
+Now `2021 Q1 = NA` appears as one explicit row.
 
-## 5. factor と空グループ(図 2 枚)
+## 5. Factors and empty groups (2 figures)
 
-`health` の `smoker` は水準 `{yes, no}` ですが全員 `no` です。`yes` は**空グループ**。
+In `health`, `smoker` has levels `{yes, no}`, but everyone is `no`. `yes` is an **empty group**.
 
-### 空グループを落とす(既定)(`01-drop-empty.svg`)
+### Drop empty groups (default) (`01-drop-empty.svg`)
 
-観測された値だけ数えると、`no` の棒しか出ません。
+Counting only observed values shows only `no` bars.
 
 ![drop empty](01-drop-empty.svg)
 
-### 空グループも保持(`drop = FALSE`)(`02-keep-empty.svg`)
+### Keep empty groups (`drop = FALSE`) (`02-keep-empty.svg`)
 
-水準を全部残すと、`yes = 0` も(高さ 0 の棒として)x 軸に現れます。
+Keeping all levels shows `yes = 0` as a zero-height bar on x-axis.
 
 | R | hgg |
 |---|---|
-| `geom_bar()`(既定) | 観測値のみで集計して `bar` |
-| `scale_x_discrete(drop = FALSE)` | 全水準を明示して `bar`(`yes=0` を含める) |
+| `geom_bar()` (default) | Aggregate observed only, then `bar` |
+| `scale_x_discrete(drop = FALSE)` | Explicitly include all levels in `bar` (`yes=0` included) |
 
 ![keep empty](02-keep-empty.svg)
 
-> dataframe に factor 型は無いので「空グループ」 は自動では現れません。R4DS の
-> `drop = FALSE` の意図(取りうる水準をすべて見せる)を、`yes=0` を明示的に
-> 加えることで再現しています。
+> dataframe lacks factor types, so "empty groups" don't auto-appear. We reproduce R4DS's `drop = FALSE` intent (show all possible levels) by explicitly adding `yes=0`.
 
 ---
 
-## この章で出てきた対応表(まとめ)
+## Reference table (summary of correspondence)
 
 | tidyr / dplyr | hgg |
 |---|---|
-| `fill(col)` | 自前 `fillForward`(前方補完) |
+| `fill(col)` | Custom `fillForward` (forward fill) |
 | `coalesce(x, v)` | `map (fromMaybe v)` |
-| `pivot_wider` | 自前 pivot(欠損は `Nothing`) |
-| `complete(a, b)` | 全組生成 + 各組を引く |
-| `scale_x_discrete(drop=FALSE)` | 全水準を明示して `bar` |
+| `pivot_wider` | Custom pivot (missing is `Nothing`) |
+| `complete(a, b)` | Generate all pairs + fetch values per pair |
+| `scale_x_discrete(drop=FALSE)` | Explicitly include all levels in `bar` |
 
-前章 → [`17-datetimes`](../17-datetimes/)。
-次章 → [`19-joins`](../19-joins/)(Ch19 Joins)。
+Previous → [`17-datetimes`](../17-datetimes/).
+Next → [`19-joins`](../19-joins/) (Ch19 Joins).

@@ -1,41 +1,33 @@
-# DataFrame 連携 ─ `df |>> layer …` で列名で書く
+# DataFrame Integration — `df |>> layer …` Write with Column Names
 
-> [📚 索引](README.md) ｜ [01 quickstart](01-quickstart.md) ｜ [02 layers](02-layers.md) ｜ [03 encoding & scale](03-encoding-scale.md) ｜ [04 decoration](04-decoration.md) ｜ [05 backends](05-backends.md) ｜ **06 dataframe** ｜ [07 analyze](07-analyze.md) ｜ [08 3d](08-3d.md) ｜ [09 appendix](09-appendix.md)
+> 🌐 **English** | [日本語](06-dataframe.ja.md)
 
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | **06 dataframe** | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
 
-`hgg-frame` を使うと、 ggplot2 のように **データフレーム + 列名**で書ける。
-spec には列「名」 (`scatter "x" "y"`) だけが入り、 実データは `(|>>)` でバインド時に解決。
+Using `hgg-frame`, write like ggplot2: **dataframe + column names**. The spec contains only column "names" (`scatter "x" "y"`); actual data is resolved at bind time with `(|>>)`.
 
-このページの構成:
-**[df を用意する 3 つの方法](#df-sources)** ｜ **[列名で描く](#by-column-name)** ｜
-**[CSV (Hackage dataframe)](#df-csv)** ｜ **[列名検証 (純関数)](#df-validate)**
+Structure of this page:
+**[3 ways to prepare df](#df-sources)** | **[Draw with column names](#by-column-name)** |
+**[CSV (Hackage dataframe)](#df-csv)** | **[Column validation (pure function)](#df-validate)**
 
-> ⚠️ 演算子は **`|>>`** (`|>` ではない)。 Hackage `dataframe` が `|>` を export
-> しており衝突するため。 `import DataFrame` と併用しても衝突しない。
-> `|>>` は `<>` より弱い (`infixl 1`) ので `df |>> (layer a <> layer b)` と書ける。
-> (4 演算子 `<>` / `|>` / `|>>` / `|->` の役割一覧は [演算子早見表](README.md#演算子早見表)。)
+> ⚠️ Operator is **`|>>`** (not `|>`). Hackage `dataframe` exports `|>`, so collision. No collision when using `import DataFrame` together. `|>>` is weaker than `<>` (`infixl 1`) so `df |>> (layer a <> layer b)` works. (4 operator roles `<>` / `|>` / `|>>` / `|->` listed at [operator quick reference](README.md#operator-quick-reference).)
 
-> 📝 **`"x"` と書ける理由 (列名リテラル)**: `scatter "weight" "mpg"` の `"weight"` は
-> `ColRef`。 `ColRef` に `IsString` instance (`fromString = ColByName . T.pack`) が
-> あるので、 **`{-# LANGUAGE OverloadedStrings #-}` を付ければ** `"weight"` が
-> 自動で `ColByName "weight"` になる。 拡張が無いと `ColByName "weight"` と明示が要る。
-> 本ガイドの例はすべて `OverloadedStrings` 前提。
+> 📝 **Why `"x"` works (column name literal)**: `"weight"` in `scatter "weight" "mpg"` is `ColRef`. `ColRef` has `IsString` instance (`fromString = ColByName . T.pack`), so **with `{-# LANGUAGE OverloadedStrings #-}`**, `"weight"` auto-converts to `ColByName "weight"`. Without the extension, must write `ColByName "weight"` explicitly. All examples in this guide assume `OverloadedStrings`.
 
-### df を用意する 3 つの方法 (`class PlotData`) {#df-sources}
+### 3 Ways to Prepare df (`class PlotData`) {#df-sources}
 
-`(|>>)` の左辺は `class PlotData df` の instance なら何でもよい。 標準で 3 つ:
+Left side of `(|>>)` can be any `instance PlotData df`. Standard 3 options:
 
-| df の型 | 必要パッケージ | 用途 |
+| df type | Required package | Use case |
 |---|---|---|
-| `Map Text ColData` | core のみ (ゼロ依存) | 手元のベクタを即 df 化 |
-| `[(Text, ColData)]` | core のみ (ゼロ依存) | assoc-list で順序を保つ |
-| `DataFrame` | `hgg-dataframe` | Hackage `dataframe` (CSV 読込・操作) |
+| `Map Text ColData` | core only (zero deps) | Turn local vector into df |
+| `[(Text, ColData)]` | core only (zero deps) | Assoc-list preserving order |
+| `DataFrame` | `hgg-dataframe` | Hackage `dataframe` (CSV reading, manipulation) |
 
-列値は `ColData` = `NumData (Vector Double)` / `TxtData (Vector Text)`。 短く書くヘルパを
-置くと楽:
+Column values are `ColData` = `NumData (Vector Double)` / `TxtData (Vector Text)`. Helper shortcuts simplify:
 
 ```haskell
-import           Hgg.Plot.Easy             -- Spec を re-export (scatter/layer/…/ColData)
+import           Hgg.Plot.Easy             -- re-export Spec (scatter/layer/…/ColData)
 import           Hgg.Plot.Frame            ((|>>), BoundPlot, bpDiagnostics)
 import           Hgg.Plot.Backend.SVG      (saveSVGBound)
 import qualified Data.Map.Strict as M
@@ -53,91 +45,78 @@ df = M.fromList
   , ("group", txt (take 10 (cycle ["A","B"]))) ]
 ```
 
-> ⚠️ df の列値は **`ColData` (`NumData`/`TxtData`)**。 `inline`/`inlineCat` は
-> mark の引数 (`scatter (inline xs) ys`) 用の **`ColRef`** で、 df の値には使えない
-> (型が違う)。 df では上の `num`/`txt` (= `NumData`/`TxtData`) を使う。
+> ⚠️ df column values are **`ColData` (`NumData`/`TxtData`)**. `inline`/`inlineCat` are **`ColRef`** for mark arguments (`scatter (inline xs) ys`), can't use for df values (different type). For df, use above `num`/`txt` (= `NumData`/`TxtData`).
 
-## df から描けること = すべての mark・encoding を「列名」で {#by-column-name}
+## What you can draw from df = All marks and encodings by "column name" {#by-column-name}
 
-spec 側は列「名」 (`scatter "x" "y"`) だけ。 **どの mark・どの encoding も列名で書ける**。
+Spec side uses column "names" only (`scatter "x" "y"`). **Any mark, any encoding uses column names**.
 
 ```haskell
--- (a) 散布図 + group で色分け + size 列で大きさ
+-- (a) Scatter + color-code by group + size by size column
 df |>> ( layer (scatter "x" "y" <> colorBy "group" <> sizeBy "size" <> alpha 0.85)
-       <> title "df |>> scatter (color/size を列名で)" )
+       <> title "df |>> scatter (color/size by column name)" )
 ```
 ![df scatter](images/df/01-scatter-color-size.svg)
 
 ```haskell
--- (b) 重畳: 同じ df の別 layer を <> (04 decoration の重畳と同じ)
+-- (b) Overlay: separate layers of same df with <> ([04 decoration](04-decoration.md#overlay) same)
 df |>> ( layer (scatter "x" "y" <> size 6)
        <> layer (line "x" "y" <> color (fromHex "#d62728") <> stroke 1) )
 ```
 ![df overlay](images/df/02-overlay.svg)
 
 ```haskell
--- (c) facet: 列で小分け (free/fixed scale も VisualSpec で指定可)
+-- (c) facet: partition by column (free/fixed scale also set via VisualSpec)
 df |>> ( layer (scatter "x" "y" <> colorBy "group" <> size 6) <> facet "group" )
 ```
 ![df facet](images/df/03-facet.svg)
 
 ```haskell
--- (d) 棒グラフ: カテゴリ列 + 群 + position adjustment
+-- (d) Bar chart: category column + grouping + position adjustment
 dfB |>> ( layer (bar "cat" "val" <> colorBy "grp" <> position PosDodge) )
 ```
 ![df bar dodge](images/df/04-bar-dodge.svg)
 
-同様に `boxplot "y"` / `histogram "x"` / `violin "y" <> groupBy "g"` / `heatmap "c" "r" "v"` …
-[02 layers](02-layers.md#index) の mark はすべて列名引数で df から描ける。
+Similarly, all marks in [02 layers](02-layers.md#index) like `boxplot "y"` / `histogram "x"` / `violin "y" <> groupBy "g"` / `heatmap "c" "r" "v"` etc. can be drawn from df using column name arguments.
 
-### Hackage `dataframe` (CSV 等) {#df-csv}
+### Hackage `dataframe` (CSV etc.) {#df-csv}
 
-`hgg-dataframe` を足すと `DataFrame` がそのまま df になる
-(`instance PlotData DataFrame`)。 中間 JSON 変換は不要。
+Add `hgg-dataframe` and `DataFrame` becomes df directly
+(`instance PlotData DataFrame`). No intermediate JSON conversion needed.
 
 ```haskell
 import qualified DataFrame              as DF
-import           Hgg.Plot.DataFrame ()   -- instance を見せる
+import           Hgg.Plot.DataFrame ()   -- expose the instance
 
 main = do
   df <- DF.readCsv "cars.csv"
   saveSVGBound "out.svg" (df |>> layer (scatter "weight" "mpg" <> colorBy "origin"))
 ```
 
-#### 欠損 (`Maybe` / NA) 列の扱い {#nullable-columns}
+#### Handling missing values (`Maybe` / NA) columns {#nullable-columns}
 
-`Double` / `Int` / `Text` 列に加え、 **`Maybe Double` / `Maybe Int` 列 (= NA を含む列・
-CSV の空セルや欠損)も列名でそのまま描ける**。 ggplot の `aes(col)` + `na.rm` と同型で、
-欠損は内部処理されるので**生ベクトルの取り出し (`columnAsList` → `catMaybes` →
-`fromNamedColumns` で作り直し) は不要**。
+Beyond `Double` / `Int` / `Text` columns, **`Maybe Double` / `Maybe Int` columns (= columns with NA · empty CSV cells or missing values) draw directly by column name**. Like ggplot's `aes(col)` + `na.rm`, missing values handled internally, so **no need to extract raw vectors** (`columnAsList` → `catMaybes` → `fromNamedColumns` rebuild).
 
 ```haskell
--- dep_delay は Maybe Int (NA 多数) だが列名で直接描ける
+-- dep_delay is Maybe Int (many NA) but drawable directly by column name
 flights |>> layer (histogram "dep_delay" <> binWidth 15)
 ```
 
-挙動 (resolver `dfResolver` + render 側):
+Behavior (resolver `dfResolver` + render side):
 
-| mark | 欠損 (NA) の扱い |
+| Mark | Missing (NA) handling |
 |---|---|
-| 単一列 (`histogram` / `freqpoly` / `density` / `boxplot` / `ecdf` …) | NA を**落として**集計 (= `na.rm = TRUE`) |
-| 多列 (`scatter` / `line`) | x か y が NA の**行を落とす** (行整列は保つ・ggplot の行単位 na.rm) |
-| 軸範囲 (range) | NA を無視して min/max を取る |
+| Single-column (`histogram` / `freqpoly` / `density` / `boxplot` / `ecdf` …) | NA **dropped** in aggregation (= `na.rm = TRUE`) |
+| Multi-column (`scatter` / `line`) | **Rows where x or y is NA dropped** (row alignment preserved · ggplot row-wise na.rm) |
+| Axis range | NA ignored for min/max |
 
-内部的には NA は `NaN` で運ばれ (列の長さを保ち行整列を壊さない)、 range / binning /
-点描画が `NaN` を除外する。 **非 NULL 列はこれらが no-op なので従来と完全に同一**。
+Internally NA carried as `NaN` (preserving column length, not breaking row alignment); range / binning / point rendering exclude `NaN`. **Non-NULL columns are no-op, completely identical to before**.
 
-> R の `filter(col < x)` 相当 (= 行を絞る) は **DataFrame 側**で行う:
-> `df |> DF.filterJust "col" |> DF.filterWhere (F.col @Int "col" .< (x :: DF.Expr Int))`
-> (`filter |> ggplot` と同型・[subplot](04-decoration.md#subplots) の patchwork と組み合わせる)。
+> R `filter(col < x)` equivalent (= narrow rows) is **on DataFrame side**: `df |> DF.filterJust "col" |> DF.filterWhere (F.col @Int "col" .< (x :: DF.Expr Int))` (same as `filter |> ggplot` · combine with patchwork-style [subplot](04-decoration.md#subplots)).
 
-### バインド時の列名検証 (純関数・例外なし) {#df-validate}
+### Column validation at bind time (pure function, no exceptions) {#df-validate}
 
-`(|>>)` は **純関数** (例外を投げない)。 バインド時に列名を検証し、 結果を
-`BoundPlot` の `bpDiagnostics` に**値として**載せる (存在しない列・型不一致・空 df を検出)。
-`saveSVGBound` / `renderBound` は描画時に Error severity の診断を stderr に報告する
-(描画は止めない)。 検証を完全に逃がすなら `unBound` で `(Resolver, VisualSpec)` を
-取り出し既存 `saveSVG` に直接渡す。
+`(|>>)` is **pure** (no exceptions thrown). At bind time, validates column names and places result **as values** in `BoundPlot`'s `bpDiagnostics` (detects missing columns, type mismatch, empty df). `saveSVGBound` / `renderBound` report Error-severity diagnostics to stderr during rendering (rendering doesn't stop). To bypass validation completely, extract `(Resolver, VisualSpec)` with `unBound` and pass directly to existing `saveSVG`.
 
 ```haskell
 let bp = df |>> layer (scatter "x" "wieght")   -- typo!

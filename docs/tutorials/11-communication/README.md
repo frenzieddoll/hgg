@@ -1,14 +1,16 @@
-# 11. 伝わる図にする — Communication
+# 11. Communication
 
-> 一次情報: **R for Data Science 2e, Ch.11 "Communication"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.11 "Communication"**
 > <https://r4ds.hadley.nz/communication>
-> データ: **mpg**(ggplot2)
+> Data: **mpg** (ggplot2)
 
-探索用の図を「人に見せる図」 に仕上げます。ラベル・注釈・凡例位置・配色・テーマ・
-ズーム・軸目盛りといった**データ以外の要素**を整えます。実行コードは
-[`Communication.hs`](Communication.hs)。
+Polish exploratory plots into "presentation-ready" figures. We arrange **non-data elements**: labels,
+annotations, legend position, color palette, theme, zoom, and axis ticks. Execution code is in
+[`Communication.hs`](Communication.hs).
 
-## 実行
+## Running
 
 ```sh
 cd docs/tutorials/11-communication
@@ -17,9 +19,9 @@ cabal run tut-11-communication
 
 ---
 
-## 1. ラベル(= `labs(...)`)
+## 1. Labels (= `labs(...)`)
 
-タイトル・サブタイトル・キャプション・軸名・凡例名を付けます。
+Add title, subtitle, caption, axis names, and legend name.
 
 | R | hgg |
 |---|---|
@@ -28,9 +30,9 @@ cabal run tut-11-communication
 
 ![labels](01-labels.svg)
 
-## 2. 注釈(= `annotate()` / `geom_text`)
+## 2. Annotations (= `annotate()` / `geom_text`)
 
-データ座標にテキストや矢印を置いて要点を示します。
+Place text or arrows at data coordinates to highlight key points.
 
 | R | hgg |
 |---|---|
@@ -39,7 +41,7 @@ cabal run tut-11-communication
 
 ![annotate](02-annotate.svg)
 
-## 3. 凡例の位置(= `theme(legend.position=)`)
+## 3. Legend position (= `theme(legend.position=)`)
 
 | R | hgg |
 |---|---|
@@ -48,27 +50,27 @@ cabal run tut-11-communication
 
 ![legend bottom](03-legend-bottom.svg)
 
-`LegendPosition` には `LegendRight`(既定)/`LegendBottom`/`LegendNone` のほか、
-プロット内に置く `LegendInsideTopRight` などもあります。
+`LegendPosition` includes `LegendRight` (default) / `LegendBottom` / `LegendNone`, plus plot-internal
+positions like `LegendInsideTopRight`.
 
-## 4. 配色 + 形の冗長符号化(色覚配慮)
+## 4. Color palette + shape redundant encoding (color-blind accessibility)
 
-色だけでなく形も同じ変数に割り当てると、色を見分けにくい人にも伝わります
-(R4DS の `scale_color_brewer` + `aes(shape=)`)。
+Assigning both color and shape to the same variable makes it intelligible to those with color
+blindness (R4DS's `scale_color_brewer` + `aes(shape=)`).
 
 | R | hgg |
 |---|---|
-| `scale_color_brewer(palette = "Set1")` | `palette tolBright`(色覚安全パレット) |
+| `scale_color_brewer(palette = "Set1")` | `palette tolBright` (color-blind safe) |
 | `aes(color = drv, shape = drv)` | `colorBy "drv" <> shapeBy "drv"` |
 
 ![palette shape](04-palette-shape.svg)
 
-選べるパレット: `okabeIto` / `tolBright` / `brewerSet2` / `brewerDark2`(いずれも
-色覚バリアフリー寄り)。
+Available palettes: `okabeIto` / `tolBright` / `brewerSet2` / `brewerDark2` (all leaning toward
+color-blind friendly).
 
-## 5. テーマ(= `theme_bw()` / `theme_minimal()` …)
+## 5. Themes (= `theme_bw()` / `theme_minimal()` …)
 
-データ以外の見た目(背景・グリッド・枠)をまとめて切り替えます。
+Switch non-data appearance (background, grid, border) wholesale.
 
 | R | hgg |
 |---|---|
@@ -78,13 +80,13 @@ cabal run tut-11-communication
 ![theme bw](05-theme-bw.svg)
 ![theme minimal](06-theme-minimal.svg)
 
-`ThemeName` は `ThemeDefault` / `ThemeBW` / `ThemeMinimal` / `ThemeClassic` /
-`ThemeGrey` / `ThemeLight` / `ThemeDark` / `ThemeVoid` / `ThemeLinedraw` などがあります。
+`ThemeName` options include `ThemeDefault` / `ThemeBW` / `ThemeMinimal` / `ThemeClassic` /
+`ThemeGrey` / `ThemeLight` / `ThemeDark` / `ThemeVoid` / `ThemeLinedraw`, etc.
 
-## 6. ズーム(= `coord_cartesian()`)
+## 6. Zoom (= `coord_cartesian()`)
 
-表示範囲だけを絞ります。**データは捨てない**ので、平滑線は全データから計算されたまま
-拡大されます(`filter` で絞ると平滑線そのものが変わってしまう、という R4DS の論点)。
+Narrow display range. **Data aren't dropped**, so smooth lines remain computed from all data and just
+get magnified (unlike `filter`, which changes smooths themselves—R4DS's point).
 
 | R | hgg |
 |---|---|
@@ -92,7 +94,7 @@ cabal run tut-11-communication
 
 ![zoom](07-zoom.svg)
 
-## 7. 軸目盛りの指定(= `scale_y_continuous(breaks=)`)
+## 7. Axis tick specification (= `scale_y_continuous(breaks=)`)
 
 | R | hgg |
 |---|---|
@@ -102,7 +104,7 @@ cabal run tut-11-communication
 
 ---
 
-## この章で出てきた対応表(まとめ)
+## Correspondence table this chapter (Summary)
 
 | ggplot2 | hgg |
 |---|---|
@@ -110,11 +112,11 @@ cabal run tut-11-communication
 | `labs(x/y/color=)` | `xLabel` / `yLabel` / `legendTitle` |
 | `annotate("label"/"segment")` | `annotText` / `annotArrow` |
 | `theme(legend.position=)` | `legendPos LegendBottom` / `legendOff` |
-| `scale_color_brewer()` | `palette tolBright` ほか |
-| `aes(shape=)`(冗長符号化) | `shapeBy "g"` |
+| `scale_color_brewer()` | `palette tolBright`, etc. |
+| `aes(shape=)` (redundant encoding) | `shapeBy "g"` |
 | `theme_bw()` / `theme_minimal()` | `theme ThemeBW` / `theme ThemeMinimal` |
 | `coord_cartesian(xlim/ylim=)` | `coordCartesianX` / `coordCartesianY` |
 | `scale_y_continuous(breaks=)` | `yAxis (axisBreaksAt […])` |
 
-前章 → [`10-eda`](../10-eda/)。
-次章 → [`17-datetimes`](../17-datetimes/)(Ch17 Dates and times・flights)。
+Previous chapter → [`10-eda`](../10-eda/).
+Next chapter → [`17-datetimes`](../17-datetimes/) (Ch.17 Dates and times, flights).

@@ -1,69 +1,71 @@
-# 08. 助けの求め方 (R4DS 2e Ch.8 "Workflow: getting help")
+# 08. Getting Help
 
-> 一次情報: **R for Data Science 2e, Ch.8 "Workflow: getting help"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.8 "Workflow: getting help"**
 > <https://r4ds.hadley.nz/workflow-help>
-> データ: なし(散文の運用章)。 実演コードは [`GettingHelp.hs`](GettingHelp.hs)。
+> Data: None (procedural chapter without diagrams). Demonstration code in [`GettingHelp.hs`](GettingHelp.hs).
 
-R4DS 第 8 章は **図を描かない** 散文の運用章で、 「Whole Game」 パートを締めくくります。
-主題は次の 3 つ:
+Chapter 8 of R4DS is a **diagram-free** procedural chapter closing the "Whole Game" part. It covers
+three main topics:
 
-1. **Google is your friend** — 検索(とくにエラーメッセージ)と Stack Overflow の使い方。
-2. **Making a reprex** — 最小・再現可能な例(**repr**oducible **ex**ample)の作り方。
-3. **Investing in yourself** — 日々の学習とコミュニティの追い方。
+1. **Google is your friend** — Using search (especially error messages) and Stack Overflow.
+2. **Making a reprex** — How to create a minimal, **repr**oducible **ex**ample.
+3. **Investing in yourself** — Daily learning and following the community.
 
-どれも **R / RStudio / tidyverse 固有の助言** なので、 ここでは近似や置換ではなく
-「**R の運用 → Haskell の等価運用**」 という honest な対応づけで翻案します。
-実演できる部分(reprex の最小例)だけ [`GettingHelp.hs`](GettingHelp.hs) で実際に動かします。
+All are **R / RStudio / tidyverse-specific advice**, so rather than approximation or substitution, we
+provide an **honest mapping from R practices to Haskell equivalents**. Only the executable parts
+(reprex example) are demonstrated in [`GettingHelp.hs`](GettingHelp.hs).
 
 ```sh
 cd docs/tutorials/08-getting-help
 cabal run tut-08-getting-help
 ```
 
-★このファイル群自体が R4DS §8.2 のいう **reprex の見本** です(先頭に import をまとめ、
-データをインラインに埋め込み、 問題に関係するコードだけを最小に書いています)。
+**Note**: This file itself is an example **reprex as described in R4DS §8.2** (imports grouped at top,
+data embedded inline, only essential code for the problem, written minimally).
 
 ---
 
-## §8.1 Google is your friend(検索を使う)
+## §8.1 Google is your friend
 
-R: 詰まったらまず Google。 クエリに "R" を足すと R 関連に絞れる。 さらに "tidyverse" /
-"ggplot2" のようなパッケージ名を足すと、 馴染みのあるコードに辿り着きやすい。 とくに
-**エラーメッセージの検索** が有効。 英語以外のエラーは `Sys.setenv(LANGUAGE = "en")` で
-英語化してから検索すると見つかりやすい。 Google で出なければ **Stack Overflow** で
-`[R]` タグ付きで探す。
+R: When stuck, start with Google. Add "R" to your query to narrow to R-related results. Add package
+names like "tidyverse" / "ggplot2" to reach familiar code more easily. **Error message search** is
+especially effective. Non-English errors can be searched after setting them to English with
+`Sys.setenv(LANGUAGE = "en")`. If Google doesn't help, search on **Stack Overflow** with the `[R]`
+tag.
 
-Haskell の等価運用:
+Haskell equivalents:
 
-| R / tidyverse の助言 | Haskell の等価 |
+| R / tidyverse advice | Haskell equivalent |
 |---|---|
-| クエリに "R" を足す | クエリに "Haskell" を足す |
-| "ggplot2" / "tidyverse" でさらに絞る | "dataframe" / "hgg" / ライブラリ名でさらに絞る |
-| エラーメッセージをそのまま検索 | GHC のエラー/警告メッセージをそのまま検索 |
-| 関数の使い方を知りたい | **Hoogle** (<https://hoogle.haskell.org>) で型・関数名から検索 |
-| パッケージのドキュメント | **Hackage** (<https://hackage.haskell.org>) の haddock |
-| `?function` でヘルプ | GHCi の `:doc 関数名` / `:info 関数名` / `:type 関数名` |
-| Stack Overflow `[R]` タグ | Stack Overflow `[haskell]` タグ |
+| Add "R" to query | Add "Haskell" to query |
+| Further narrow with "ggplot2" / "tidyverse" | Further narrow with "dataframe" / "hgg" / library names |
+| Search error message as-is | Search GHC error/warning messages as-is |
+| To learn function usage | **Hoogle** (<https://hoogle.haskell.org>) for type/function name search |
+| Package documentation | **Hackage** (<https://hackage.haskell.org>) haddock |
+| Help with `?function` | GHCi `:doc function`, `:info function`, `:type function` |
+| Stack Overflow `[R]` tag | Stack Overflow `[haskell]` tag |
 
-★Hoogle は R に無い強力な検索です。 **型シグネチャから関数を逆引き** できます
-(例: `(a -> b) -> [a] -> [b]` で検索すると `map` が出る)。 「やりたい変換の型は
-分かるが関数名が思い出せない」 ときの定石です。 エラーメッセージ検索は R と同じく有効で、
-GHC のエラーは英語が既定なので言語切替(R の `Sys.setenv` 相当)は不要です。
+**Hoogle** is a powerful R-equivalent-less search: **reverse-lookup functions from type signatures**
+(e.g., searching `(a -> b) -> [a] -> [b]` returns `map`). It's the standard approach when you know
+the transformation type but forget the function name. Error message search works as well in Haskell;
+GHC defaults to English, so language switching (R's `Sys.setenv` equivalent) isn't needed.
 
 ---
 
-## §8.2 Making a reprex(最小・再現可能な例を作る)
+## §8.2 Making a reprex
 
-R: 検索で見つからなければ **reprex**(minimal **repr**oducible **ex**ample)を作るのが
-良い。 reprex には 2 つの要件がある:
+R: When a search doesn't yield results, creating a **reprex** (minimal **repr**oducible **ex**ample)
+is good practice. A reprex has two requirements:
 
-1. **再現可能(reproducible)**: 必要な `library()` 呼び出しと、 必要なオブジェクトの
-   生成を **すべて含める**。 tidyverse の `reprex` パッケージを使うと取りこぼしを防げる。
-2. **最小(minimal)**: 問題に直接関係しないものを **すべて削る**。 実データより小さく
-   単純なオブジェクト(あるいは組み込みデータ)に置き換える。
+1. **Reproducible**: **Include all necessary** `library()` calls and object creation. The tidyverse
+   `reprex` package helps catch omissions.
+2. **Minimal**: **Remove everything** not directly related to the problem. Replace real data with
+   smaller, simpler objects (or built-in data).
 
-R4DS は `reprex::reprex()` で、 コードと **その出力** を `#>` 付き Markdown に整形して
-クリップボードに入れる手順を示します:
+R4DS shows `reprex::reprex()`, which formats code **and its output** in `#>`-prefixed Markdown and
+copies to clipboard:
 
 ```r
 # R
@@ -72,39 +74,37 @@ mean(y)
 #> [1] 2.5
 ```
 
-### Haskell の等価 = 自己完結した最小コード + その出力
+### Haskell equivalent = self-contained minimal code + its output
 
-Haskell には tidyverse の `reprex` パッケージのような専用ツールはありませんが、
-**reprex の原則はそのまま当てはまります**。 同じ例を Haskell で書くと:
+Haskell lacks tidyverse's `reprex` package, but **reprex principles apply directly**. The same example
+in Haskell:
 
 ```haskell
--- 必要な import を先頭に (= 必要パッケージを明示)
+-- Group required imports at top (= make dependencies explicit)
 import qualified DataFrame as DF
 
 main :: IO ()
 main = do
   let y = [1 .. 4] :: [Double]
-  print (sum y / fromIntegral (length y))   -- = R の mean(y)
+  print (sum y / fromIntegral (length y))   -- = R's mean(y)
   -- #> 2.5
 ```
 
-GHCi なら式を打てば下に結果が出る(R のコンソールと同じ)ので、 そのコピペが
-そのまま reprex になります。 [`GettingHelp.hs`](GettingHelp.hs) を `cabal run` すると、
-この `#> 2.5` を実際に再現します。
+In GHCi, typing an expression outputs the result below (same as R console), so copy-pasting becomes a
+reprex. Running [`GettingHelp.hs`](GettingHelp.hs) with `cabal run` actually reproduces this `#> 2.5`.
 
-R4DS が挙げる「再現可能にする 3 要素」 を Haskell に対応づけると:
+Mapping R4DS's three reproducibility elements to Haskell:
 
-| R の 3 要素 | Haskell の等価 |
+| R's 3 elements | Haskell equivalent |
 |---|---|
-| **Packages**: 必要な `library()` を先頭に。 最新版か確認(`tidyverse_update()`) | 必要な `import` を先頭に。 `.cabal` の `build-depends` で依存を宣言。 最新版確認は `cabal outdated` / `ghcup` |
-| **Data**: `dput(df)` でデータ再生成コードを吐かせて貼る | データを `fromNamedColumns` / `fromList` で **リテラルとして埋め込む**(下記) |
-| **Code**: 空白・短く分かる変数名・コメントで問題箇所を示す・無関係を削る | 同じ(本リポジトリの Coding Style (CLAUDE.md))。 GHC 警告(`-Wall`)で無駄も拾える |
+| **Packages**: Include required `library()` at top. Check version (`tidyverse_update()`) | Include required `import` at top. Declare dependencies in `.cabal` `build-depends`. Check version with `cabal outdated` / `ghcup` |
+| **Data**: Have `dput(df)` output regeneration code and paste it | Embed data **as literals** in code with `fromNamedColumns` / `fromList` (see below) |
+| **Code**: Use whitespace, short readable names, comments marking problem areas, remove unrelated code | Same (this repository's Coding Style in CLAUDE.md). GHC warnings (`-Wall`) catch waste |
 
-### データの埋め込み(= R の `dput()`)
+### Data embedding (= R's `dput()`)
 
-R の `dput(mtcars)` は「データを再生成する R コード」 を吐きます。 Haskell の等価は、
-データを **コード中のリテラルとして組む** ことです。 これなら相手は CSV を別途用意せず、
-貼って即実行できます:
+R's `dput(mtcars)` outputs "code that regenerates the data". Haskell's equivalent is embedding data
+**as code literals**. The recipient doesn't need a separate CSV file—they can paste and run:
 
 ```haskell
 let toy = DF.fromNamedColumns
@@ -114,68 +114,67 @@ let toy = DF.fromNamedColumns
 -- #> sum(value) = 60.0
 ```
 
-R の助言どおり、 問題を示す **最小の部分集合** を使います(実データ全量ではなく、
-バグが再現する一番小さい toy)。
+Following R's advice, use the **minimal subset showing the problem** (not full real data, but the
+smallest toy reproducing the bug).
 
-### 最後に「まっさらな環境で動くか」 を確認する
+### Finally, verify it runs in a fresh environment
 
-R4DS は「fresh な R セッションを起動してコピペし、 本当に再現するか確認せよ」 と
-締めくくります。 Haskell の等価は **別シェルで `cabal run`**(依存も含めビルドし直し)です。
-同じ出力が出れば、 その例は本当に self-contained・再現可能です。
+R4DS concludes: "Start a fresh R session, paste, and confirm it actually reproduces." Haskell's
+equivalent is **running `cabal run` in a different shell** (rebuilds with dependencies). Same output
+confirms the example is truly self-contained and reproducible.
 
 ---
 
-## §8.3 Investing in yourself(自分に投資する)
+## §8.3 Investing in yourself
 
-R: 問題が起きる前に、 日々少しずつ学ぶ。 tidyverse チームの動向は
-[tidyverse blog](https://www.tidyverse.org/blog/)、 R コミュニティ全体は
-[R Weekly](https://rweekly.org) で追う。
+R: Learn incrementally before problems arise. Follow tidyverse team progress at
+[tidyverse blog](https://www.tidyverse.org/blog/); follow the R community at
+[R Weekly](https://rweekly.org).
 
-Haskell の等価(コミュニティ・情報源の対応):
+Haskell equivalents (community and information sources):
 
-| R の情報源 | Haskell の等価 |
+| R information source | Haskell equivalent |
 |---|---|
-| tidyverse blog | [GHC blog](https://www.haskell.org/ghc/blog.html) / 各ライブラリの CHANGELOG・GitHub |
-| R Weekly(週次まとめ) | [Haskell Weekly](https://haskellweekly.news)(週次ニュースレター) |
-| Stack Overflow / コミュニティ Q&A | [Haskell Discourse](https://discourse.haskell.org) / r/haskell / Libera の `#haskell` |
-| CRAN Task Views | [Hackage](https://hackage.haskell.org) のカテゴリ・[Stackage](https://www.stackage.org) |
+| tidyverse blog | [GHC blog](https://www.haskell.org/ghc/blog.html) / library CHANGELOGs / GitHub |
+| R Weekly (weekly summary) | [Haskell Weekly](https://haskellweekly.news) (weekly newsletter) |
+| Stack Overflow / community Q&A | [Haskell Discourse](https://discourse.haskell.org) / r/haskell / Libera `#haskell` |
+| CRAN Task Views | [Hackage](https://hackage.haskell.org) categories / [Stackage](https://www.stackage.org) |
 
-本プロジェクト固有では、 hanalyze / hgg の `src/` 実装と `test/` が
-一次情報です(CLAUDE.md の「事実か憶測かを明示する」 の精神どおり、
-仕様の根拠はソース実装を grep で確かめます)。
-
----
-
-## §8.4 Summary(まとめ)
-
-R4DS の本章は「Whole Game」 パートの結びです。 ここまでで可視化・変換・整形・読み込みと、
-データサイエンスのプロセス全体を一巡しました。 次のパート以降は各要素を深掘りします。
-
-本チュートリアル群でも同じ流れで、 Ch.1〜Ch.8 で全体像をなぞりました。 以降の章では
-grammar of graphics やレイヤ、 探索的データ解析(EDA)へと細部に入っていきます。
+For this project specifically, hanalyze / hgg `src/` implementations and `test/` are primary sources
+(in the spirit of CLAUDE.md's "distinguish fact from conjecture"—specification basis is confirmed by
+grepping source).
 
 ---
 
-## R↔Haskell 対応のまとめ(本章で示した写像)
+## §8.4 Summary
 
-| R / RStudio / tidyverse | Haskell の等価 |
+R4DS's chapter closes the "Whole Game" part. Through visualization, transformation, tidying, and
+import, we've cycled through the entire data science process once. Later parts go deeper into each.
+
+This tutorial series follows the same flow: Ch.1–Ch.8 trace the full picture. Later chapters dive into
+grammar of graphics, layers, and exploratory data analysis (EDA).
+
+---
+
+## R↔Haskell correspondence summary (mapping shown this chapter)
+
+| R / RStudio / tidyverse | Haskell equivalent |
 |---|---|
-| Google に "R" + パッケージ名 | Google に "Haskell" + ライブラリ名 |
-| `?function`(関数ヘルプ) | GHCi `:doc` / `:info` / `:type`、 Hoogle、 Hackage haddock |
-| 型から関数を引く手段(なし) | **Hoogle**(型シグネチャで逆引き) |
-| `reprex::reprex()` | 専用ツールはなし。 ただし reprex の原則(import を先頭・最小・出力同梱)は同じ |
-| `dput(df)`(データ再生成コード) | `fromNamedColumns` / `fromList` でデータをリテラル埋め込み |
-| fresh な R セッションで再確認 | 別シェルで `cabal run`(依存込みビルドし直し) |
-| `tidyverse_update()` / 最新版確認 | `cabal outdated` / `ghcup` |
+| Google "R" + package name | Google "Haskell" + library name |
+| `?function` (function help) | GHCi `:doc` / `:info` / `:type`, Hoogle, Hackage haddock |
+| No way to reverse-lookup function from type | **Hoogle** (type signature reverse-lookup) |
+| `reprex::reprex()` | No dedicated tool. But reprex principles (imports at top, minimal, output included) are the same |
+| `dput(df)` (data regeneration code) | Embed data as literals with `fromNamedColumns` / `fromList` |
+| Verify in fresh R session | Rebuild with `cabal run` in another shell (with dependencies) |
+| `tidyverse_update()` / check version | `cabal outdated` / `ghcup` |
 | R Weekly / tidyverse blog | Haskell Weekly / GHC blog / Haskell Discourse |
 
-## できないこと / 近似せず記録した相違
+## Unsupported / Differences recorded without approximation
 
-- **`reprex` パッケージの専用糖衣はなし**: R はコードを `reprex()` に通すと、 出力を `#>`
-  付き Markdown に整形してクリップボードへ自動コピーします。 Haskell にこの自動整形ツールは
-  ありません。 ただし本章の眼目は「再現可能で最小な例を作る」 という **規律** であり、
-  それは import を先頭にまとめ・データを埋め込み・別シェルで `cabal run` する運用で
-  完全に満たせます(整形を自動化するツールが無いだけ)。
-- **R/RStudio 固有の UI**: RStudio Viewer のプレビュー・クリップボード連携・Server/Cloud
-  での選択コピー等は RStudio 固有の操作で、 本章では対応する Haskell の運用(GHCi / Hoogle /
-  `cabal run`)を表で示すにとどめます(R4DS でも本章に解析図はゼロ = 散文の助言章)。
+- **No `reprex` package sugar**: R's `reprex()` formats code and output as `#>`-prefixed Markdown and
+  auto-copies to clipboard. Haskell lacks this auto-formatting tool. But the chapter's goal—creating
+  "reproducible and minimal" examples—is fully met by grouping imports at top, embedding data, and
+  running `cabal run` in a fresh shell (just without auto-formatting).
+- **R/RStudio-specific UI**: RStudio Viewer preview, clipboard integration, Server/Cloud selective
+  copy are RStudio-specific operations. We note only the Haskell equivalents (GHCi / Hoogle /
+  `cabal run`) in the table (R4DS has zero analysis figures in this chapter—it's prose advice).

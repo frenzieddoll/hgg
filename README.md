@@ -1,36 +1,37 @@
 # hgg — Haskell Grammar of Graphics
 
-> **状態: ドキュメント先行公開 (コードは公開予定)**
-> 本リポジトリは現在 **API リファレンス等のドキュメントのみ**を公開しています。
-> ライブラリ本体 (Haskell パッケージ) は追って公開します。
+> 🌐 **English** | [日本語](README.ja.md)
 
-**hgg** は Haskell の宣言型作図ライブラリです。ggplot2 / Vega-Lite と同じ
-**Grammar of Graphics** の発想で、 `purePlot <> layer (mark …) <> 設定 …` と
-モノイド合成で図を組み立てます。統計ライブラリ
-[**hanalyze**](https://hackage.haskell.org/package/hanalyze) と対になり
-(hanalyze = 解析 / hgg = 可視化)、 回帰・GLM・GP・生存・時系列・ベイズ (HBM) など
-fit 済みモデルをそのまま図に重ねられます。
+> **Status: Documentation Preview (Code Coming Soon)**
+> This repository currently publishes **documentation and API reference only**.
+> The Haskell library itself will be released later.
 
-## できること (抜粋)
+**hgg** is a declarative plotting library for Haskell. Like ggplot2 and Vega-Lite,
+it follows the **Grammar of Graphics** philosophy, building plots with monoid composition:
+`purePlot <> layer (mark …) <> settings …`. It pairs with the statistical library
+[**hanalyze**](https://hackage.haskell.org/package/hanalyze) (hanalyze = analysis / hgg = visualization),
+letting you overlay fitted models (regression, GLM, GP, survival, time series, Bayesian HBM) directly onto plots.
 
-- **layer / mark** ベースの宣言型 API (散布・線・棒・ヒスト・箱ひげ・violin・density・
-  band・forest・heatmap・contour・vector field・DAG・MCMC 診断 …)
-- **DataFrame 連携** — `df |>> layer (scatter "x" "y")` のように列名で書く
-- **backend** — SVG / PDF / PNG (日本語フォント可) / Jupyter (iHaskell) inline
-- **3D** — 応答曲面 (RSM)・汎用 3D プロット (CPU 投影 + WebGL)
-- **統計連携** — `toPlot` / `statLm` / HBM 抽出子で hanalyze のモデルを描画
+## What You Can Do (Highlights)
 
-## ドキュメント
+- **Layer/mark-based declarative API** (scatter, line, bar, histogram, boxplot, violin, density,
+  band, forest, heatmap, contour, vector field, DAG, MCMC diagnostics …)
+- **DataFrame integration** — write `df |>> layer (scatter "x" "y")` using column names
+- **Multiple backends** — SVG / PDF / PNG (with Japanese font support) / Jupyter (iHaskell) inline
+- **3D plotting** — response surface (RSM), generic 3D (CPU projection + WebGL)
+- **Statistical integration** — `toPlot` / `statLm` / HBM extractors to visualize hanalyze models
 
-- 📚 **[API リファレンス](docs/api-guide/README.md)** — topic 別の網羅リファレンス
-- [チュートリアル](docs/tutorials/README.md) — *R for Data Science 2e* の再現
-- [Getting Started](docs/getting-started.md) ／ [ggplot2 移行ガイド](docs/migration-from-ggplot.md)
-- [Vega-Lite との比較](docs/comparison-vega-lite.md) ／ [モジュール構成](docs/modules.md)
+## Documentation
 
-## ライセンス
+- 📚 **[API Reference](docs/api-guide/README.md)** — comprehensive topic-organized reference
+- [Tutorials](docs/tutorials/README.md) — recreating examples from *R for Data Science 2e*
+- [Getting Started](docs/getting-started.md) / [ggplot2 Migration Guide](docs/migration-from-ggplot.md)
+- [Vega-Lite Comparison](docs/comparison-vega-lite.md) / [Module Structure](docs/modules.md)
 
-[BSD-3-Clause](LICENSE) (hanalyze と同じ)。
+## License
+
+[BSD-3-Clause](LICENSE) (same as hanalyze).
 
 ---
 
-*hgg — declarative Grammar-of-Graphics plotting for Haskell. コード本体は順次公開予定です。*
+*hgg — declarative Grammar-of-Graphics plotting for Haskell. Library code coming soon.*

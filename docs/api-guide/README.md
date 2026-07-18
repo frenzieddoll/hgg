@@ -1,58 +1,56 @@
-# hgg API リファレンス
+# hgg API Reference
 
-公開 API を topic 別に網羅するリファレンス。 「どう学ぶか」 の学習導線は
-[チュートリアル](../tutorials/README.md) が担い、 ここは **用語・網羅性重視の辞書**に振る。
+> 🌐 **English** | [日本語](README.ja.md)
 
-> **用語**: 合成単位 = **layer**、 描画の種類 = **mark** (型 `MarkKind`・`scatter`/`line`/`bar`/…)、
-> 図全体 = **`VisualSpec`**。 「geom」 は ggplot 利用者向けの相互参照としてのみ使う (本ライブラリ
-> native の概念名は layer / mark)。 3D は別型系 ([08 3d](08-3d.md))。
+Comprehensive reference organized by topic. Learning pathways are covered by [tutorials](../tutorials/README.md); here we prioritize **terminology and completeness as a dictionary**.
 
-## ページ一覧
+> **Terminology**: composition unit = **layer**, plot type = **mark** (type `MarkKind`: `scatter`/`line`/`bar`/…), entire plot = **`VisualSpec`**. "geom" is used only as a cross-reference for ggplot users (native concepts here are layer / mark). 3D is a separate type system ([08 3d](08-3d.md)).
 
-| ページ | 内容 |
+## Page index
+
+| Page | Content |
 |---|---|
-| [01 quickstart](01-quickstart.md) | 30 秒で 1 枚 + 書き方の 3 層 (Easy / Grammar / DataFrame) |
-| [02 layers](02-layers.md) | レイヤとマーク (描けるグラフ一覧・mark カタログ) |
-| [03 encoding & scale](03-encoding-scale.md) | channel (色 / サイズ / 形 / 固定色) + scale / palette + 軸 (position scale) |
-| [04 decoration](04-decoration.md) | ラベル / theme / facet / subplot / 座標 / 参照線 / 重畳 / 高度な積層 |
-| [05 backends](05-backends.md) | backend (SVG / PDF / PNG / Jupyter) の選び方と保存関数 |
-| [06 dataframe](06-dataframe.md) | DataFrame 連携 (`df \|>> layer …`・nullable 列) |
-| [07 analyze](07-analyze.md) | analyze 連携 (`toPlot` / `statLm` / HBM 抽出子) |
-| [08 3d](08-3d.md) | 3D (別型系 `Layer3D` / `VisualSpec3D`・応答曲面・汎用 3D) |
-| [09 appendix](09-appendix.md) | 付録 (層・ページ選択 / ggplot 移行 / ライブラリ拡張) + API 早見表 |
-| [10 custom marks](10-custom-marks.md) | 自作 mark (`customMark`) — core 無改造で新プロット型を足す |
+| [01 quickstart](01-quickstart.md) | 30 seconds to one plot + 3 layers of API (Easy / Grammar / DataFrame) |
+| [02 layers](02-layers.md) | Layers and marks (plot catalog, mark reference) |
+| [03 encoding & scale](03-encoding-scale.md) | Channels (color / size / shape / static color) + scale / palette + axes (position scale) |
+| [04 decoration](04-decoration.md) | Labels / theme / facet / subplot / coordinates / reference lines / overlay / advanced layering |
+| [05 backends](05-backends.md) | Backend choice (SVG / PDF / PNG / Jupyter) and save functions |
+| [06 dataframe](06-dataframe.md) | DataFrame integration (`df \|>> layer …`, nullable columns) |
+| [07 analyze](07-analyze.md) | analyze integration (`toPlot` / `statLm` / HBM extractors) |
+| [08 3d](08-3d.md) | 3D (separate types `Layer3D` / `VisualSpec3D`, response surfaces, general 3D) |
+| [09 appendix](09-appendix.md) | Appendix (layer/page selection / ggplot migration / library extension) + API quick reference |
+| [10 custom marks](10-custom-marks.md) | Custom marks (`customMark`) — add new plot types without modifying core |
 
-## 書き方の 3 層 (どの import でも下位層は全部使える)
+## 3 layers of writing (any import gives you all lower layers)
 
-| 層 | モジュール | 立ち位置 |
+| Layer | Module | Role |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` 直渡し + `overlay` 既定 |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
+| **0. Quick** | `Hgg.Plot.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` direct pass + `overlay` default |
+| **2. Grammar** | `Hgg.Plot.Spec` | ggplot-like channels + `<>` composition (primary) |
 
-## 2 つの黄金律
+## Two golden rules
 
-1. 図は **`purePlot <> layer (mark …) <> 設定 …`** の形。 `<>` で部品を足す。
-2. `<>` は 2 階層。 mark・見た目は **`Layer`** を返し `layer (…)` の**中**、 タイトル・テーマ・facet 等は
-   **`VisualSpec`** を返し `layer (…)` の**外**。 → [重畳の仕組み](04-decoration.md#overlay)。
+1. Plots are shaped **`purePlot <> layer (mark …) <> settings …`**. Add components with `<>`.
+2. `<>` is two-layered: marks/appearance return **`Layer`** and compose **inside** `layer (…)`, titles/theme/facet return **`VisualSpec`** and compose **outside**. → [Layering rules](04-decoration.md#overlay).
 
-## 演算子早見表
+## Operator quick reference
 
-図を組み立てる演算子は 4 つだけ。 役割の違いはここを一次根拠にする (各ページは詳細のみ扱う)。
+Only 4 operators build plots. Understand their roles here (individual pages cover detail).
 
-| 演算子 | 役割 | 詳細 |
+| Operator | Role | Reference |
 |---|---|---|
-| `<>` | spec / layer / 設定の**合成** (Monoid) | [2 つの黄金律](#2-つの黄金律) |
-| `\|>` | DataFrame の**前方変換** (Hackage `dataframe`・groupBy/aggregate 等) | [06 dataframe](06-dataframe.md) |
-| `\|>>` | df を図に**束ねる** (`BoundPlot` を作る純関数・ファイルは書かない) | [06 dataframe](06-dataframe.md#by-column-name) |
-| `\|->` | df から列名で**モデルを fit** する | [07 analyze](07-analyze.md#fit-data) |
+| `<>` | **Compose** spec / layer / settings (Monoid) | [Two golden rules](#two-golden-rules) |
+| `\|>` | DataFrame **forward transform** (Hackage `dataframe`, groupBy/aggregate etc) | [06 dataframe](06-dataframe.md) |
+| `\|>>` | **Bind** df to plot (pure function creating `BoundPlot`, no file I/O) | [06 dataframe](06-dataframe.md#by-column-name) |
+| `\|->` | **Fit model** from df by column name | [07 analyze](07-analyze.md#fit-data) |
 
-保存関数 (`saveSVG` / `saveSVGBound` / `saveSVGBoundStats` × SVG/PDF/PNG) は
-[05 backends](05-backends.md#be-svg) に一覧がある。
+Save functions (`saveSVG` / `saveSVGBound` / `saveSVGBoundStats` × SVG/PDF/PNG) are listed in
+[05 backends](05-backends.md#be-svg).
 
-## 関連ドキュメント
+## Related documentation
 
-- **実例ギャラリー** ─ reference から実データ作例へ:
-  [README ギャラリー](../../README.md#ギャラリー) (各図クリックで該当エントリへ)
-- [チュートリアル (R4DS 再現等)](../tutorials/README.md) ─ 学習導線
-- [R4DS 第 1 章](../tutorials/01-visualize/README.md) (penguins 全 24 図 + 再現コード)
+- **Live gallery** — from reference to real data examples:
+  [README gallery](../../README.md) (click plots to see relevant entries)
+- [Tutorials (R4DS recreation etc)](../tutorials/README.md) — learning pathway
+- [R4DS Chapter 1](../tutorials/01-visualize/README.md) (all 24 penguins plots + code)
