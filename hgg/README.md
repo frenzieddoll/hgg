@@ -12,8 +12,50 @@ GP, survival, time series, Bayesian HBM — can be overlaid directly onto plots.
 This is the **umbrella package**: depending on `hgg` brings in the core
 (`hgg-core`), the dataframe binding (`hgg-frame`) and the SVG backend
 (`hgg-svg`), and a single `import Graphics.Hgg` covers the whole default
-experience. A gallery with generating code is on
-[GitHub](https://github.com/frenzieddoll/hgg#gallery).
+experience.
+
+<img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/tutorials/01-visualize/09-final.svg" width="560" alt="Finished plot: penguin body mass vs flipper length, coloured and shaped by species, with a regression line">
+
+## Gallery
+
+<table>
+  <tr>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L94"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/line.svg" width="210" alt="function lines"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L102"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/scatter.svg" width="210" alt="scatter"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L107"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/histogram.svg" width="210" alt="histogram"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L112"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/density.svg" width="210" alt="density"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L124"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/boxplot.svg" width="210" alt="boxplot"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L129"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/violin.svg" width="210" alt="violin"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L151"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/contour.svg" width="210" alt="contour"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L156"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/heatmap.svg" width="210" alt="heatmap"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L215"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/hexbin.svg" width="210" alt="hexbin"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L167"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/quiver.svg" width="210" alt="vector field"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L177"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/bar.svg" width="210" alt="stacked bar"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L182"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/pie.svg" width="210" alt="pie chart"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/api-guide/04-decoration.md#facet"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/tutorials/01-visualize/24-facet-island.svg" width="210" alt="facets"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L139"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/distcols.svg" width="210" alt="distCols side-by-side"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L188"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/subplots.svg" width="210" alt="subplots patchwork"></a></td>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L204"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/surface3d.svg" width="210" alt="3D response surface"></a></td>
+  </tr>
+  <tr>
+    <td><a href="https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs#L226"><img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/hbm-hier-dag.svg" width="210" alt="hierarchical Bayesian model DAG"></a></td>
+  </tr>
+</table>
+
+Click any figure to jump to its **generating code**
+([`hgg-tutorials/readme-images/ReadmeImages.hs`](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/hgg-tutorials/readme-images/ReadmeImages.hs));
+the facet figure comes from the
+[R4DS tutorial](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/tutorials/01-visualize/README.md).
+The full API reference lives in the
+[api-guide](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/api-guide/02-layers.md).
+All 24 penguins figures with reproduction code are in
+[R for Data Science, chapter 1](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/tutorials/01-visualize/README.md).
 
 ## Installation
 
@@ -85,11 +127,39 @@ main = saveSVGBound "bound.svg" $
            , ("y", NumData (V.fromList [1,4,9,16,25])) ] :: [(Text, ColData)]
 ```
 
+<img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/images/readme/quickstart.svg" width="420" alt="scatter plot of y = x²">
+
 ## A taste of the grammar
 
 A plot is the empty `purePlot` plus `layer (mark …)` pieces combined with `<>`.
 Data is bound with `|>>`; colour and shape are given inside the mark with
 `colorBy`/`shapeBy` (below, `raw` is palmerpenguins).
+
+**1. Scatter** — a `scatter` mark with column names produces axes and points.
+
+```haskell
+saveSVGBound "04-scatter.svg" $
+  raw |>> layer (scatter "flipper_length_mm" "body_mass_g" <> alpha 0.85)
+      <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+      <> theme ThemeGrey
+```
+
+<img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/tutorials/01-visualize/04-scatter.svg" width="420" alt="scatter plot">
+
+**2. Colour by species** — add `colorBy "species"` to the mark.
+
+```haskell
+saveSVGBound "05-color.svg" $
+  raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                 <> colorBy "species" <> alpha 0.85)
+      <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+      <> legendTitle "species"
+      <> theme ThemeGrey
+```
+
+<img src="https://raw.githubusercontent.com/frenzieddoll/hgg/v0.1.0.0/docs/tutorials/01-visualize/05-color.svg" width="420" alt="coloured scatter plot">
+
+**3. Overlay a regression line and labels** — keep adding layers and decorations with `<>`.
 
 ```haskell
 saveSVGBoundStats "09-final.svg" $
@@ -104,8 +174,8 @@ saveSVGBoundStats "09-final.svg" $
       <> theme ThemeGrey
 ```
 
-The full step-by-step walkthrough (all 24 figures) is in the
-[R for Data Science, chapter 1 tutorial](https://github.com/frenzieddoll/hgg/blob/master/docs/tutorials/01-visualize/README.md).
+The full step-by-step walkthrough is in the
+[R for Data Science, chapter 1 tutorial](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/tutorials/01-visualize/README.md).
 
 ## What you can do
 
@@ -123,10 +193,10 @@ The full step-by-step walkthrough (all 24 figures) is in the
 ## Documentation
 
 - [Gallery + full README](https://github.com/frenzieddoll/hgg#readme)
-- [API Reference](https://github.com/frenzieddoll/hgg/blob/master/docs/api-guide/README.md) — organised by topic
-- [Tutorial: R for Data Science, chapter 1](https://github.com/frenzieddoll/hgg/blob/master/docs/tutorials/01-visualize/README.md)
-- [Getting Started](https://github.com/frenzieddoll/hgg/blob/master/docs/getting-started.md) /
-  [ggplot2 Migration Guide](https://github.com/frenzieddoll/hgg/blob/master/docs/migration-from-ggplot.md)
+- [API Reference](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/api-guide/README.md) — organised by topic
+- [Tutorial: R for Data Science, chapter 1](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/tutorials/01-visualize/README.md)
+- [Getting Started](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/getting-started.md) /
+  [ggplot2 Migration Guide](https://github.com/frenzieddoll/hgg/blob/v0.1.0.0/docs/migration-from-ggplot.md)
 
 ## License
 
