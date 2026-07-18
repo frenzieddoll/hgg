@@ -126,7 +126,7 @@ main = do
   --   色にするもので、 件数密度の geom_hex とは別物)。 本章の眼目は六角ビン自体では
   --   なく「コードで相対パスに保存する」 ワークフローなので、 図は実装済の scatter で
   --   代替する (過密は alpha で緩和)。 六角/件数ビンの実装と本格再現は EDA/Layers 章へ。
-  let dPlot = diamonds |>> layer (scatter "carat" "price" <> size 2 <> alpha 0.05)
+  let dPlot = diamonds |>> theme ThemeGrey <> layer (scatter "carat" "price" <> alpha 0.05)
   saveSVGBound "diamonds-carat-price.svg" dPlot   -- = ggsave("diamonds.png") の等価 (相対パス)
   createDirectoryIfMissing False "data"           -- = Files ペインの New Folder
   DF.writeCsv "data/diamonds.csv" diamonds        -- = write_csv(diamonds, "data/diamonds.csv")

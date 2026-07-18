@@ -25,7 +25,7 @@ import           Hgg.Plot.Frame       ((|>>))
 import           Hgg.Plot.Backend.SVG (saveSVGBound)
 import           Hgg.Plot.DataFrame   ()
 
--- === 列抽出ヘルパ (= 09-missing と同型。 例外安全に列を list 化) ===
+-- === 列抽出ヘルパ (= 18-missing と同型。 例外安全に列を list 化) ===
 
 safeCol :: forall a. (DFC.Columnable a, NFData a) => Text -> DF.DataFrame -> Maybe [a]
 safeCol name df = unsafePerformIO $ do
@@ -81,7 +81,7 @@ main = do
 
   -- (1) carat の分布 (binwidth=0.5)
   saveSVGBound "01-hist-carat-bw05.svg" $
-    diamonds |>> layer (histogram "carat" <> binWidth 0.5)
+    diamonds |>> theme ThemeGrey <> layer (histogram "carat" <> binWidth 0.5)
              <> title "carat の分布 (binwidth=0.5)" <> xLabel "carat" <> yLabel "count"
 
   -- (2) 小さい diamond (carat<3) を細かい bin で (binwidth=0.01)
@@ -89,7 +89,7 @@ main = do
         [ ("carat", DF.fromList [ c | (c,_) <- zip carat price, c < 3 ])
         , ("price", DF.fromList [ p | (c,p) <- zip carat price, c < 3 ]) ]
   saveSVGBound "02-hist-carat-bw001.svg" $
-    smallerDF |>> layer (histogram "carat" <> binWidth 0.01)
+    smallerDF |>> theme ThemeGrey <> layer (histogram "carat" <> binWidth 0.01)
               <> title "carat<3 の分布 (binwidth=0.01)" <> xLabel "carat" <> yLabel "count"
 
   -- ============================================================
@@ -98,12 +98,12 @@ main = do
 
   -- (3) y (幅 mm) の分布。 x 軸が異常に広い = 外れ値の痕跡
   saveSVGBound "03-hist-y-bw05.svg" $
-    diamonds |>> layer (histogram "y" <> binWidth 0.5)
+    diamonds |>> theme ThemeGrey <> layer (histogram "y" <> binWidth 0.5)
              <> title "y (幅 mm) の分布" <> xLabel "y" <> yLabel "count"
 
   -- (4) y 軸を 0..50 にズーム (coord_cartesian) して低頻度 bin を見る
   saveSVGBound "04-hist-y-zoom.svg" $
-    diamonds |>> layer (histogram "y" <> binWidth 0.5)
+    diamonds |>> theme ThemeGrey <> layer (histogram "y" <> binWidth 0.5)
              <> coordCartesianY 0 50
              <> title "y の分布 (y 軸を 0..50 にズーム)" <> xLabel "y" <> yLabel "count"
 
@@ -125,7 +125,7 @@ main = do
         [ ("x", DF.fromList (map fst xyKept))
         , ("y", DF.fromList (map snd xyKept)) ]
   saveSVGBound "05-scatter-xy.svg" $
-    diamonds2DF |>> layer (scatter "x" "y" <> size 4 <> alpha 0.4)
+    diamonds2DF |>> theme ThemeGrey <> layer (scatter "x" "y" <> alpha 0.4)
                 <> title "x vs y (異常な y は NA に recode)" <> xLabel "x" <> yLabel "y"
 
   -- (6) flights: 欠航 (dep_time が欠損) 別に sched_dep_time の頻度多角形
@@ -139,7 +139,7 @@ main = do
         [ ("sched_dep_time", DF.fromList schedDec)
         , ("cancelled",      DF.fromList ([ if c then "TRUE" else "FALSE" | c <- cancelled ] :: [Text])) ]
   saveSVGBound "06-freqpoly-flights.svg" $
-    flightsDF |>> layer (freqpoly "sched_dep_time" <> binWidth 0.25 <> color "cancelled" <> stroke 0.75)
+    flightsDF |>> theme ThemeGrey <> layer (freqpoly "sched_dep_time" <> binWidth 0.25 <> colorBy "cancelled")
               <> title "予定出発時刻の頻度多角形 (欠航別)"
               <> xLabel "sched_dep_time (時)" <> yLabel "count"
 
@@ -149,19 +149,19 @@ main = do
 
   -- (7) cut 別 price の頻度多角形 (count)
   saveSVGBound "07-freqpoly-price-count.svg" $
-    diamonds |>> layer (freqpoly "price" <> binWidth 500 <> color "cut"
-                       <> colorCats cutOrder <> stroke 0.75)
+    diamonds |>> theme ThemeGrey <> layer (freqpoly "price" <> binWidth 500 <> colorBy "cut"
+                       <> colorCats cutOrder)
              <> title "cut 別 price の頻度多角形 (count)" <> xLabel "price" <> yLabel "count"
 
   -- (8) 同じく density (after_stat(density)) で高さを揃える
   saveSVGBound "08-freqpoly-price-density.svg" $
-    diamonds |>> layer (freqpoly "price" <> binWidth 500 <> color "cut"
-                       <> colorCats cutOrder <> histogramDensity True <> stroke 0.75)
+    diamonds |>> theme ThemeGrey <> layer (freqpoly "price" <> binWidth 500 <> colorBy "cut"
+                       <> colorCats cutOrder <> histogramDensity True)
              <> title "cut 別 price の頻度多角形 (density)" <> xLabel "price" <> yLabel "density"
 
   -- (9) cut 別 price の箱ひげ図
   saveSVGBound "09-box-price-cut.svg" $
-    diamonds |>> layer (boxplotBy "cut" "price")
+    diamonds |>> theme ThemeGrey <> layer (boxplot "price" <> groupBy "cut")
              <> scaleXDiscreteLimits cutOrder
              <> title "cut 別 price の箱ひげ図" <> xLabel "cut" <> yLabel "price"
 
@@ -172,20 +172,20 @@ main = do
 
   -- (10) class 別 hwy の箱ひげ図 (class はアルファベット順)
   saveSVGBound "10-box-hwy-class.svg" $
-    mpg |>> layer (boxplotBy "class" "hwy")
+    mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class")
         <> title "class 別 hwy の箱ひげ図" <> xLabel "class" <> yLabel "hwy"
 
   -- (11) fct_reorder: class を hwy 中央値の昇順に並べ替え
   let classMedian c = median [ h | (cl,h) <- zip mpgClass mpgHwy, cl == c ]
       classByMedian = sortOn classMedian (nub mpgClass)
   saveSVGBound "11-box-hwy-class-reorder.svg" $
-    mpg |>> layer (boxplotBy "class" "hwy")
+    mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class")
         <> scaleXDiscreteLimits classByMedian
         <> title "class 別 hwy (hwy 中央値の昇順)" <> xLabel "class" <> yLabel "hwy"
 
   -- (12) 横向き (coord_flip)。 長いカテゴリ名に向く
   saveSVGBound "12-box-hwy-class-flip.svg" $
-    mpg |>> layer (boxplotBy "class" "hwy")
+    mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class")
         <> scaleXDiscreteLimits classByMedian
         <> coordFlip
         -- coordFlip はデータ軸を反転するが軸タイトルは物理軸 (底=x/左=y) に固定される
@@ -198,7 +198,7 @@ main = do
 
   -- (13) cut × color の件数 (geom_count)
   saveSVGBound "13-count-cut-color.svg" $
-    diamonds |>> layer (countXY "cut" "color")
+    diamonds |>> theme ThemeGrey <> layer (countXY "cut" "color")
              <> scaleXDiscreteLimits cutOrder
              <> title "cut × color の件数 (geom_count)" <> xLabel "cut" <> yLabel "color"
 
@@ -220,7 +220,7 @@ main = do
         , ("cut",   DF.fromList ([ ct | (_,ct,_) <- tileRows ] :: [Text]))
         , ("n",     DF.fromList ([ n  | (_,_,n)  <- tileRows ] :: [Double])) ]
   saveSVGBound "14-tile-color-cut.svg" $
-    tileDF |>> layer (heatmap "color" "cut" "n")
+    tileDF |>> theme ThemeGrey <> layer (heatmap "color" "cut" "n")
            <> scaleYDiscreteLimits cutOrder
            <> title "color × cut の件数 (geom_tile)" <> xLabel "color" <> yLabel "cut"
 
@@ -230,23 +230,23 @@ main = do
 
   -- (15) carat vs price の散布図 (carat<3)
   saveSVGBound "15-scatter-carat-price.svg" $
-    smallerDF |>> layer (scatter "carat" "price" <> size 4)
+    smallerDF |>> theme ThemeGrey <> layer (scatter "carat" "price")
               <> title "carat vs price" <> xLabel "carat" <> yLabel "price"
 
   -- (16) alpha で重なりを可視化 (alpha=1/100)
   saveSVGBound "16-scatter-carat-price-alpha.svg" $
-    smallerDF |>> layer (scatter "carat" "price" <> size 4 <> alpha 0.01)
+    smallerDF |>> theme ThemeGrey <> layer (scatter "carat" "price" <> alpha 0.01)
               <> title "carat vs price (alpha=1/100)" <> xLabel "carat" <> yLabel "price"
 
   -- (17) geom_bin2d: 2D bin の件数を連続色で
   saveSVGBound "17-bin2d-carat-price.svg" $
-    smallerDF |>> layer (bin2dCount "carat" "price")
+    smallerDF |>> theme ThemeGrey <> layer (bin2dCount "carat" "price")
               <> title "carat vs price (geom_bin2d, fill=count)"
               <> xLabel "carat" <> yLabel "price"
 
   -- (18) geom_hex 相当 (※ hgg は六角形 binning 未実装。 矩形 bin2d で代替)
   saveSVGBound "18-hex-carat-price.svg" $
-    smallerDF |>> layer (bin2dCount "carat" "price")
+    smallerDF |>> theme ThemeGrey <> layer (bin2dCount "carat" "price")
               <> title "carat vs price (geom_hex 代替 = 矩形 bin2d)"
               <> xLabel "carat" <> yLabel "price"
 
@@ -258,7 +258,7 @@ main = do
         [ ("carat_bin", DF.fromList (map fst cwRows :: [Text]))
         , ("price",     DF.fromList (map snd cwRows :: [Double])) ]
   saveSVGBound "19-box-cutwidth.svg" $
-    cwDF |>> layer (boxplotBy "carat_bin" "price")
+    cwDF |>> theme ThemeGrey <> layer (boxplot "price" <> groupBy "carat_bin")
          <> scaleXDiscreteLimits cwLabels
          <> title "cut_width(carat, 0.1) 別 price の箱ひげ図"
          <> xLabel "carat (0.1 刻み)" <> yLabel "price"
@@ -285,13 +285,13 @@ main = do
 
   -- (20) 残差 vs carat
   saveSVGBound "20-resid-carat.svg" $
-    residDF |>> layer (scatter "carat" "resid" <> size 4 <> alpha 0.2)
+    residDF |>> theme ThemeGrey <> layer (scatter "carat" "resid" <> alpha 0.2)
             <> title "残差 (carat の効果を除いた価格) vs carat"
             <> xLabel "carat" <> yLabel "resid"
 
   -- (21) cut 別 残差の箱ひげ図 = 品質が良いほど (相対的に) 高価
   saveSVGBound "21-resid-cut.svg" $
-    residDF |>> layer (boxplotBy "cut" "resid")
+    residDF |>> theme ThemeGrey <> layer (boxplot "resid" <> groupBy "cut")
             <> scaleXDiscreteLimits cutOrder
             <> title "cut 別 残差の箱ひげ図" <> xLabel "cut" <> yLabel "resid"
 

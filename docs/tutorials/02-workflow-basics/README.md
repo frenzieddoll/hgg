@@ -50,7 +50,7 @@ cabal run tut-02-workflow-basics
 ## §2.3 What's in a name?
 
 命名規約。 R4DS は **snake_case** を推奨。 Haskell の慣例は **camelCase**(関数・束縛)/
-**PascalCase**(型・コンストラクタ)で、 本プロジェクトも camelCase(`../../CLAUDE.md`)。
+**PascalCase**(型・コンストラクタ)で、 本プロジェクトも camelCase(`CLAUDE.md`)。
 
 | R (snake_case) | Haskell (camelCase) |
 |---|---|

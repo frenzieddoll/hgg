@@ -41,8 +41,8 @@ import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
 import           Hgg.Plot.DataFrame   ()
 
 -- ggplot geom_smooth の既定線色 (単一回帰線のとき)。
-smoothBlue :: Text
-smoothBlue = "#3366FF"
+smoothBlue :: Color
+smoothBlue = fromHex "#3366FF"
 
 -- diamonds の factor 水準順 (R の ordered factor)。 既定アルファベット順だと崩れるので
 -- scaleXDiscreteLimits / colorCats で明示する。
@@ -76,19 +76,19 @@ main = do
 
   -- R4DS L71: aes(color=class) = class で色分け (ggplot 既定 hue)。
   saveSVGBound "01-aes-color.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> color "class" <> size 4 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "class" <> alpha 0.9)
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "class"
 
   -- R4DS L75: aes(shape=class) = class で形状分け。 R は shape を最大 6 種に制限し
   --   7 番目 (suv) を描かない (警告)。 hgg の MarkShape は 8 種なので 7 class
   --   すべてに形状が付く (= ここは R より多く描ける。 honest 記録)。
   saveSVGBound "02-aes-shape.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> shapeBy "class" <> size 4 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> shapeBy "class" <> alpha 0.9)
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "class"
 
   -- R4DS L104: aes(size=class) = class を点サイズにマップ (順序を含意するので非推奨)。
   saveSVGBound "03-aes-size.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> sizeBy "class" <> alpha 0.6)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> sizeBy "class" <> alpha 0.6)
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "class"
 
   -- R4DS L108: aes(alpha=class)。 alpha を変数にマップする aesthetic は hgg 未対応
@@ -97,29 +97,35 @@ main = do
 
   -- R4DS L130: geom_point(color="blue") = aes 外で色を固定 (全点青)。
   saveSVGBound "04-aes-blue.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> colorStatic "blue" <> size 4 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> color (fromHex "#0000ff") <> alpha 0.9)
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS fig-shapes (L165): R の 26 種 pch 参照図。 hgg の MarkShape は 8 種
-  --   (circle/square/triangle/diamond/cross/spade/heart/club)。 使える 8 種の一覧図に
-  --   置換し honest 記録。 8 点を横一列に並べ各点の形状を変え、 下にラベルを置く。
-  let shapeNames = ["circle","square","triangle","diamond","cross","spade","heart","club"] :: [Text]
+  --   (circle/square/triangle/cross/spade/heart/club/diamond)。 使える 8 種の一覧図に
+  --   置換し honest 記録。 トランプのスーツ (spade/heart/club/diamond) は hgg 独自
+  --   拡張で、 形は htdebeer/SVG-cards (public domain) 由来。 diamond は通常の菱形を
+  --   廃しトランプ型のみ、 heart は上下反転 (ユーザ要望)。
+  let shapeNames = ["circle","square","triangle","cross","spade","heart","club","diamond"] :: [Text]
       shapeXs    = [0 .. 7] :: [Double]
       shapeYs    = replicate 8 (1.0 :: Double)
       -- shapeBy は内部でカテゴリをアルファベット順に形状へ割り当てるため、 ラベルと形状が
       -- ずれる。 shapeMapEntry で各名前を対応する MarkShape に固定する。
       shapePins  = mconcat (zipWith shapeMapEntry shapeNames
-                     [MShCircle, MShSquare, MShTriangle, MShDiamond
-                     , MShCross, MShSpade, MShHeart, MShClub])
+                     [MShCircle, MShSquare, MShTriangle, MShCross
+                     , MShSpade, MShHeart, MShClub, MShDiamond])
   saveSVGBound "05-shapes.svg" $
     DF.empty |>>
-        layer (scatter (inline shapeXs) (inline shapeYs)
+        theme ThemeGrey
+     <> layer (scatter (inline shapeXs) (inline shapeYs)
                  <> shapeBy (inlineCat shapeNames) <> shapePins
-                 <> colorStatic "red" <> size 12)
-     <> layer (geomText (inline shapeXs) (inline (map (subtract 0.18) shapeYs))
+                 <> color (fromHex "#ff0000") <> size 12)
+     <> layer (text (inline shapeXs) (inline (map (subtract 0.18) shapeYs))
                  (inlineCat shapeNames))
      <> yAxis hideTicks <> xAxis hideTicks
      <> xLabel "" <> yLabel ""
+     <> coordCartesianX (-0.7) 7.7   -- 両端ラベルがはみ出ないよう表示域を広げる
+     <> widthMm 220                  -- 8 ラベルが重ならないよう図幅を拡張 (既定 165mm)
+     <> legendOff   -- 形ギャラリー図ゆえ shape 凡例は不要 (Phase 35 shape-only 凡例を抑制)
      <> title "hgg の 8 shapes (R の pch 26 種に対する honest 版)"
 
   -- =========================================================================
@@ -128,60 +134,61 @@ main = do
 
   -- R4DS L225/243: geom_point。
   saveSVGBound "06-geom-point.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 4 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L228/248: geom_smooth = 平滑曲線 + 信頼帯。 R は loess、 ここは B-spline (honest)。
   saveSVGBoundStats "07-geom-smooth.svg" $
-    mpg |>> layer (statSmoothCI "displ" "hwy" 6 <> colorStatic smoothBlue <> stroke 2)
+    mpg |>> theme ThemeGrey <> layer (statSmoothCI "displ" "hwy" 6 <> color smoothBlue)
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L327: geom_smooth(aes(color=drv)) = drv で 3 本に分かれた平滑曲線。
   --   stat の群分割は color aesthetic で駆動 (= R の color=drv 版に対応)。
   saveSVGBoundStats "08-smooth-color-drv.svg" $
-    mpg |>> layer (statSmoothCI "displ" "hwy" 6 <> color "drv" <> stroke 2)
+    mpg |>> theme ThemeGrey <> layer (statSmoothCI "displ" "hwy" 6 <> colorBy "drv")
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "drv"
 
   -- R4DS L291: 2 つの geom を重畳 + 局所マッピング。 R は point(color=drv) + smooth(linetype=drv)。
   --   ここは smooth も color=drv で群分割 (linetype 群分割は未対応 → 3 本を色で区別、 honest)。
   saveSVGBoundStats "09-point-smooth-drv.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> color "drv" <> size 4 <> alpha 0.9)
-          <> layer (statSmoothCI "displ" "hwy" 6 <> color "drv" <> stroke 2)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "drv" <> alpha 0.9)
+          <> layer (statSmoothCI "displ" "hwy" 6 <> colorBy "drv")
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "drv"
 
   -- R4DS L343: 局所マッピングの典型。 geom_point(aes(color=class)) + 全体 1 本の geom_smooth。
   saveSVGBoundStats "10-point-class-smooth.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> color "class" <> size 4 <> alpha 0.9)
-          <> layer (statSmoothCI "displ" "hwy" 6 <> colorStatic smoothBlue <> stroke 2)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "class" <> alpha 0.9)
+          <> layer (statSmoothCI "displ" "hwy" 6 <> color smoothBlue)
           <> xLabel "displ" <> yLabel "hwy" <> legendTitle "class"
 
   -- R4DS L357: 局所 data。 全点 + 2seater を赤点と赤い中抜き円で強調。
+  --   Phase 34 で `hollow` (= ggplot shape="circle open") を実装し、 3 層目を
+  --   塗り透明 + 赤 stroke の輪 (size=外径・stroke=線幅) にして R4DS 同型に。
   let twoSeater = mpg |> DF.filterBy (== ("2seater" :: Text)) (F.col @Text "class")
   saveSVGBound "11-2seater.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 4 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
           <> layer (scatter (inline (DF.columnAsList (F.col @Double "displ") twoSeater))
                             (inline (map fromIntegral (DF.columnAsList (F.col @Int "hwy") twoSeater)))
-                     <> colorStatic "red" <> size 4)
+                     <> color (fromHex "#ff0000"))
           <> layer (scatter (inline (DF.columnAsList (F.col @Double "displ") twoSeater))
                             (inline (map fromIntegral (DF.columnAsList (F.col @Int "hwy") twoSeater)))
-                     <> shapeBy (inlineCat (replicate (fst (DF.dimensions twoSeater)) ("circle" :: Text)))
-                     <> colorStatic "red" <> size 7)
+                     <> color (fromHex "#ff0000") <> hollow <> size 9 <> stroke 1.2)
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L380/388: 1 変数 hwy の分布を geom 違いで見る (histogram / density / boxplot)。
   saveSVGBound "12-histogram.svg" $
-    mpg |>> layer (histogram "hwy" <> binWidth 2)
+    mpg |>> theme ThemeGrey <> layer (histogram "hwy" <> binWidth 2)
           <> xLabel "hwy" <> yLabel "count"
   saveSVGBound "13-density.svg" $
-    mpg |>> layer (density "hwy")
+    mpg |>> theme ThemeGrey <> layer (density "hwy")
           <> xLabel "hwy" <> yLabel "density"
   saveSVGBound "14-boxplot.svg" $
-    mpg |>> layer (boxplot "hwy")
+    mpg |>> theme ThemeGrey <> layer (boxplot "hwy")
           <> xLabel "" <> yLabel "hwy"
 
   -- R4DS L407: ggridges geom_density_ridges(drv)。 drv ごとの density を縦に積む。
   saveSVGBound "15-ridges.svg" $
-    mpg |>> layer (ridge "hwy" "drv" <> color "drv" <> alpha 0.5)
+    mpg |>> theme ThemeGrey <> layer (ridge "hwy" <> colorBy "drv" <> alpha 0.5)
           <> xLabel "hwy" <> yLabel "drv" <> legendOff
 
   -- =========================================================================
@@ -190,19 +197,19 @@ main = do
 
   -- R4DS L487: facet_wrap(~cyl)。
   saveSVGBound "16-facet-wrap-cyl.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
           <> facetWrap "cyl_f" 2
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L502: facet_grid(drv ~ cyl)。 行=drv・列=cyl の 2 次元 grid。
   saveSVGBound "17-facet-grid-drv-cyl.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
           <> facetGrid "drv" "cyl_f"
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L519: facet_grid(drv ~ cyl, scales="free")。 行で y・列で x のスケールを自由化。
   saveSVGBound "18-facet-grid-free.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
           <> facetGrid "drv" "cyl_f" <> facetScales FacetFree
           <> xLabel "displ" <> yLabel "hwy"
 
@@ -216,14 +223,14 @@ main = do
 
   -- R4DS L608: geom_bar(aes(x=cut)) = cut ごとの件数 (Fair 1610 .. Ideal 21551)。
   saveSVGBound "19-bar-cut.svg" $
-    byCut |>> layer (bar "cut" "n")
+    byCut |>> theme ThemeGrey <> layer (bar "cut" "n")
             <> scaleXDiscreteLimits cutOrder
             <> xLabel "cut" <> yLabel "count"
 
   -- R4DS L663: count(cut) |> geom_bar(stat="identity") = 既に集計済の n を棒高に直接。
   --   hgg の bar は元々「集計済 y を高さに」 取るので、 19 と同じ集計を y=n で描く。
   saveSVGBound "20-bar-identity.svg" $
-    byCut |>> layer (bar "cut" "n")
+    byCut |>> theme ThemeGrey <> layer (bar "cut" "n")
             <> scaleXDiscreteLimits cutOrder
             <> xLabel "cut" <> yLabel "n"
 
@@ -232,7 +239,7 @@ main = do
       byProp = byCut |> DF.derive "prop"
                           (F.lift (\k -> fromIntegral k / total :: Double) (F.col @Int "n"))
   saveSVGBound "21-bar-prop.svg" $
-    byProp |>> layer (bar "cut" "prop")
+    byProp |>> theme ThemeGrey <> layer (bar "cut" "prop")
              <> scaleXDiscreteLimits cutOrder
              <> xLabel "cut" <> yLabel "prop"
 
@@ -251,7 +258,8 @@ main = do
   -- x 軸目盛ラベルを cut 名に差し替える (categorical x は range geom 非対応のため)。
   saveSVGBound "22-stat-summary.svg" $
     DF.empty |>>
-        layer (lineRange (inline cutXs) (inline mids) (inline halves) <> stroke 1.5)
+        theme ThemeGrey
+     <> layer (lineRange (inline cutXs) (inline mids) (inline halves) <> stroke 1.5)
      <> layer (scatter (inline cutXs) (inline meds) <> size 7)
      <> xAxis (axisBreaksLabeled (zip cutXs cutOrder))
      <> xLabel "cut" <> yLabel "depth"
@@ -269,37 +277,37 @@ main = do
   --   color(枠) と fill(面) を分離せず color=面色 → 両者は同一図になる (honest 記録)。
   --   ここは fill 相当の 1 図を出す。
   saveSVGBound "23-bar-fill-drv.svg" $
-    byDrv |>> layer (bar "drv" "n" <> color "drv")
+    byDrv |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "drv")
             <> xLabel "drv" <> yLabel "count" <> legendOff
 
   -- R4DS L764: geom_bar(x=drv, fill=class) = 既定 (stack) で class を積み上げ。
   saveSVGBound "24-bar-stack-class.svg" $
-    byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosStack)
+    byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosStack)
                  <> xLabel "drv" <> yLabel "count" <> legendTitle "class"
 
   -- R4DS L787: position="identity" + alpha = 重なりを半透明で見せる。
   saveSVGBound "25-bar-identity.svg" $
-    byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosIdentity <> alpha 0.2)
+    byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosIdentity <> alpha 0.2)
                  <> xLabel "drv" <> yLabel "count" <> legendTitle "class"
 
   -- R4DS L818: position="fill" = 各 drv の合計を 1 に揃え割合比較。
   saveSVGBound "26-bar-fill.svg" $
-    byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosFill)
+    byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosFill)
                  <> xLabel "drv" <> yLabel "count" <> legendTitle "class"
 
   -- R4DS L822: position="dodge" = 横に並べて個別値を比較。
   saveSVGBound "27-bar-dodge.svg" $
-    byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosDodge)
+    byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosDodge)
                  <> xLabel "drv" <> yLabel "count" <> legendTitle "class"
 
   -- R4DS L835: 素の散布図 (overplotting: 234 点中 126 点しか見えない)。
   saveSVGBound "28-scatter-overplot.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 4)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy")
           <> xLabel "displ" <> yLabel "hwy"
 
   -- R4DS L852: position="jitter" = 微小ノイズで重なりを散らす。
   saveSVGBound "29-jitter.svg" $
-    mpg |>> layer (scatter "displ" "hwy" <> size 4 <> jitterX 0.02 <> jitterY 0.02)
+    mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> jitterX 0.02 <> jitterY 0.02)
           <> xLabel "displ" <> yLabel "hwy"
 
   -- =========================================================================
@@ -311,20 +319,20 @@ main = do
 
   -- R4DS L927: 素の bar (clarity)。 Coxcomb の元になる棒グラフ。
   saveSVGBound "30-bar-clarity.svg" $
-    byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+    byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
                 <> scaleXDiscreteLimits clarityOrder
                 <> xLabel "clarity" <> yLabel "count" <> legendOff
 
   -- R4DS L935: bar + coord_flip() = 横棒。
   saveSVGBound "31-coord-flip.svg" $
-    byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+    byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
                 <> scaleXDiscreteLimits clarityOrder
                 <> coordFlip
                 <> xLabel "clarity" <> yLabel "count" <> legendOff
 
   -- R4DS L936: bar + coord_polar() = Coxcomb chart (棒グラフを極座標へ)。
   saveSVGBound "32-coord-polar.svg" $
-    byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+    byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
                 <> scaleXDiscreteLimits clarityOrder
                 <> coordPolar
                 <> xLabel "clarity" <> yLabel "count" <> legendOff

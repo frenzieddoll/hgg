@@ -2,8 +2,11 @@
 --   https://r4ds.hadley.nz/data-visualize
 --
 --   R4DS 第 1 章が **表示する図を、 順番どおり・全数 (24 枚)** 再現する。
---   penguins 全量 (344 個体・欠損 2 行は R4DS と同様に除外) を使い、 R4DS の
---   geom / aes / 設定 (binwidth・position・facet 等) をそのまま写す。
+--   penguins 全量 (344 個体・欠損 2 行は R4DS と同様に除外) を使い、 R4DS 各図の
+--   見た目を hgg の layer (mark …) で同じ図になるよう写す。 hgg では
+--   data を |>> で束ね、 scatter/bar/boxplot 等の mark を layer で重ねて図を作り、
+--   色・形・大きさは mark 内の colorBy/shapeBy/… で与える
+--   (以下のコメントの "R4DS L###" は対応する R 原典の行番号)。
 --
 --   ・忠実性メモ:
 --     - 色分け図 (05-08, 17-23) は ggplot 既定 hue 配色 (= palette 未指定)。
@@ -14,9 +17,9 @@
 --     - histogram は binWidth (= R4DS binwidth) で R4DS と同じ bin 境界・棒高。
 --
 --   DataFrame 変換は dataframe の `|>` 前方パイプ (R4DS の `|>` と同型)。
---   flipper_length_mm / body_mass_g は 2 行が欠損 (Maybe Int) なので
---   `DF.filterJust` で欠損行を除く (= R4DS が "removing 2 rows containing
---   missing values" と警告する箇所)。
+--   flipper_length_mm / body_mass_g は 2 行が欠損 (Maybe Int)。 hgg は Maybe 列を
+--   直接読み mark/stat とも NA を自動除外する (= R の na.rm) ので raw を直読する。
+--   明示除去したいときは `DF.filterJust` も使える (= R4DS の "removing 2 rows")。
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 module Main (main) where
@@ -27,204 +30,234 @@ import qualified DataFrame.Functions      as F
 import           DataFrame.Operators      ((|>))
 import           Hgg.Plot.Easy
 import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
+import           Hgg.Plot.Backend.SVG (saveSVGBound, saveSVG)
 import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
 import           Hgg.Plot.DataFrame   ()
 
--- ggplot geom_smooth(method="lm") の既定線色 (= 単一回帰線のとき)。
-smoothBlue :: Text
-smoothBlue = "#3366FF"
+-- lm 回帰直線 (statLm) の既定線色 (= 単一回帰線のとき、 R4DS と同じ青)。
+smoothBlue :: Color
+smoothBlue = fromHex "#3366FF"
 
 main :: IO ()
 main = do
   raw <- DF.readCsv "penguins.csv"
 
-  -- 散布図系で使う 2 列の欠損行を除く (Maybe Int → Int)。 R4DS の警告と同じ 2 行。
-  let p = raw |> DF.filterJust "flipper_length_mm"
-              |> DF.filterJust "body_mass_g"
+  -- 欠損値: flipper/body_mass は 2 行が NA (Maybe Int)。 hgg は Maybe 列を
+  --   列名で直接読み、 mark も stat も NA を自動で落とす (= R の na.rm) ので、
+  --   以降の図は raw をそのまま使う。 明示的に落としたいときは DF.filterJust も使える
+  --   (R4DS の "removing 2 rows" に相当):
+  let cleaned = raw |> DF.filterJust "flipper_length_mm"
+                    |> DF.filterJust "body_mass_g"
+  putStrLn $ "rows: raw = " <> show (fst (DF.dimensions raw))
+           <> " / filterJust 後 = " <> show (fst (DF.dimensions cleaned))
+           <> " (NA 2 行)。 以降の図は raw を直読 (NA 自動除外)。"
 
   -- =========================================================================
   -- §1.1 章扉の motivating plot (R4DS L137): final と同一の完成図
   -- =========================================================================
   saveSVGBoundStats "01-teaser.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> shapeBy "species" <> size 5 <> alpha 0.85)
-        <> layer (statLm "flipper_length_mm" "body_mass_g" <> colorStatic smoothBlue <> stroke 2)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> shapeBy "species" <> alpha 0.85)
+        <> layer (statLm "flipper_length_mm" "body_mass_g" <> color smoothBlue)
         <> palette okabeIto
         <> title "Body mass and flipper length"
         <> subtitle "Dimensions for Adelie, Chinstrap, and Gentoo Penguins"
         <> xLabel "Flipper length (mm)" <> yLabel "Body mass (g)"
         <> legendTitle "Species"
+        <> theme ThemeGrey
 
   -- =========================================================================
   -- §1.2 散布図を一歩ずつ組み立てる
   -- =========================================================================
 
-  -- R4DS L162: ggplot(penguins) = 空のグレーパネル (aes なし → 軸目盛なし)。
-  saveSVGBound "02-empty.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g" <> alpha 0.0)
-        <> xAxis hideTicks <> yAxis hideTicks
-        <> xLabel "" <> yLabel ""
+  -- 空パネル: layer を重ねない純粋 spec (purePlot = mempty) がそのまま空のパネル
+  --   (R4DS の ggplot(penguins) に相当)。
+  saveSVG "02-empty.svg" $
+    purePlot
 
-  -- R4DS L178: + aes(x,y) = 軸 (flipper 170-230 / body_mass 3000-6000) のみ、 点なし。
+  -- 軸枠だけ: mark を重ねないので点は無い。 列を指定していないので目盛は
+  --   既定レンジ (= hgg はデータ未指定なら 0-1 軸)。 R4DS の「軸枠だけ・mark 無し」
+  --   に対応する step だが、 hgg では mark を足して初めて列・スケールが決まる。
+  -- ★ この図は layer 0 の意図的な空パネル。 saveSVGBound は EmptyPlot 診断
+  --   (`[error] layer が 1 つもありません`) を stderr に 1 回出すが、 これは仕様どおりの
+  --   挙動で図は正常生成される (Phase 56 A1 で発生源=本行と確定)。 02-empty は saveSVG
+  --   (reportErrors 非経由) ゆえ無音。 EmptyPlot check は実ユーザの mark 忘れ検出に必要な
+  --   ので弱めない。
   saveSVGBound "03-empty-axes.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g" <> alpha 0.0)
-        <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+    raw |>> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+        <> theme ThemeGrey
 
-  -- R4DS L202: + geom_point() = 最初の散布図。
+  -- R4DS L202: 最初の散布図 (scatter mark)。
   saveSVGBound "04-scatter.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g" <> size 5 <> alpha 0.85)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g" <> alpha 0.85)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+        <> theme ThemeGrey
 
-  -- R4DS L241: aes(color=species) + geom_point() = 種で色分け (ggplot 既定 hue)。
+  -- R4DS L241: 種で色分けした散布 (scatter <> colorBy "species"・ggplot 既定 hue)。
   saveSVGBound "05-color.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> size 5 <> alpha 0.85)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> alpha 0.85)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
-  -- R4DS L265: global color=species を point/smooth 両方が継承 → 種ごと 3 本の lm 線。
+  -- R4DS L265: colorBy "species" を散布と回帰の両 layer に効かせ → 種ごと 3 本の lm 線。
   saveSVGBoundStats "06-smooth-species.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> size 5 <> alpha 0.85)
-        <> layer (statLm "flipper_length_mm" "body_mass_g" <> color "species" <> stroke 2)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> alpha 0.85)
+        <> layer (statLm "flipper_length_mm" "body_mass_g" <> colorBy "species")
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
-  -- R4DS L287: color は geom_point のみ → 回帰線は全体 1 本 (ggplot 既定の青)。
+  -- R4DS L287: colorBy は散布点だけに付ける → 回帰線は全体 1 本 (ggplot 既定の青)。
   saveSVGBoundStats "07-smooth-global.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> size 5 <> alpha 0.85)
-        <> layer (statLm "flipper_length_mm" "body_mass_g" <> colorStatic smoothBlue <> stroke 2)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> alpha 0.85)
+        <> layer (statLm "flipper_length_mm" "body_mass_g" <> color smoothBlue)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
-  -- R4DS L310: geom_point(aes(color,shape=species)) + smooth(lm) 全体 1 本。
+  -- R4DS L310: 色+形で種を区別した散布 + lm 回帰線 全体 1 本。
   saveSVGBoundStats "08-shape.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> shapeBy "species" <> size 5 <> alpha 0.85)
-        <> layer (statLm "flipper_length_mm" "body_mass_g" <> colorStatic smoothBlue <> stroke 2)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> shapeBy "species" <> alpha 0.85)
+        <> layer (statLm "flipper_length_mm" "body_mass_g" <> color smoothBlue)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
-  -- R4DS L336: + labs(...) + scale_color_colorblind() = 完成図。
+  -- R4DS L336: タイトル・整形ラベル + colorblind パレットを添えた完成図。
   saveSVGBoundStats "09-final.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> shapeBy "species" <> size 5 <> alpha 0.85)
-        <> layer (statLm "flipper_length_mm" "body_mass_g" <> colorStatic smoothBlue <> stroke 2)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> shapeBy "species" <> alpha 0.85)
+        <> layer (statLm "flipper_length_mm" "body_mass_g" <> color smoothBlue)
         <> palette okabeIto
         <> title "Body mass and flipper length"
         <> subtitle "Dimensions for Adelie, Chinstrap, and Gentoo Penguins"
         <> xLabel "Flipper length (mm)" <> yLabel "Body mass (g)"
         <> legendTitle "Species"
+        <> theme ThemeGrey
 
   -- =========================================================================
   -- §1.4 1 変数の分布
   -- =========================================================================
 
-  -- geom_bar は stat_count を内部で行う。 ここでは件数を |> で先に集計 (値は不変)。
+  -- 棒は件数集計が要る。 ここでは件数を |> で先に集計してから bar mark で描く (値は不変)。
   let bySpecies = raw |> DF.groupBy ["species"]
                       |> DF.aggregate [ F.count (F.col @Text "species") `F.as` "n" ]
 
-  -- R4DS L489: geom_bar(aes(x=species)) = 種ごとの件数 (Adelie 152 / Chinstrap 68 / Gentoo 124)。
+  -- R4DS L489: 種ごとの件数の棒 (Adelie 152 / Chinstrap 68 / Gentoo 124)。
   --   x はアルファベット順 (= ggplot factor 既定 / 本ライブラリの既定)。
   saveSVGBound "10-bar-species.svg" $
     bySpecies |>> layer (bar "species" "n")
                 <> xLabel "species" <> yLabel "count"
+                <> theme ThemeGrey
 
-  -- R4DS L502: geom_bar(aes(x=fct_infreq(species))) = 件数降順。
-  --   fct_infreq は factor 水準を件数降順に並べ替える。 ここでは scale_x_discrete(limits=)
-  --   相当の scaleXDiscreteLimits で水準順を Adelie(152) > Gentoo(124) > Chinstrap(68) に固定。
+  -- R4DS L502: 件数降順に並べた棒。 scaleXDiscreteLimits で水準順を
+  --   Adelie(152) > Gentoo(124) > Chinstrap(68) に固定する (R4DS の fct_infreq 相当)。
   saveSVGBound "11-bar-infreq.svg" $
     bySpecies |>> layer (bar "species" "n")
                 <> scaleXDiscreteLimits ["Adelie", "Gentoo", "Chinstrap"]
-                <> xLabel "fct_infreq(species)" <> yLabel "count"
+                <> xLabel "species" <> yLabel "count"
+                <> theme ThemeGrey
 
-  -- 体重 (欠損除外)。 histogram / density で使う。
-  let pm = raw |> DF.filterJust "body_mass_g"
-
-  -- R4DS L520: geom_histogram(body_mass_g, binwidth = 200)。
+  -- R4DS L520: 体重のヒストグラム (binwidth 200)。
   saveSVGBound "12-histogram-bw200.svg" $
-    pm |>> layer (histogram "body_mass_g" <> binWidth 200)
+    raw |>> layer (histogram "body_mass_g" <> binWidth 200)
          <> xLabel "body_mass_g" <> yLabel "count"
+         <> theme ThemeGrey
 
-  -- R4DS L542: binwidth = 20 (細かすぎてギザギザ)。
+  -- R4DS L542: binWidth 20 (細かすぎてギザギザ)。
   saveSVGBound "13-histogram-bw20.svg" $
-    pm |>> layer (histogram "body_mass_g" <> binWidth 20)
+    raw |>> layer (histogram "body_mass_g" <> binWidth 20)
          <> xLabel "body_mass_g" <> yLabel "count"
+         <> theme ThemeGrey
 
-  -- R4DS L544: binwidth = 2000 (粗すぎて 3 bin)。
+  -- R4DS L544: binWidth 2000 (粗すぎて 3 bin)。
   saveSVGBound "14-histogram-bw2000.svg" $
-    pm |>> layer (histogram "body_mass_g" <> binWidth 2000)
+    raw |>> layer (histogram "body_mass_g" <> binWidth 2000)
          <> xLabel "body_mass_g" <> yLabel "count"
+         <> theme ThemeGrey
 
-  -- R4DS L560: geom_density(body_mass_g)。
+  -- R4DS L560: 体重の密度曲線。
   saveSVGBound "15-density.svg" $
-    pm |>> layer (density "body_mass_g")
+    raw |>> layer (density "body_mass_g")
          <> xLabel "body_mass_g" <> yLabel "density"
+         <> theme ThemeGrey
 
   -- =========================================================================
   -- §1.5 2 変数の関係
   -- =========================================================================
 
-  -- R4DS L630: geom_boxplot(aes(x=species, y=body_mass_g))。
+  -- R4DS L630: 種 × 体重の箱ひげ図。
   saveSVGBound "16-boxplot.svg" $
-    pm |>> layer (boxplotBy "species" "body_mass_g")
+    raw |>> layer (boxplot "body_mass_g" <> groupBy "species")
          <> xLabel "species" <> yLabel "body_mass_g"
+         <> theme ThemeGrey
 
-  -- R4DS L642: geom_density(aes(x=body_mass_g, color=species), linewidth=0.75)。
+  -- R4DS L642: 種ごとに色分けした密度曲線 (linewidth 0.75)。
   saveSVGBound "17-density-color.svg" $
-    pm |>> layer (density "body_mass_g" <> color "species" <> stroke 1.5)
+    raw |>> layer (density "body_mass_g" <> colorBy "species")
          <> xLabel "body_mass_g" <> yLabel "density"
          <> legendTitle "species"
+         <> theme ThemeGrey
 
-  -- R4DS L659: geom_density(aes(color=species, fill=species), alpha=0.5) = 塗りつぶし。
+  -- R4DS L659: 種ごとに塗りつぶした密度曲線 (alpha 0.5)。
   saveSVGBound "18-density-fill.svg" $
-    pm |>> layer (density "body_mass_g" <> color "species"
-                   <> densityFill True <> alpha 0.5 <> stroke 1.5)
+    raw |>> layer (density "body_mass_g" <> colorBy "species"
+                   <> densityFill True <> alpha 0.5)
          <> xLabel "body_mass_g" <> yLabel "density"
          <> legendTitle "species"
+         <> theme ThemeGrey
 
   -- 島 × 種の件数 (stack / fill 用)。
   let byIslandSpecies = raw |> DF.groupBy ["island", "species"]
                             |> DF.aggregate [ F.count (F.col @Text "species") `F.as` "n" ]
 
-  -- R4DS L680: geom_bar(aes(x=island, fill=species)) = 既定 (stack) で積み上げ。
+  -- R4DS L680: 島ごと × 種で色分けした積み上げ棒 (既定 stack)。
   saveSVGBound "19-bar-stack.svg" $
-    byIslandSpecies |>> layer (bar "island" "n" <> color "species" <> position PosStack)
+    byIslandSpecies |>> layer (bar "island" "n" <> colorBy "species" <> position PosStack)
                       <> xLabel "island" <> yLabel "count"
                       <> legendTitle "species"
+                      <> theme ThemeGrey
 
-  -- R4DS L692: position="fill" = 各島の合計を 1 に揃える (y 軸は既定で "count" 表記のまま)。
+  -- R4DS L692: position PosFill で各島の合計を 1 に揃える (y 軸は既定で "count" 表記のまま)。
   saveSVGBound "20-bar-fill.svg" $
-    byIslandSpecies |>> layer (bar "island" "n" <> color "species" <> position PosFill)
+    byIslandSpecies |>> layer (bar "island" "n" <> colorBy "species" <> position PosFill)
                       <> xLabel "island" <> yLabel "count"
                       <> legendTitle "species"
+                      <> theme ThemeGrey
 
-  -- R4DS L704: 同上 + labs(y="proportion") で y 軸ラベルを直す。
+  -- R4DS L704: 同上で y 軸ラベルを yLabel "proportion" に直す。
   saveSVGBound "21-bar-fill-proportion.svg" $
-    byIslandSpecies |>> layer (bar "island" "n" <> color "species" <> position PosFill)
+    byIslandSpecies |>> layer (bar "island" "n" <> colorBy "species" <> position PosFill)
                       <> xLabel "island" <> yLabel "proportion"
                       <> legendTitle "species"
+                      <> theme ThemeGrey
 
-  -- R4DS L720: §1.5.3 冒頭の素の散布図 (geom_point())。
+  -- R4DS L720: §1.5.3 冒頭の素の散布図。
   saveSVGBound "22-scatter-plain.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g" <> size 5 <> alpha 0.85)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g" <> alpha 0.85)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
+        <> theme ThemeGrey
 
-  -- R4DS L739: geom_point(aes(color=species, shape=island)) = 3 変数 (色=種・形=島)。
+  -- R4DS L739: 3 変数の散布 (色=種・形=島)。
   saveSVGBound "23-scatter-shape-island.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> shapeBy "island" <> size 5 <> alpha 0.85)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> shapeBy "island" <> alpha 0.85)
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
-  -- R4DS L761: + facet_wrap(~island) = 島ごとのパネル。
+  -- R4DS L761: facetWrap で島ごとのパネルに分割。
   saveSVGBound "24-facet-island.svg" $
-    p |>> layer (scatter "flipper_length_mm" "body_mass_g"
-                   <> color "species" <> shapeBy "species" <> size 4 <> alpha 0.85)
+    raw |>> layer (scatter "flipper_length_mm" "body_mass_g"
+                   <> colorBy "species" <> shapeBy "species" <> alpha 0.85)
         <> facetWrap "island" 3
         <> xLabel "flipper_length_mm" <> yLabel "body_mass_g"
         <> legendTitle "species"
+        <> theme ThemeGrey
 
   putStrLn "wrote 01-teaser .. 24-facet-island (24 SVG)"

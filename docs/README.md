@@ -5,7 +5,7 @@ Haskell / PureScript 両対応の宣言型 plot library。 ここは利用者向
 ## 読む順番
 
 0. **[tutorials/](./tutorials/README.md)** ─ R for Data Science 2e ベースの実践チュートリアル
-   (mpg データで 読込→確認→変換→整形→可視化→モデル を 17 章で・タスク指向の入口)
+   (mpg データで 読込→確認→変換→整形→可視化→モデル を 19 章で・タスク指向の入口)
 1. **[getting-started.md](./getting-started.md)** ─ インストール、 最短で 1 枚出す Quick Start、 backend の選び方
 2. **[API リファレンス (api-guide/)](./api-guide/README.md)** ─ 公開 API を topic 別に網羅 (layer/mark・装飾・backend・df・analyze・3D)
 3. **[modules.md](./modules.md)** ─ パッケージ構成と「何ができるか」 の一覧 (chart 種・座標系・テーマ等)
@@ -24,7 +24,7 @@ Haskell / PureScript 両対応の宣言型 plot library。 ここは利用者向
 |---|---|---|
 | `cabal run tutorial-01-easy` | Easy API で散布図を 1 枚 | [api-guide §Easy](./api-guide/01-quickstart.md#easy) |
 | `cabal run tutorial-02-grammar` | Grammar (ggplot 風) で色分け + scale | [api-guide §Grammar](./api-guide/01-quickstart.md#grammar) |
-| `cabal run tutorial-03-overlay` | 複数 layer の重畳 | [api-guide §重畳](./api-guide/03-decoration.md#overlay) |
+| `cabal run tutorial-03-overlay` | 複数 layer の重畳 | [api-guide §重畳](./api-guide/04-decoration.md#overlay) |
 | `cabal run tutorial-04-distribution` | violin / box (群比較) | [modules §分布](./modules.md) |
 | `cabal run tutorial-05-theme` | テーマ明/暗の出し分け | [modules §テーマ](./modules.md) |
 

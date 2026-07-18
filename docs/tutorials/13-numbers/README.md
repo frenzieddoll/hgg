@@ -198,10 +198,10 @@ flights |> groupBy ["year","month","day"]
 はあっても数時間早く出ることはないため、分布が右に歪み平均が引き上げられるからです。
 
 R4DS の `geom_abline(slope=1, intercept=0)`(= `y=x` 参照線)は、plot の公開 API
-`refIdentity` でそのまま描けます(`<>` で重ねるだけ・[api-guide 03-decoration の参照線](../../api-guide/03-decoration.md#guides)):
+`refIdentity` でそのまま描けます(`<>` で重ねるだけ・[api-guide 04-decoration の参照線](../../api-guide/04-decoration.md#guides)):
 
 ```haskell
-dayDelay |>> layer (scatter "mean" "median") <> refIdentity
+dayDelay |>> theme ThemeGrey <> layer (scatter "mean" "median") <> refIdentity
 ```
 
 > 参照線は `refIdentity`(=`y=x`)/`refHorizontal c`(=`geom_hline`)/`refVertical x`
@@ -240,8 +240,8 @@ JFK EGE  distance_iqr 1.0  n 103
 let ddZoom = flights |> DF.filterJust  "dep_delay"
                      |> DF.filterWhere (F.col @Int "dep_delay" .< (120 :: DF.Expr Int))
 saveSVG "fig3-dist.svg" $ subplots
-  [ bakeSpec (toResolver flights) (layer (histogram "dep_delay" <> binWidth 15) <> title "全体 (binwidth 15)")
-  , bakeSpec (toResolver ddZoom)  (layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
+  [ bakeSpec (toResolver flights) (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 15) <> title "全体 (binwidth 15)")
+  , bakeSpec (toResolver ddZoom)  (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
   <> subplotCols 2
 ```
 

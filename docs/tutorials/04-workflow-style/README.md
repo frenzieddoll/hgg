@@ -7,7 +7,7 @@
 R4DS 第 4 章は **図を描かない**「コードスタイル」章です(本文の R コードはすべて
 `eval: false` のスタイル見本、 図は RStudio のスクリーンショットのみ)。 ここでは
 [tidyverse style guide](https://style.tidyverse.org) の各ルールを **Haskell /
-本プロジェクト規約(`../../../CLAUDE.md`)に対応づけ**、
+本プロジェクト規約(`CLAUDE.md`)に対応づけ**、
 「**Strive for(こう書く)/ Avoid(避ける)**」で示します。 実行コードは
 [`WorkflowStyle.hs`](WorkflowStyle.hs)(Strive 版を実際に動かして確認)。
 
@@ -111,7 +111,7 @@ delayByMonth
 -- 引数が多いレイヤは 1 行ずつ
 plotData
   |>> layer (statSmooth "distance" "speed" 8
-               <> colorStatic "#FFFFFF"
+               <> color (fromHex "#FFFFFF")
                <> stroke 4)
    <> layer (scatter "distance" "speed")
 ```
@@ -123,7 +123,7 @@ R の `|>` → `+` の切り替えに相当するのが、 本ライブラリの
 ## §4.6 セクション罫線(Sectioning comments)
 
 R: `# Load data ----------` のような区切りコメントでスクリプトを分割。 本プロジェクト
-規約は **`-- ===` 罫線**(`../../../CLAUDE.md`)。
+規約は **`-- ===` 罫線**(`CLAUDE.md`)。
 [`WorkflowStyle.hs`](WorkflowStyle.hs) の各セクションがその見本です。
 
 ```haskell

@@ -72,8 +72,8 @@ Afghanistan | 1999 | population | 19987071
 目盛を 1999/2000 のみにします。
 
 ```haskell
-table1 |>> layer (line "year" "cases" <> color "country")
-       <> layer (scatter "year" "cases" <> color "country" <> shapeBy "country" <> size 7)
+table1 |>> theme ThemeGrey <> layer (line "year" "cases" <> colorBy "country")
+       <> layer (scatter "year" "cases" <> colorBy "country" <> shapeBy "country")
        <> palette okabeIto
        <> xAxis (axisBreaksAt [1999, 2000])
 ```
@@ -85,8 +85,8 @@ table1 |>> layer (line "year" "cases" <> color "country")
 
 | R | hgg |
 |---|---|
-| `geom_line(aes(group = country))` | `layer (line "year" "cases" <> color "country")` |
-| `geom_point(aes(color = country, shape = country))` | `layer (scatter "year" "cases" <> color "country" <> shapeBy "country")` |
+| `geom_line(aes(group = country))` | `layer (line "year" "cases" <> colorBy "country")` |
+| `geom_point(aes(color = country, shape = country))` | `layer (scatter "year" "cases" <> colorBy "country" <> shapeBy "country")` |
 | `scale_x_continuous(breaks = c(1999, 2000))` | `xAxis (axisBreaksAt [1999, 2000])` |
 
 ---
@@ -123,7 +123,7 @@ let wkCols  = filter ("wk" `T.isPrefixOf`) (DF.columnNames billboardRaw)
 `reverseY`(= `scale_y_reverse()`)で 1 位を上にします。
 
 ```haskell
-bbLong |>> layer (line "week" "rank" <> linetypeBy "track" <> colorStatic "#88888855")
+bbLong |>> theme ThemeGrey <> layer (line "week" "rank" <> linetypeBy "track" <> color (fromHex "#888888") <> alpha (85/255))
        <> reverseY
 ```
 
@@ -254,7 +254,7 @@ pivotWiderG ["id"] "measurement" "value" toyW
 | `parse_number("wk12")` | `read . T.unpack . T.drop 2` |
 | `scale_y_reverse()` | `reverseY` |
 | `scale_x_continuous(breaks=…)` | `xAxis (axisBreaksAt […])` |
-| `geom_line(aes(group = g))` | `line … <> color "g"`(色分け)/ `<> linetypeBy "g"`(灰色) |
+| `geom_line(aes(group = g))` | `line … <> colorBy "g"`(色分け)/ `<> linetypeBy "g"`(灰色) |
 
 ## 忠実再現にあたっての相違(正直な記録)
 
