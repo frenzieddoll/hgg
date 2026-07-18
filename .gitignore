@@ -11,3 +11,6 @@ scripts/
 
 # cabal build 生成物
 dist-newstyle/
+
+# 退避ファイル置き場 (rm しない運用、公開対象外)
+_trash/
