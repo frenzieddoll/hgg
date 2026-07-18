@@ -1,6 +1,6 @@
 # 13. 数値ベクトル — Numbers
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.13 "Numbers"**
 > <https://r4ds.hadley.nz/numbers>

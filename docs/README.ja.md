@@ -1,6 +1,6 @@
 # hgg ドキュメント
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 Haskell / PureScript 両対応の宣言型 plot library。 ここは利用者向けドキュメントの入口。
 

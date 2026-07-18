@@ -1,6 +1,6 @@
 # 10. 探索的データ分析 — Exploratory data analysis
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.11 "Exploratory data analysis"**
 > <https://r4ds.hadley.nz/eda>

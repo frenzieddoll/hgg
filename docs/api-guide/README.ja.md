@@ -1,6 +1,6 @@
 # hgg API リファレンス
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 公開 API を topic 別に網羅するリファレンス。 「どう学ぶか」 の学習導線は
 [チュートリアル](../tutorials/README.ja.md) が担い、 ここは **用語・網羅性重視の辞書**に振る。

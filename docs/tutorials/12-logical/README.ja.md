@@ -1,6 +1,6 @@
 # 12. 論理ベクトル — Logical vectors
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.12 "Logical vectors"**
 > <https://r4ds.hadley.nz/logicals>

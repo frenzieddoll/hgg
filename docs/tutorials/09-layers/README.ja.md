@@ -1,6 +1,6 @@
 # 09. 層 (R4DS 2e Ch.9 "Layers")
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.9 "Layers"**
 > <https://r4ds.hadley.nz/layers>

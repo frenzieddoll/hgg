@@ -1,6 +1,6 @@
 # Vega-Lite との比較
 
-> 🌐 [English](comparison-vega-lite.ja.md) | **日本語**
+> 🌐 [English](comparison-vega-lite.md) | **日本語**
 
 [matplotlib / ggplot2 との比較](comparison.ja.md) は命令型/宣言型の軸だった。 ここでは
 **hgg に最も近い類縁である Vega-Lite** と比較する。 両者とも

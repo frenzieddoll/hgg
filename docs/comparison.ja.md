@@ -1,6 +1,6 @@
 # matplotlib / ggplot2 との比較
 
-> 🌐 [English](comparison.ja.md) | **日本語**
+> 🌐 [English](comparison.md) | **日本語**
 
 > 宣言的 spec の類縁である **Vega-Lite** との比較 (とくに DataFrame 連携・hanalyze 統計
 > エンジン連携の軸) は [comparison-vega-lite.ja.md](comparison-vega-lite.ja.md) を参照。

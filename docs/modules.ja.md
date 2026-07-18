@@ -1,6 +1,6 @@
 # モジュールとできること
 
-> 🌐 [English](modules.ja.md) | **日本語**
+> 🌐 [English](modules.md) | **日本語**
 
 ## パッケージ構成
 

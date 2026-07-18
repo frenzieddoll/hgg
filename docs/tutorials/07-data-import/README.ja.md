@@ -1,6 +1,6 @@
 # 07. データの読み込み (R4DS 2e Ch.7 "Data import")
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.7 "Data import"**
 > <https://r4ds.hadley.nz/data-import>

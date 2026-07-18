@@ -1,6 +1,6 @@
 # クイックスタート ─ 30 秒で 1 枚 + 書き方の 3 層
 
-> 🌐 [English](01-quickstart.ja.md) | **日本語**
+> 🌐 [English](01-quickstart.md) | **日本語**
 
 > [📚 索引](README.ja.md) ｜ **01 quickstart** ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 appendix](09-appendix.ja.md)
 

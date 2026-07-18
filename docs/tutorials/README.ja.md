@@ -1,6 +1,6 @@
 # hgg チュートリアル — R for Data Science 2e ベース
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 [R for Data Science 2e](https://r4ds.hadley.nz/)(Hadley Wickham ほか)の章構成に
 **1:1 で対応** させた、hgg + dataframe による実践チュートリアル群です。

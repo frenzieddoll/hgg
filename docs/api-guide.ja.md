@@ -1,6 +1,6 @@
 # API ガイドは [api-guide/](api-guide/README.ja.md) に分割されました
 
-> 🌐 [English](api-guide.ja.md) | **日本語**
+> 🌐 [English](api-guide.md) | **日本語**
 
 旧 `docs/api-guide.md` (1738 行) は topic 別の API リファレンスへ再編しました。
 **[📚 API リファレンス索引 → api-guide/README.md](api-guide/README.ja.md)**

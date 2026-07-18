@@ -1,6 +1,6 @@
 # Vega-Lite 例ギャラリーの再現
 
-> 🌐 [English](vega-lite-gallery.ja.md) | **日本語**
+> 🌐 [English](vega-lite-gallery.md) | **日本語**
 
 [Vega-Lite examples gallery](https://vega.github.io/vega-lite/examples/) の各セクション
 代表例を hgg で再現したコード集。 実際に動く executable

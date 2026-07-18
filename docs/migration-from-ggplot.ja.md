@@ -1,6 +1,6 @@
 # ggplot2 → hgg 移行ガイド
 
-> 🌐 [English](migration-from-ggplot.ja.md) | **日本語**
+> 🌐 [English](migration-from-ggplot.md) | **日本語**
 
 ggplot2 経験者が最短で書き換えられるよう、 関数の **対応表** を示す。
 文法を手取り足取り学ぶなら [API リファレンス (api-guide/)](api-guide/README.ja.md)、 思想面・matplotlib も含む広い比較は

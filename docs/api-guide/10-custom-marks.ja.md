@@ -1,6 +1,6 @@
 # 10 custom marks — 自作の mark を足す
 
-> 🌐 [English](10-custom-marks.ja.md) | **日本語**
+> 🌐 [English](10-custom-marks.md) | **日本語**
 
 組み込み mark (`scatter` / `line` / `bar` / `box` / …) に無いプロット型を、**ライブラリ本体
 (`MarkKind` の列挙) を一切編集せず**自分で定義するための拡張点が **custom mark** (`customMark`)。

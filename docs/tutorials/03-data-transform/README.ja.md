@@ -1,6 +1,6 @@
 # 03. データ変換 (R4DS 2e Ch.3 "Data transformation")
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.3 "Data transformation"**
 > <https://r4ds.hadley.nz/data-transform>

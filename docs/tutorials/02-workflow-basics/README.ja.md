@@ -1,6 +1,6 @@
 # 02. ワークフローの基礎 (R4DS 2e Ch.2 "Workflow: basics")
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > 一次情報: **R for Data Science 2e, Ch.2 "Workflow: basics"**
 > <https://r4ds.hadley.nz/workflow-basics>

@@ -1,6 +1,6 @@
 # hgg — Haskell Grammar of Graphics
 
-> 🌐 [English](README.ja.md) | **日本語**
+> 🌐 [English](README.md) | **日本語**
 
 > **状態: ドキュメント先行公開 (コードは公開予定)**
 > 本リポジトリは現在 **API リファレンス等のドキュメントのみ**を公開しています。

@@ -1,6 +1,6 @@
 # Getting Started
 
-> 🌐 [English](getting-started.ja.md) | **日本語**
+> 🌐 [English](getting-started.md) | **日本語**
 
 ## インストール
 
