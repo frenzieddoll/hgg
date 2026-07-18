@@ -4,12 +4,13 @@ version:            0.1.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           Bridge from hanalyze (Hanalyze.Model.HBM.ModelGraph) to hgg DAG rendering
 description:
-  hanalyze の HBM ModelGraph を、 hgg 経由で SVG / PNG / PDF
-  に直接描画する bridge package。 graphviz CLI / Mermaid CDN 依存ゼロで
-  production アプリ組込みや offline batch に向く。
+  Renders hanalyze's HBM ModelGraph directly to SVG / PNG / PDF via hgg.
+  No graphviz CLI or Mermaid CDN dependency, which makes it suitable for
+  embedding in production applications and for offline batch use.
   .
-  既存 analyze 側の Mermaid HTML (Hanalyze.Viz.ModelGraph) と Graphviz DOT
-  (Hanalyze.Viz.ModelGraphDot) ルートは 撤廃せず併存。 用途に応じて使い分け。
+  The existing Mermaid HTML (Hanalyze.Viz.ModelGraph) and Graphviz DOT
+  (Hanalyze.Viz.ModelGraphDot) routes in hanalyze remain available;
+  choose whichever fits the use case.
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg
 license-file:       LICENSE

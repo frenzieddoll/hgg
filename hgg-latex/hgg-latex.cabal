@@ -4,11 +4,12 @@ version:            0.1.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           LaTeX (TikZ) backend for hgg
 description:
-  LaTeX backend (Phase 54)。 plot-core の [Primitive] を TikZ 命令の
-  純テキストに解釈する (SVG/PDF backend と同じ Layer 1 構図)。
-  新規 runtime 依存ゼロ (text 生成のみ)。 生成 .tex の組版は利用者側の
-  LaTeX 環境 (pdflatex 等) が行う — §10.7 (外部 CLI の production 依存禁止)
-  と同じ流儀で、 本 package は LaTeX バイナリに依存しない。
+  LaTeX (TikZ) backend for hgg. Interprets the [Primitive] list from
+  hgg-core into plain TikZ commands, in the same single-pass architecture
+  as the SVG / PDF backends. Adds zero runtime dependencies (pure text
+  generation). Typesetting the generated .tex is left to the user's LaTeX
+  environment (pdflatex, lualatex, ...) — this package does not depend on
+  any LaTeX binary.
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg
 license-file:       LICENSE

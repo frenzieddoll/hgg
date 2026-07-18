@@ -4,10 +4,12 @@ version:            0.1.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           PNG backend for hgg (Rasterific + JuicyPixels)
 description:
-  raster PNG backend (Phase 22)。 plot-core の [Primitive] を Rasterific
-  (純 Haskell rasterizer・BSD-3) の Drawing 命令に解釈し JuicyPixels で
-  PNG エンコードする (SVG/PDF backend と同じ Layer 1 構図)。 フォントは
-  FontyFruity の TrueType 読込 = 日本語ラベル対応 (PDF v1 制約の受け皿)。
+  Raster PNG backend for hgg. Interprets the [Primitive] list from
+  hgg-core with Rasterific (a pure-Haskell rasterizer, BSD-3) and encodes
+  PNG via JuicyPixels, in the same single-pass architecture as the
+  SVG / PDF backends. Fonts are loaded from TrueType files via
+  FontyFruity, so CJK labels are fully supported (complementing the
+  Latin-only PDF backend).
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg
 license-file:       LICENSE

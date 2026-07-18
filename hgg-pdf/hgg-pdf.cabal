@@ -4,10 +4,11 @@ version:            0.1.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           PDF backend for hgg (HPDF)
 description:
-  ベクタ PDF backend (Phase 17)。 plot-core の [Primitive] を HPDF
-  (Graphics.PDF、 純 Haskell・BSD-3) の Draw 命令に解釈する (SVG backend と
-  同じ Layer 1 構図)。 v1 は PDF 標準 14 フォント (Latin) のみ —
-  日本語ラベルは hgg-rasterific (PNG + TrueType) が受け皿。
+  Vector PDF backend for hgg. Interprets the [Primitive] list from
+  hgg-core into HPDF (Graphics.PDF, pure Haskell, BSD-3) drawing
+  commands, in the same single-pass architecture as the SVG backend.
+  Currently limited to the 14 standard PDF fonts (Latin only); for CJK
+  labels use hgg-rasterific (PNG + TrueType) instead.
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg
 license-file:       LICENSE

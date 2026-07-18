@@ -4,13 +4,15 @@ version:            0.1.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           3D plot (CPU projection) for hgg; works with all 2D backends
 description:
-  matplotlib mplot3d 同等の 3D plot library。 CPU-based projection + painter's
-  algorithm により、 既存の hgg 2D backend (SVG / PDF / Rasterific)
-  をそのまま使って 3D scatter / line / wireframe / surface を描画できる。
+  A 3D plotting library for hgg, comparable to matplotlib's mplot3d.
+  CPU-based projection plus the painter's algorithm let the existing hgg
+  2D backends (SVG / PDF / Rasterific) render 3D scatter / line /
+  wireframe / surface plots as-is.
   .
-  WebGL 不要、 純 Haskell 完結。 web 環境での interactive 3D (= camera 回転等)
-  は別リポジトリの PureScript frontend 側で WebGL backend を実装しており、
-  事前 bundle 済 JS (`data/webgl-spec.js`) を通じて連携する。
+  No WebGL required — pure Haskell end to end. Interactive 3D (camera
+  rotation etc.) in web environments is handled by a separate
+  PureScript / WebGL frontend outside this package, connected through the
+  pre-bundled @data/webgl-spec.js@.
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg
 license-file:       LICENSE
