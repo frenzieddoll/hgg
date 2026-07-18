@@ -31,7 +31,8 @@ library
   build-depends:    base                >= 4.17 && < 5
                   , text                >= 2.0  && < 2.2
                   , vector              >= 0.13 && < 0.14
-                  , dataframe           >= 1.3  && < 3
+                  , dataframe-core       ^>= 1.1
+                  , dataframe-operations >= 1.1.1 && < 1.2
                   , deepseq             >= 1.4  && < 1.6
                   , hgg-core   ^>= 0.1
                   , hgg-frame  ^>= 0.1
@@ -47,7 +48,7 @@ test-suite hgg-dataframe-tests
                   , text
                   , vector
                   , containers
-                  , dataframe
+                  , dataframe-core       ^>= 1.1
                   , hgg-core
                   , hgg-frame
                   , hgg-svg

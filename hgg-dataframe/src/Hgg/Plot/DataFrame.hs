@@ -5,7 +5,7 @@
 -- License     : BSD-3-Clause
 --
 -- @
--- import qualified DataFrame                  as DF
+-- import qualified DataFrame.IO.CSV            as DF
 -- import           Hgg.Plot.Easy
 -- import           Hgg.Plot.Backend.SVG    (saveSVGWith)
 -- import           Hgg.Plot.DataFrame      (dfResolver, plotDF)
@@ -39,9 +39,10 @@ import           Control.DeepSeq          (NFData, force)
 import           Control.Exception        (SomeException, evaluate, try)
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
-import qualified DataFrame                as DF
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Internal.DataFrame as DFI
+import qualified DataFrame.Operations.Core as DF
+import qualified DataFrame.Operators      as DF
 import           System.IO.Unsafe         (unsafePerformIO)
 
 -- | 'DataFrame' から hgg の 'Resolver' を作る。
@@ -102,7 +103,7 @@ plotDF path df spec = saveSVGWith path (dfResolver df) spec
 -- Phase 14: Hackage @dataframe@ の 'DFI.DataFrame' を 'PlotData' instance に
 -- することで、 @df |>> layer (scatter "x" "y")@ (df-first バインド) が使える。
 -- @toResolver@ は既存 'dfResolver' を再利用、 @columnNames@/@nrows@ は dataframe
--- の API (@DF.columnNames@ / @DFI.dataframeDimensions@) で実装する。
+-- の API (@DFI.columnNames@ / @DFI.dataframeDimensions@) で実装する。
 
 -- | df-first バインド ('(|>>)') / 列名検証のための instance。
 --
@@ -110,5 +111,5 @@ plotDF path df spec = saveSVGWith path (dfResolver df) spec
 -- * @nrows@       = @dataframeDimensions@ の第 1 要素 (= 行数。 実測: @(rows, cols)@)
 instance PlotData DFI.DataFrame where
   toResolver  = dfResolver
-  columnNames = DF.columnNames
+  columnNames = DFI.columnNames
   nrows       = fst . DFI.dataframeDimensions

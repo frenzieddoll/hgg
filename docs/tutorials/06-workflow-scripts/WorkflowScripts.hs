@@ -23,7 +23,10 @@ module Main (main) where
 --   勝手に変えてしまう)。 Haskell では依存は .cabal の build-depends で宣言し、
 --   import はその利用宣言にあたる。
 import           Data.Text              (Text)
-import qualified DataFrame              as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Expression        as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Functions    as F
 import           DataFrame.Operators    ((|>), (.<), (.==))
 import           Hgg.Plot.Easy

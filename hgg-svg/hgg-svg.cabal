@@ -35,7 +35,7 @@ executable scatter-demo
   import:           warnings
   main-is:          ScatterDemo.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , vector
                   , hgg-core
@@ -46,7 +46,7 @@ executable custom-mark-demo
   import:           warnings
   main-is:          CustomMarkDemo.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , vector
                   , hgg-core
                   , hgg-svg
@@ -56,7 +56,7 @@ executable vega-lite-gallery
   import:           warnings
   main-is:          VegaLiteGallery.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , vector
                   , directory
                   , hgg-core
@@ -67,7 +67,7 @@ executable df-plot-demo
   import:           warnings
   main-is:          DfPlotDemo.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , containers
                   , directory
                   , text
@@ -81,7 +81,7 @@ executable gallery-demo
   import:           warnings
   main-is:          GalleryDemo.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , vector
                   , directory
@@ -95,7 +95,7 @@ executable dag-comparison-demo
   import:           warnings
   main-is:          DagComparisonDemo.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , hgg-core
                   , hgg-svg
@@ -109,7 +109,7 @@ executable dag-parity-bench
   -- 落とす事故が起きたため、 heap を 2.5G で頭打ちにする。 超過時は WSL クラッシュ
   -- ではなく GHC RTS の "heap overflow" 例外で綺麗に死ぬ。 routing 修正後も保険で残す。
   ghc-options:      -rtsopts "-with-rtsopts=-M2500m"
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , directory
                   , hgg-core
@@ -122,7 +122,7 @@ executable phase52-kink-probe
   hs-source-dirs:   examples
   -- dag-parity-bench と同じ OOM 安全網 (routing の heap 事故対策)。
   ghc-options:      -rtsopts "-with-rtsopts=-M2500m"
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , hgg-core
                   , hgg-svg
@@ -134,7 +134,7 @@ executable phase53-x-probe
   hs-source-dirs:   examples
   -- dag-parity-bench と同じ OOM 安全網 (routing の heap 事故対策)。
   ghc-options:      -rtsopts "-with-rtsopts=-M2500m"
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , directory
                   , hgg-core
@@ -145,7 +145,7 @@ executable json-dump
   import:           warnings
   main-is:          JsonDump.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , bytestring
                   , aeson
                   , hgg-core
@@ -156,35 +156,35 @@ executable tutorial-01-easy
   import:           warnings
   main-is:          Tutorial01Easy.hs
   hs-source-dirs:   examples
-  build-depends:    base, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, hgg-core, hgg-svg
   default-language: Haskell2010
 
 executable tutorial-02-grammar
   import:           warnings
   main-is:          Tutorial02Grammar.hs
   hs-source-dirs:   examples
-  build-depends:    base, text, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, text, hgg-core, hgg-svg
   default-language: Haskell2010
 
 executable tutorial-03-overlay
   import:           warnings
   main-is:          Tutorial03Overlay.hs
   hs-source-dirs:   examples
-  build-depends:    base, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, hgg-core, hgg-svg
   default-language: Haskell2010
 
 executable tutorial-04-distribution
   import:           warnings
   main-is:          Tutorial04Distribution.hs
   hs-source-dirs:   examples
-  build-depends:    base, text, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, text, hgg-core, hgg-svg
   default-language: Haskell2010
 
 executable tutorial-05-theme
   import:           warnings
   main-is:          Tutorial05Theme.hs
   hs-source-dirs:   examples
-  build-depends:    base, text, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, text, hgg-core, hgg-svg
   default-language: Haskell2010
 
 -- docs/ に埋め込む図を生成 (cabal run doc-figures、 repo root から)
@@ -197,7 +197,7 @@ executable doc-figures
                   , DocFig.Layers
                   , DocFig.EncodingScale
                   , DocFig.Decoration
-  build-depends:    base, text, vector, directory, hgg-core, hgg-svg
+  build-depends:    base >= 4.17 && < 5, text, vector, directory, hgg-core, hgg-svg
   default-language: Haskell2010
 
 -- Phase 14 A3: BoundPlot (df |>> spec) → SVG の smoke test。
@@ -207,7 +207,7 @@ test-suite hgg-svg-tests
   type:             exitcode-stdio-1.0
   main-is:          Spec.hs
   hs-source-dirs:   test
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , vector
                   , containers

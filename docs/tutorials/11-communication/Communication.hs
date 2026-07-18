@@ -7,7 +7,7 @@
 {-# LANGUAGE TypeApplications  #-}
 module Main (main) where
 
-import qualified DataFrame                as DF
+import qualified DataFrame.IO.CSV                     as DF
 import           Hgg.Plot.Easy
 import           Hgg.Plot.Unit        (Pos (..))
 import           Hgg.Plot.Frame       ((|>>))

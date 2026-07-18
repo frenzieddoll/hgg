@@ -9,7 +9,8 @@ import           Data.Map.Strict          (Map)
 import qualified Data.Map.Strict          as M
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
-import qualified DataFrame                as DF
+import qualified DataFrame.Internal.Column    as DF
+import qualified DataFrame.Internal.DataFrame as DF
 import           Test.Hspec
 
 main :: IO ()

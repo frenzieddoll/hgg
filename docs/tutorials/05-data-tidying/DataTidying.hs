@@ -26,7 +26,16 @@ import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Data.Vector               as V
 import qualified Data.Map.Strict           as M
-import qualified DataFrame                 as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Internal.Schema            as DF
+import qualified DataFrame.Operators                  as DF
+import qualified DataFrame.Operations.Aggregation     as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Permutation     as DF
+import qualified DataFrame.Operations.Subset          as DF
+import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Functions       as F
 import           DataFrame.Operators       ((|>))

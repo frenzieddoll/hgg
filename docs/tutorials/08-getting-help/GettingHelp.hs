@@ -22,7 +22,9 @@ module Main (main) where
 --   どの依存を入れれば動くか一目で分かる。 Haskell では .cabal の build-depends で
 --   依存を宣言し、 この import 群がその利用宣言にあたる。
 import           Data.Text           (Text)
-import qualified DataFrame           as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Functions as F
 
 main :: IO ()

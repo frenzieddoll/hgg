@@ -38,7 +38,7 @@ executable ihaskell-demo-svg
   import:           warnings
   main-is:          DemoSvg.hs
   hs-source-dirs:   examples
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , vector
                   , hgg-core
@@ -50,7 +50,7 @@ test-suite hgg-ihaskell-tests
   type:             exitcode-stdio-1.0
   main-is:          Spec.hs
   hs-source-dirs:   test
-  build-depends:    base
+  build-depends:    base               >= 4.17 && < 5
                   , text
                   , vector
                   , containers

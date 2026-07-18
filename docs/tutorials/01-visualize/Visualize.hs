@@ -25,7 +25,10 @@
 module Main (main) where
 
 import           Data.Text                (Text)
-import qualified DataFrame                as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Operations.Aggregation     as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Functions      as F
 import           DataFrame.Operators      ((|>))
 import           Hgg.Plot.Easy

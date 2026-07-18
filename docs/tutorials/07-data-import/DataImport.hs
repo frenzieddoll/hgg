@@ -18,7 +18,12 @@ import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import           Text.Read                 (readMaybe)
 import           System.Directory          (listDirectory, removeFile, doesFileExist)
-import qualified DataFrame                 as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Subset          as DF
+import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Functions        as F
 import           DataFrame.Operators       ((|>))
 

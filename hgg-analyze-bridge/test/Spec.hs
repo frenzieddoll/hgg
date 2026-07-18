@@ -27,7 +27,8 @@ import qualified Hgg.Plot.Bridge.Analyze.Internal as I
 import           Hgg.Plot.Bridge.Stat (resolveStats)
 import           Hgg.Plot.Frame       ((|>>), bpSpec, bpResolver)
 import qualified Data.Vector         as V
-import qualified DataFrame           as DX
+import qualified DataFrame.Internal.Column    as DX
+import qualified DataFrame.Internal.DataFrame as DX
 import qualified Hanalyze.Model.LM   as LM
 import           Hanalyze.Model.Core (fittedList)
 import           Data.List           (sortOn)

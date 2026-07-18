@@ -31,7 +31,11 @@ import           Data.Ord                  (Down (..), comparing)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Data.Map.Strict           as M
-import qualified DataFrame                 as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Operators                  as DF
+import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Internal.Column as DFC
 
 import           Hanalyze.Data.Strings

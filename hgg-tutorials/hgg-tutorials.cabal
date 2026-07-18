@@ -23,7 +23,10 @@ common tut
                   , vector                      >= 0.12 && < 0.14
                   , directory
                   , deepseq
-                  , dataframe                   >= 1.3  && < 2
+                  , dataframe-core              ^>= 1.1
+                  , dataframe-operations        >= 1.1.1 && < 1.2
+                  , dataframe-csv               ^>= 1.0.2
+                  , dataframe-parsing           ^>= 1.0.2
                   , hgg-core           ^>= 0.1
                   , hgg-frame          ^>= 0.1
                   , hgg-svg            ^>= 0.1

@@ -2514,15 +2514,19 @@ main = hspec $ do
   -- =========================================================================
   describe "gallery primitive count 回帰 (Phase 7 A7)" $
     it "全 gallery spec の primitive 本数が golden と一致" $ do
-      galleryDir <- findGalleryDir
-      actual <- galleryCountsString galleryDir
-      let goldenPath = galleryDir ++ "/primitive-counts.golden"
-      exists <- doesFileExist goldenPath
-      if not exists
-        then writeFile goldenPath actual
-               >> pendingWith "golden 初回生成 (次回実行から比較)"
-        else do golden <- readFile goldenPath
-                actual `shouldBe` golden
+      mGalleryDir <- findGalleryDir
+      case mGalleryDir of
+        -- fixture (design/gallery) 非同梱の環境 (公開ツリー等) では skip。
+        Nothing -> pendingWith "design/gallery fixture が無い環境のため skip"
+        Just galleryDir -> do
+          actual <- galleryCountsString galleryDir
+          let goldenPath = galleryDir ++ "/primitive-counts.golden"
+          exists <- doesFileExist goldenPath
+          if not exists
+            then writeFile goldenPath actual
+                   >> pendingWith "golden 初回生成 (次回実行から比較)"
+            else do golden <- readFile goldenPath
+                    actual `shouldBe` golden
 
 
   -- =========================================================================
@@ -2634,14 +2638,15 @@ galleryCountsString galleryDir = do
 
 -- | cwd から design/gallery を探す (cabal test の cwd が repo root か package
 --   dir か実行環境で異なるため、 数段上まで候補を辿る)。
-findGalleryDir :: IO FilePath
+--   fixture 非同梱の環境 (公開ツリー等) では 'Nothing' (test 側で pendingWith skip)。
+findGalleryDir :: IO (Maybe FilePath)
 findGalleryDir = go [ up n ++ "design/gallery" | n <- [0 .. 4 :: Int] ]
   where
     up n = concat (replicate n "../")
-    go []     = ioError (userError "design/gallery が cwd から見つからない (cabal test は repo root から実行のこと)")
+    go []     = pure Nothing
     go (d:ds) = do
       e <- doesDirectoryExist d
-      if e then pure d else go ds
+      if e then pure (Just d) else go ds
 
 -- | design/gallery/specs 配下を再帰列挙し .json のみ返す。
 listJsonRec :: FilePath -> IO [FilePath]

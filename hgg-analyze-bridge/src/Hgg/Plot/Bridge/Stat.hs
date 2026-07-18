@@ -41,7 +41,8 @@ import           Data.Monoid             (First (..), Last (..))
 import           Data.Text               (Text)
 import qualified Data.Text               as T
 import qualified Data.Vector             as V
-import qualified DataFrame               as DX
+import qualified DataFrame.Internal.Column    as DX
+import qualified DataFrame.Internal.DataFrame as DX
 
 import           Hgg.Plot.Backend.SVG (renderBound, saveSVGBound)
 import           Hgg.Plot.Frame       (BoundPlot (..))

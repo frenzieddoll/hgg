@@ -18,7 +18,11 @@ import           Data.List                (sort, sortOn, nub)
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import           Numeric                  (showFFloat)
-import qualified DataFrame                as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Operators                  as DF
+import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Internal.Column as DFC
 import           Hgg.Plot.Easy
 import           Hgg.Plot.Frame       ((|>>))
