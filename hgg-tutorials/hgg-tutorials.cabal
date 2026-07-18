@@ -1,0 +1,166 @@
+cabal-version:      3.0
+name:               hgg-tutorials
+version:            0.1.0.0
+synopsis:           R for Data Science 2e ベースのチュートリアル (図生成プログラム群)
+description:
+  docs/tutorials/ の各章チュートリアルの図を生成する実行可能プログラム。
+  各 exe は対応する章ディレクトリを CWD にして実行し、 章の CSV を読んで SVG を出力する。
+  (ドキュメント専用パッケージ。 ライブラリ API は持たない)
+license:            BSD-3-Clause
+license-file:       LICENSE
+homepage:           https://github.com/frenzieddoll/hgg
+author:             Toshiaki Honda
+maintainer:         frenzieddoll@gmail.com
+copyright:          2026 Aelysce Project (Toshiaki Honda)
+category:           Graphics
+build-type:         Simple
+
+-- 全章共通の依存・拡張
+common tut
+  build-depends:    base                        >= 4.17 && < 5
+                  , text                        >= 2.0  && < 2.2
+                  , containers                  >= 0.6  && < 0.8
+                  , vector                      >= 0.12 && < 0.14
+                  , directory
+                  , deepseq
+                  , dataframe                   >= 1.3  && < 2
+                  , hgg-core           ^>= 0.1
+                  , hgg-frame          ^>= 0.1
+                  , hgg-svg            ^>= 0.1
+                  , hgg-3d             ^>= 0.1
+                  , hgg-dataframe      ^>= 0.1
+                  , hgg-analyze-bridge ^>= 0.1
+                  , hanalyze >= 0.2 && < 0.3
+                  , time                        >= 1.9  && < 1.15
+  default-language: Haskell2010
+  default-extensions: OverloadedStrings
+  ghc-options:      -Wall -Wno-unused-imports -Wno-type-defaults
+
+-- ============================================================================
+-- Phase 28 全面やり直し (2026-06-14): R4DS 2e 章に 1:1 で対応する全 11 章。
+-- 各 exe は「1 章ずつ R4DS を忠実になぞって作成・図を目視・ユーザ承認」 のうえで
+-- 追加する (量産しない)。 着手順は 01-visualize → 11-modeling (R4DS 章順)。
+-- ============================================================================
+
+-- README 用の図 (quickstart + matplotlib gallery の hgg 版) を生成する dev ツール。
+-- リポジトリ root で `cabal run -v0 readme-images` (= scripts/gen-readme-images.sh)。
+executable readme-images
+  import:         tut
+  main-is:        ReadmeImages.hs
+  hs-source-dirs: readme-images
+
+executable tut-01-visualize
+  import:         tut
+  main-is:        Visualize.hs
+  hs-source-dirs: ../docs/tutorials/01-visualize
+
+-- R4DS 2e 章順 (Phase 28 やり直し): Ch2 = workflow-basics (図なし・コード tutorial)。
+-- 旧 02-transform .. 09-missing は旧番号 (緩い基準) の残骸。 各章を R4DS 順で順次やり直し中。
+executable tut-02-workflow-basics
+  import:         tut
+  main-is:        WorkflowBasics.hs
+  hs-source-dirs: ../docs/tutorials/02-workflow-basics
+
+-- R4DS Ch3 = data-transform (dplyr 動詞・全量 flights + Lahman batting・図 1 枚)。
+-- 旧 02-transform (緩い基準・flights 間引き) は _trash へ退役し、 これが置換。
+executable tut-03-data-transform
+  import:         tut
+  main-is:        DataTransform.hs
+  hs-source-dirs: ../docs/tutorials/03-data-transform
+
+-- R4DS Ch4 = workflow: code style (図なし・コードスタイル章)。
+executable tut-04-workflow-style
+  import:         tut
+  main-is:        WorkflowStyle.hs
+  hs-source-dirs: ../docs/tutorials/04-workflow-style
+
+-- R4DS Ch5 = data tidying (tidyr・pivot_longer/wider・図 2 枚)。
+-- 旧 03-tidy (緩い基準・table1/2 と billboard のみ) は _trash へ退役し、 これが置換。
+executable tut-05-data-tidying
+  import:         tut
+  main-is:        DataTidying.hs
+  hs-source-dirs: ../docs/tutorials/05-data-tidying
+
+-- R4DS Ch6 = workflow: scripts and projects (図なし・運用章)。
+-- R/RStudio の script/project/相対パス運用を cabal/GHCi/project の等価運用に翻案。
+executable tut-06-workflow-scripts
+  import:         tut
+  main-is:        WorkflowScripts.hs
+  hs-source-dirs: ../docs/tutorials/06-workflow-scripts
+
+-- R4DS Ch7 = data import (readr の read_csv 系・図なしコード章)。
+-- 旧 04-import (緩い基準・基礎のみ) は _trash へ退役し、 これが置換。
+executable tut-07-data-import
+  import:         tut
+  main-is:        DataImport.hs
+  hs-source-dirs: ../docs/tutorials/07-data-import
+
+-- R4DS Ch8 = workflow: getting help (図なし・散文の運用章)。
+-- Google/Hoogle・Stack Overflow/Haskell Discourse・reprex (最小再現例)・自己投資を翻案。
+executable tut-08-getting-help
+  import:         tut
+  main-is:        GettingHelp.hs
+  hs-source-dirs: ../docs/tutorials/08-getting-help
+
+executable tut-09-layers
+  import:         tut
+  main-is:        Layers.hs
+  hs-source-dirs: ../docs/tutorials/09-layers
+
+executable tut-10-eda
+  import:         tut
+  main-is:        Eda.hs
+  hs-source-dirs: ../docs/tutorials/10-eda
+
+executable tut-11-communication
+  import:         tut
+  main-is:        Communication.hs
+  hs-source-dirs: ../docs/tutorials/11-communication
+
+executable tut-17-datetimes
+  import:         tut
+  main-is:        Datetimes.hs
+  hs-source-dirs: ../docs/tutorials/17-datetimes
+
+executable tut-18-missing
+  import:         tut
+  main-is:        Missing.hs
+  hs-source-dirs: ../docs/tutorials/18-missing
+
+executable tut-19-joins
+  import:         tut
+  main-is:        Joins.hs
+  hs-source-dirs: ../docs/tutorials/19-joins
+
+-- R4DS Ch12 = logicals (論理ベクトル・flights 全量・図 0 枚=概念ベン図のみ)。
+executable tut-12-logical
+  import:         tut
+  main-is:        Logicals.hs
+  hs-source-dirs: ../docs/tutorials/12-logical
+
+-- R4DS Ch13 = numbers (数値ベクトル・flights 全量・図 4 枚・analyze 高レベル API 使用)。
+executable tut-13-numbers
+  import:         tut
+  main-is:        Numbers.hs
+  hs-source-dirs: ../docs/tutorials/13-numbers
+
+-- R4DS Ch14 = strings (文字列・babynames 192 万行・図 0 枚=表/ベクトル値が主役)。
+-- stringr/tidyr 相当は analyze Hanalyze.Data.Strings (Phase 28 Ch14)。
+executable tut-14-strings
+  import:         tut
+  main-is:        Strings.hs
+  hs-source-dirs: ../docs/tutorials/14-strings
+
+-- R4DS Ch15 = regular expressions (正規表現・words/fruit/babynames・図 0 枚)。
+-- regex は analyze Data.Strings の regex 節 (regex-tdfa・Phase 28 Ch15)。
+executable tut-15-regexps
+  import:         tut
+  main-is:        Regexps.hs
+  hs-source-dirs: ../docs/tutorials/15-regexps
+
+-- R4DS Ch16 = factors (因子・gss_cat 21,483 行・図 5 枚=§16.4 順序変更)。
+-- forcats 相当は analyze Hanalyze.Data.Factor (Phase 28 Ch16)。
+executable tut-16-factors
+  import:         tut
+  main-is:        Factors.hs
+  hs-source-dirs: ../docs/tutorials/16-factors
