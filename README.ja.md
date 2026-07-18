@@ -50,7 +50,26 @@ penguins の全 24 図と再現コードは [R for Data Science 第 1 章](docs/
 
 ## インストール
 
-cabal の `build-depends` に backend パッケージを足します (core は依存で入ります)。
+一番手軽なのは umbrella パッケージ
+[`hgg`](https://hackage.haskell.org/package/hgg) です — core + DataFrame
+バインディング + SVG backend が一括で入り、 `import Graphics.Hgg` 1 つで
+下のクイックスタート全部が書けます。
+
+```
+build-depends: hgg
+```
+
+追加 backend は manual cabal flag で opt-in します — `cabal.project` に:
+
+```
+constraints: hgg +pdf +png +latex +3d
+```
+
+(`pdf` = `hgg-pdf`、 `png` = `hgg-rasterific` 日本語フォント可、
+`latex` = `hgg-latex` TikZ 出力、 `3d` = `hgg-3d`。)
+
+umbrella を使わず、 backend パッケージを個別に選んでも構いません
+(core は依存で入ります)。
 
 ```
 build-depends: hgg-svg          -- core + SVG backend

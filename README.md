@@ -54,7 +54,26 @@ All 24 penguins figures with reproduction code are in
 
 ## Installation
 
-Add a backend package to your cabal `build-depends` (the core comes in as a dependency).
+The quickest way is the umbrella package
+[`hgg`](https://hackage.haskell.org/package/hgg) — it brings in the core,
+the dataframe binding and the SVG backend, and one `import Graphics.Hgg`
+covers everything in the quick start below.
+
+```
+build-depends: hgg
+```
+
+Optional backends are enabled with manual cabal flags — in your `cabal.project`:
+
+```
+constraints: hgg +pdf +png +latex +3d
+```
+
+(`pdf` = `hgg-pdf`, `png` = `hgg-rasterific` with Japanese font support,
+`latex` = `hgg-latex` TikZ output, `3d` = `hgg-3d`.)
+
+Alternatively, skip the umbrella and pick packages directly (the core comes
+in as a dependency):
 
 ```
 build-depends: hgg-svg          -- core + SVG backend

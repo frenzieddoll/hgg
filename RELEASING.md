@@ -1,6 +1,6 @@
 # Releasing hgg to Hackage
 
-This monorepo contains 14 packages, but **only a subset is published to
+This monorepo contains 15 packages, but **only a subset is published to
 Hackage**. The rest stay repository-only (buildable from source via
 `cabal.project`, not uploaded).
 
@@ -8,6 +8,7 @@ Hackage**. The rest stay repository-only (buildable from source via
 
 | Package | Hackage | Notes |
 |---|---|---|
+| `hgg` | ✅ | umbrella: exact-pins core/frame/svg, one re-export module `Graphics.Hgg`; flags `pdf`/`png`/`latex`/`3d` |
 | `hgg-core` | ✅ | no deps beyond base/vector/text/containers |
 | `hgg-frame` | ✅ | DataFrame integration (`PlotData` / `\|>>`); required by every backend below |
 | `hgg-svg` | ✅ | SVG backend |
@@ -39,6 +40,10 @@ Then, respecting intra-repo dependencies:
 3. `hgg-svg`, `hgg-pdf`, `hgg-rasterific`, `hgg-latex`, `hgg-custom`
 4. `hgg-3d`, `hgg-ihaskell`
 5. `hgg-analyze-bridge`
+6. `hgg` (umbrella — always last; it exact-pins `hgg-core`/`hgg-frame`/`hgg-svg`
+   to the release version, and its optional flags reference `hgg-pdf`/
+   `hgg-rasterific`/`hgg-latex`/`hgg-3d`, so all of those must be up first.
+   On every release bump, update the `== x.y.z.w` pins in `hgg/hgg.cabal`.)
 
 ## Procedure (per package)
 

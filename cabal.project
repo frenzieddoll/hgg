@@ -1,6 +1,8 @@
 -- | hgg: Haskell の matplotlib 不在を埋める Grammar of Graphics 系 plot library。
 -- |
--- | 14 package 構成:
+-- | 15 package 構成:
+-- |   hgg                ← umbrella (= core/frame/svg exact pin + Graphics.Hgg
+-- |                         1 枚の薄い re-export。 pdf/png/latex/3d は manual flag)
 -- |   hgg-core           ← Layer 1-3 (Spec / Data / Layout / Render 抽象)
 -- |                         依存: base, vector, text, containers のみ
 -- |   hgg-svg             ← SVG backend (純 Haskell)
@@ -21,6 +23,7 @@
 -- | hgg-analyze-bridge / hgg-tutorials は Hackage の `hanalyze` package に依存する
 -- | (build-depends 経由、 このファイルではローカルパスを参照しない)。
 packages:
+  ./hgg
   ./hgg-core
   ./hgg-svg
   ./hgg-pdf
