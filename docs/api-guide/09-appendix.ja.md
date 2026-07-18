@@ -34,7 +34,7 @@ ggplot2 の概念との対応は各ページに **geom / aes との相互参照*
 通常の作図では不要。 新しい出力 backend を書く、 既存 mark に無い描画をする等、
 **ライブラリ自体を拡張する**ときだけ読む。
 
-- **backend を書く** = `Hgg.Plot.Render` の
+- **backend を書く** = `Graphics.Hgg.Render` の
   `renderToPrimitives :: Resolver -> Layout -> VisualSpec -> [Primitive]` で spec を幾何プリミティブ列
   (`PLine` / `PRect` / `PCircle` / `PPath` / `PText` / `PClipPush`/`PClipPop` / `PTransformPush`/`PTransformPop`)
   に落とし、 それを対象フォーマットへ**畳む**だけ。 **雛形 = `hgg-svg` の `Backend/SVG.hs`**

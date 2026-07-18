@@ -32,7 +32,7 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.Frame
+  exposed-modules:  Graphics.Hgg.Frame
   hs-source-dirs:   src
   build-depends:    base       >= 4.17 && < 5
                   , vector     >= 0.13 && < 0.14

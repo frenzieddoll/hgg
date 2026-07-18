@@ -22,8 +22,8 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.Backend.SVG
-                    Hgg.Plot.Quick
+  exposed-modules:  Graphics.Hgg.Backend.SVG
+                    Graphics.Hgg.Quick
   hs-source-dirs:   src
   build-depends:    base               >= 4.17 && < 5
                   , text               >= 2.0  && < 2.2

@@ -4,13 +4,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Spec        -- grammar API (purePlot / layer / 各 mark / inline / …)
-import           Hgg.Plot.Backend.SVG (saveSVG, saveSVGWith, saveSVGBound)
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Unit        (px, (*~))
-import qualified Hgg.Plot.ThreeD.Spec  as P3
-import qualified Hgg.Plot.ThreeD.Easy  as P3E
-import           Hgg.Plot.ThreeD.Types (cameraIso)
+import           Graphics.Hgg.Spec        -- grammar API (purePlot / layer / 各 mark / inline / …)
+import           Graphics.Hgg.Backend.SVG (saveSVG, saveSVGWith, saveSVGBound)
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Unit        (px, (*~))
+import qualified Graphics.Hgg.ThreeD.Spec  as P3
+import qualified Graphics.Hgg.ThreeD.Easy  as P3E
+import           Graphics.Hgg.ThreeD.Types (cameraIso)
 import qualified Data.Vector              as V
 import qualified Data.Text                as T
 import           Control.Monad            (forM, forM_)

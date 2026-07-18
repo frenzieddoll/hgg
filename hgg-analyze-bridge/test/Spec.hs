@@ -7,12 +7,12 @@ import qualified Data.Set            as Set
 import qualified Data.Monoid
 import qualified Data.Text
 
-import qualified Hgg.Plot.Spec   as Spec
-import           Hgg.Plot.Palette (ggplotHue)
+import qualified Graphics.Hgg.Spec   as Spec
+import           Graphics.Hgg.Palette (ggplotHue)
 import           Hanalyze.Model.HBM  (ModelGraph (..), Node (..),
                                       NodeKind (..))
 
-import           Hgg.Plot.Bridge.Analyze
+import           Graphics.Hgg.Bridge.Analyze
                                      (modelGraphToDAGEdges,
                                       modelGraphToDAGNodes,
                                       modelGraphToDAGPlates,
@@ -22,10 +22,10 @@ import           Hgg.Plot.Bridge.Analyze
                                       renderModelGraphPNG,
                                       renderModelGraphSVG,
                                       renderModelGraphSVGBytes)
-import qualified Hgg.Plot.Bridge.Analyze.Internal as I
+import qualified Graphics.Hgg.Bridge.Analyze.Internal as I
 
-import           Hgg.Plot.Bridge.Stat (resolveStats)
-import           Hgg.Plot.Frame       ((|>>), bpSpec, bpResolver)
+import           Graphics.Hgg.Bridge.Stat (resolveStats)
+import           Graphics.Hgg.Frame       ((|>>), bpSpec, bpResolver)
 import qualified Data.Vector         as V
 import qualified DataFrame.Internal.Column    as DX
 import qualified DataFrame.Internal.DataFrame as DX

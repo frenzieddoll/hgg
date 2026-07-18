@@ -27,9 +27,9 @@ Left side of `(|>>)` can be any `instance PlotData df`. Standard 3 options:
 Column values are `ColData` = `NumData (Vector Double)` / `TxtData (Vector Text)`. Helper shortcuts simplify:
 
 ```haskell
-import           Hgg.Plot.Easy             -- re-export Spec (scatter/layer/…/ColData)
-import           Hgg.Plot.Frame            ((|>>), BoundPlot, bpDiagnostics)
-import           Hgg.Plot.Backend.SVG      (saveSVGBound)
+import           Graphics.Hgg.Easy             -- re-export Spec (scatter/layer/…/ColData)
+import           Graphics.Hgg.Frame            ((|>>), BoundPlot, bpDiagnostics)
+import           Graphics.Hgg.Backend.SVG      (saveSVGBound)
 import qualified Data.Map.Strict as M
 import qualified Data.Vector     as V
 import           Data.Text       (Text)
@@ -86,7 +86,7 @@ Add `hgg-dataframe` and `DataFrame` becomes df directly
 
 ```haskell
 import qualified DataFrame              as DF
-import           Hgg.Plot.DataFrame ()   -- expose the instance
+import           Graphics.Hgg.DataFrame ()   -- expose the instance
 
 main = do
   df <- DF.readCsv "cars.csv"

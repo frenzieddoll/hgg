@@ -4,10 +4,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.Rasterific (PNGConfig (..), PNGFonts (..),
+import           Graphics.Hgg.Backend.Rasterific (PNGConfig (..), PNGFonts (..),
                                                   defaultPNGConfig, loadPNGFonts,
                                                   savePNG, savePNGConfigured)
-import           Hgg.Plot.Easy
+import           Graphics.Hgg.Easy
 import           Codec.Picture                   (Image (..), PixelRGBA8,
                                                   convertRGBA8, decodePng)
 import qualified Data.ByteString                 as BS

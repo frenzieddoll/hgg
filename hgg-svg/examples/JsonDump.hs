@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
-import Hgg.Plot.Easy
-import           Hgg.Plot.Unit         (px, (*~))
+import Graphics.Hgg.Easy
+import           Graphics.Hgg.Unit         (px, (*~))
 import Data.Aeson (encode)
 import qualified Data.ByteString.Lazy.Char8 as BL
 

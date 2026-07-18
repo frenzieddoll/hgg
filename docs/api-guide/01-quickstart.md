@@ -23,11 +23,11 @@ Page structure:
 
 | Layer | Module | Role |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` direct pass + `overlay` default |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot-like channels + `<>` composition (primary) |
-| **3. Typed** | `Hgg.Plot.Spec` + `Resolver` | Typed channels / scales / Resolver-controlled encoding |
-| **4. Low-level** | `Hgg.Plot.Render` | Direct `Primitive` (custom backends, special rendering) |
+| **0. Quick** | `Graphics.Hgg.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Graphics.Hgg.Easy` | `[Double]` direct pass + `overlay` default |
+| **2. Grammar** | `Graphics.Hgg.Spec` | ggplot-like channels + `<>` composition (primary) |
+| **3. Typed** | `Graphics.Hgg.Spec` + `Resolver` | Typed channels / scales / Resolver-controlled encoding |
+| **4. Low-level** | `Graphics.Hgg.Render` | Direct `Primitive` (custom backends, special rendering) |
 
 > `Easy` re-exports `Spec` + value-passing helpers. `Quick` re-exports `Easy` + `IO` save helpers.
 > **Any import gives you all lower-layer features**.
@@ -36,10 +36,10 @@ Page structure:
 
 ## 30 seconds to a plot (Quick layer) {#quickstart-30s}
 
-One plot, data only, zero configuration. Uses `hgg-svg`'s `Hgg.Plot.Quick`.
+One plot, data only, zero configuration. Uses `hgg-svg`'s `Graphics.Hgg.Quick`.
 
 ```haskell
-import Hgg.Plot.Quick
+import Graphics.Hgg.Quick
 
 main :: IO ()
 main = do
@@ -60,9 +60,9 @@ main = do
 Pass `[Double]` without `inline`, wrap overlays in `overlay`, add decoration with `<>`.
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.Backend.SVG (saveSVG)
-import Hgg.Plot.Unit (px, (*~))   -- px sizing (default unit mm, omit for 6.5×4in)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Backend.SVG (saveSVG)
+import Graphics.Hgg.Unit (px, (*~))   -- px sizing (default unit mm, omit for 6.5×4in)
 
 main :: IO ()
 main = saveSVG "easy.svg" $
@@ -85,8 +85,8 @@ Start with `purePlot` (empty plot), add `layer (mark …)`, build channels with 
 `inlineCat` (categorical). Aesthetics compose **inside** the mark with `<>`.
 
 ```haskell
-import Hgg.Plot.Spec
-import Hgg.Plot.Backend.SVG (saveSVG)
+import Graphics.Hgg.Spec
+import Graphics.Hgg.Backend.SVG (saveSVG)
 import Data.Text (Text)
 
 main :: IO ()

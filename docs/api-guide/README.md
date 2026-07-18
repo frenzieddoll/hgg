@@ -25,9 +25,9 @@ Comprehensive reference organized by topic. Learning pathways are covered by [tu
 
 | Layer | Module | Role |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` direct pass + `overlay` default |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot-like channels + `<>` composition (primary) |
+| **0. Quick** | `Graphics.Hgg.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Graphics.Hgg.Easy` | `[Double]` direct pass + `overlay` default |
+| **2. Grammar** | `Graphics.Hgg.Spec` | ggplot-like channels + `<>` composition (primary) |
 
 ## Two golden rules
 

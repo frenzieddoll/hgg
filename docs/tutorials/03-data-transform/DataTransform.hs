@@ -31,10 +31,10 @@ import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Functions      as F
 import           DataFrame.Internal.Column (columnTypeString)
 import           DataFrame.Operators      ((|>), (.>), (.==), (.&&), (.||))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
-import           Hgg.Plot.DataFrame   ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.DataFrame   ()
 
 -- 章見出しと結果 (DataFrame) をまとめて表示する小ヘルパ。
 sect :: String -> IO ()

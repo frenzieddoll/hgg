@@ -16,9 +16,9 @@ Reading this page alone, you can build new marks from start to finish.
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
-import Hgg.Plot.Easy
-import Hgg.Plot.Primitive (Primitive(..), Point(..), solid)
-import Hgg.Plot.Spec      (RenderCtx(..), customMark)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Primitive (Primitive(..), Point(..), solid)
+import Graphics.Hgg.Spec      (RenderCtx(..), customMark)
 
 -- Just draw one diagonal from bottom-left (0,0) to top-right (1,1)
 diagonal :: RenderCtx -> [Primitive]
@@ -54,11 +54,11 @@ The only argument `drawFn` receives. Everything needed for drawing comes from he
 | `rcTextColor` | `Text` | Theme default text color |
 | `rcAxisColor` | `Text` | Theme default axis color |
 
-`RenderCtx(..)` imported from `Hgg.Plot.Spec`.
+`RenderCtx(..)` imported from `Graphics.Hgg.Spec`.
 
 ## 3. Primitive — Drawing shape vocabulary
 
-Backend-agnostic drawing commands returned by `drawFn`. Import from `Hgg.Plot.Primitive` (or re-export from `Hgg.Plot.Render`).
+Backend-agnostic drawing commands returned by `drawFn`. Import from `Graphics.Hgg.Primitive` (or re-export from `Graphics.Hgg.Render`).
 All coordinates are **device px** (= `rcProjectXY` output).
 
 | Constructor | Arguments | Meaning |
@@ -89,9 +89,9 @@ Draw merges as Π-shaped elbows. Final form: **`dendrogram "leaf" "height"`** us
 Complete example at `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`).
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.Primitive (Primitive(..), Point(..), TextStyle(..), TextAnchor(..), solid)
-import Hgg.Plot.Spec (RenderCtx(..), ColRef, ColData(..), customMark, encX, encY, resolveNum)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Primitive (Primitive(..), Point(..), TextStyle(..), TextAnchor(..), solid)
+import Graphics.Hgg.Spec (RenderCtx(..), ColRef, ColData(..), customMark, encX, encY, resolveNum)
 import qualified Data.Vector as V
 
 -- ① draw: Read "leaf"/"height" columns via rcResolver, build elbows (4-leaf fixed for simplicity)
@@ -140,7 +140,7 @@ Key points:
 
 ### 4.1 How first-class marks work — `encX` / `encY`
 
-`encX` / `encY` are **mark-independent x/y column bundlers** (`Hgg.Plot.Spec`):
+`encX` / `encY` are **mark-independent x/y column bundlers** (`Graphics.Hgg.Spec`):
 
 ```haskell
 encX :: ColRef -> Layer          -- Bundle x column only
@@ -161,7 +161,7 @@ data flows via `df |>>` (§5). Each custom mark has unique `draw`, so naturally
 - **From columns**: Read column bound to layer via `rcResolver`. Data-driven on screen.
 
 ```haskell
-import Hgg.Plot.Spec (resolveNum)
+import Graphics.Hgg.Spec (resolveNum)
 
 fromCols :: RenderCtx -> [Primitive]
 fromCols ctx =
@@ -187,8 +187,8 @@ sends only `id` and options; closure drops. To draw same mark on canvas too, **h
 (current HS↔PS hand-mirroring practice). Unregistered → canvas **skips** (= Haskell-only = SVG / PDF / Rasterific only).
 
 ```purescript
-import Hgg.Plot.Custom (registerMark)          -- RenderCtx also from here
-import Hgg.Plot.Render.Common (Primitive(..), Point(..))
+import Graphics.Hgg.Custom (registerMark)          -- RenderCtx also from here
+import Graphics.Hgg.Render.Common (Primitive(..), Point(..))
 
 -- Hand-write to return same shapes as HS drawFn
 dendroDrawPS :: Json -> RenderCtx -> Array Primitive
@@ -219,7 +219,7 @@ Custom marks are a lightweight channel for types not needing that.
 ## 8. API quick reference
 
 ```haskell
--- Hgg.Plot.Spec (Easy also OK)
+-- Graphics.Hgg.Spec (Easy also OK)
 customMark     :: Text -> (RenderCtx -> [Primitive]) -> Layer
 customMarkWith :: Text -> Value -> (RenderCtx -> [Primitive]) -> Layer   -- With options for PS
 encX           :: ColRef -> Layer   -- Bundle x column (mark-independent, first-class mark / auto axis range)
@@ -233,12 +233,12 @@ data RenderCtx = RenderCtx
 ```
 
 ```purescript
--- Hgg.Plot.Custom (PureScript)
+-- Graphics.Hgg.Custom (PureScript)
 registerMark :: String -> (Json -> RenderCtx -> Array Primitive) -> Effect Unit
 type RenderCtx = { projectXY :: Number -> Number -> { x :: Number, y :: Number }
                  , plotArea :: Rect, resolver :: Resolver
                  , color, fill, textColor, axisColor :: String }
--- PureScript also has isomorphic customMark / customMarkWith in Hgg.Plot.Spec
+-- PureScript also has isomorphic customMark / customMarkWith in Graphics.Hgg.Spec
 ```
 
 ## Related

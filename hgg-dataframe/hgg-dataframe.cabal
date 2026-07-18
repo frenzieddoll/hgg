@@ -3,7 +3,7 @@ name:               hgg-dataframe
 version:            0.1.0.0
 synopsis:           DataFrame ↔ hgg Resolver bridge
 description:
-  Hackage `dataframe` package を 'Hgg.Plot.Spec.Resolver' に橋渡しする。
+  Hackage `dataframe` package を 'Graphics.Hgg.Spec.Resolver' に橋渡しする。
   これにより plotnine 風の col 名渡し API (= `scatter "weight" "mpg"`) が
   そのまま動く。
   .
@@ -26,7 +26,7 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.DataFrame
+  exposed-modules:  Graphics.Hgg.DataFrame
   hs-source-dirs:   src
   build-depends:    base                >= 4.17 && < 5
                   , text                >= 2.0  && < 2.2

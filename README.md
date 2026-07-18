@@ -66,21 +66,21 @@ for Jupyter inline display `hgg-ihaskell`.
 
 ## Quick start
 
-The shortest form is one line (`Hgg.Plot.Quick` — one figure, no decisions beyond the data).
+The shortest form is one line (`Graphics.Hgg.Quick` — one figure, no decisions beyond the data).
 
 ```haskell
-import Hgg.Plot.Quick
+import Graphics.Hgg.Quick
 
 main :: IO ()
 main = quickScatter "scatter.svg" [1,2,3,4,5] [1,4,9,16,25]
 ```
 
-To add decorations, use `Hgg.Plot.Easy` (direct values + `overlay`).
+To add decorations, use `Graphics.Hgg.Easy` (direct values + `overlay`).
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.Backend.SVG (saveSVG)
-import Hgg.Plot.Unit (px, (*~))
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Backend.SVG (saveSVG)
+import Graphics.Hgg.Unit (px, (*~))
 
 main :: IO ()
 main = saveSVG "easy.svg" $
@@ -98,10 +98,10 @@ with several layers. The next section shows `|>>` on real data
 (the palmerpenguins CSV).
 
 ```haskell
-import Hgg.Plot.Spec
-import Hgg.Plot.Frame       ((|>>))
--- import Hgg.Plot.DataFrame       ((|>>))
-import Hgg.Plot.Backend.SVG (saveSVGBound)
+import Graphics.Hgg.Spec
+import Graphics.Hgg.Frame       ((|>>))
+-- import Graphics.Hgg.DataFrame       ((|>>))
+import Graphics.Hgg.Backend.SVG (saveSVGBound)
 import qualified Data.Vector as V
 import Data.Text (Text)
 

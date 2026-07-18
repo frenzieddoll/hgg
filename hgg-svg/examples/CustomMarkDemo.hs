@@ -11,17 +11,17 @@
 -- → カレントディレクトリに @custom-mark-demo.svg@ を生成。
 --
 -- 詳細な拡張ガイドは @docs/api-guide/10-custom-marks.md@。 canvas parity が欲しい時は同じ id で
--- PS registry (@Hgg.Plot.Custom.registerMark@) に draw 関数を手登録する。
+-- PS registry (@Graphics.Hgg.Custom.registerMark@) に draw 関数を手登録する。
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVGWith)
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Primitive   (Primitive (..), Point (..),
+import           Graphics.Hgg.Backend.SVG (saveSVGWith)
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Primitive   (Primitive (..), Point (..),
                                            TextStyle (..), TextAnchor (..), solid)
-import           Hgg.Plot.Spec        (RenderCtx (..), ColRef, ColData (..),
+import           Graphics.Hgg.Spec        (RenderCtx (..), ColRef, ColData (..),
                                            customMark, encX, encY, resolveNum)
-import           Hgg.Plot.Unit        (px, (*~))
+import           Graphics.Hgg.Unit        (px, (*~))
 import qualified Data.Vector              as V
 
 -- | ① draw: @"leaf"@ (葉の x 位置)・@"height"@ (節の高さ) 列を 'rcResolver' で読み、 併合を

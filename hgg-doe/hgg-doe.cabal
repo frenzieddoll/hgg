@@ -26,10 +26,10 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.DoE
-                    Hgg.Plot.DoE.MainEffects
-                    Hgg.Plot.DoE.Interaction
-                    Hgg.Plot.DoE.ResponseSurface
+  exposed-modules:  Graphics.Hgg.DoE
+                    Graphics.Hgg.DoE.MainEffects
+                    Graphics.Hgg.DoE.Interaction
+                    Graphics.Hgg.DoE.ResponseSurface
   build-depends:    base             >= 4.16 && < 5
                   , hgg-core
                   , text             >= 1.2 && < 3

@@ -24,10 +24,10 @@ import qualified DataFrame.Internal.DataFrame         as DF
 import qualified DataFrame.Operators                  as DF
 import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Internal.Column as DFC
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
-import           Hgg.Plot.DataFrame   ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.DataFrame   ()
 
 safeCol :: forall a. (DFC.Columnable a, NFData a) => Text -> DF.DataFrame -> Maybe [a]
 safeCol name df = unsafePerformIO $ do

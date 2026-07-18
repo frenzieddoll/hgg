@@ -4,13 +4,13 @@ module Main where
 
 import           Data.Aeson                  (encode)
 import qualified Data.ByteString.Lazy.Char8  as BL
-import           Hgg.Plot.ThreeD.Axes
-import           Hgg.Plot.ThreeD.Line
-import           Hgg.Plot.ThreeD.Scatter
-import           Hgg.Plot.ThreeD.Spec
-import           Hgg.Plot.Color          (fromHex)
-import           Hgg.Plot.ThreeD.Surface
-import           Hgg.Plot.ThreeD.Types
+import           Graphics.Hgg.ThreeD.Axes
+import           Graphics.Hgg.ThreeD.Line
+import           Graphics.Hgg.ThreeD.Scatter
+import           Graphics.Hgg.ThreeD.Spec
+import           Graphics.Hgg.Color          (fromHex)
+import           Graphics.Hgg.ThreeD.Surface
+import           Graphics.Hgg.ThreeD.Types
 
 main :: IO ()
 main = do

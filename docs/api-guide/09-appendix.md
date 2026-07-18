@@ -33,7 +33,7 @@ Correspondence with ggplot2 concepts is noted on each page as **cross-references
 
 Not needed for normal plotting. Read this only when **extending the library itself** — writing a new output backend, rendering something the existing marks don't support.
 
-- **Writing a backend** = Use `Hgg.Plot.Render`'s
+- **Writing a backend** = Use `Graphics.Hgg.Render`'s
   `renderToPrimitives :: Resolver -> Layout -> VisualSpec -> [Primitive]` to lower the spec to geometric primitive sequences
   (`PLine` / `PRect` / `PCircle` / `PPath` / `PText` / `PClipPush`/`PClipPop` / `PTransformPush`/`PTransformPop`),
   then **fold** them into your target format. **Template = `hgg-svg`'s `Backend/SVG.hs`**

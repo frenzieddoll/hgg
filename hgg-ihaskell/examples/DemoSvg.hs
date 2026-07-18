@@ -6,8 +6,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.SVG (renderSVG, renderSVGWith)
-import           Hgg.Plot.Easy
+import           Graphics.Hgg.Backend.SVG (renderSVG, renderSVGWith)
+import           Graphics.Hgg.Easy
 import qualified Data.Text.IO             as TIO
 import qualified Data.Vector              as V
 

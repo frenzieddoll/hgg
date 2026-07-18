@@ -6,14 +6,14 @@ module Main where
 import qualified Data.Text             as T
 import           Test.Hspec
 
-import           Hgg.Plot.Semi.WaferMap
-import           Hgg.Plot.Semi.ControlChart
-import           Hgg.Plot.Semi.ProbabilityPlot
-import           Hgg.Plot.Semi.ParetoChart
-import           Hgg.Plot.Semi.BoxCoxPlot
-import           Hgg.Plot.Layout.RangeOf (invNormCdf)
-import           Hgg.Plot.Math.Special   (betaQuantile)
-import           Hgg.Plot.Backend.SVG (renderPrimitivesSVG)
+import           Graphics.Hgg.Semi.WaferMap
+import           Graphics.Hgg.Semi.ControlChart
+import           Graphics.Hgg.Semi.ProbabilityPlot
+import           Graphics.Hgg.Semi.ParetoChart
+import           Graphics.Hgg.Semi.BoxCoxPlot
+import           Graphics.Hgg.Layout.RangeOf (invNormCdf)
+import           Graphics.Hgg.Math.Special   (betaQuantile)
+import           Graphics.Hgg.Backend.SVG (renderPrimitivesSVG)
 
 -- | 手組みの ControlChart (center=0, σ=1, 3σ 限界)。 ルール検出単体テスト用。
 mkCC :: [Double] -> ControlChart

@@ -4,9 +4,9 @@ module Main (main) where
 
 -- 注: renderBound (df |>> spec → SVG) の smoke は hgg-svg の test に置く。
 -- frame:test が svg に依存すると cabal が frame↔svg をパッケージ循環と見なすため。
-import           Hgg.Plot.Frame
-import           Hgg.Plot.Spec     (ColData (..), layer, scatter)
-import           Hgg.Plot.Validate (PlotDiagnostic (..), PlotErrorKind (..),
+import           Graphics.Hgg.Frame
+import           Graphics.Hgg.Spec     (ColData (..), layer, scatter)
+import           Graphics.Hgg.Validate (PlotDiagnostic (..), PlotErrorKind (..),
                                         Severity (..), diagnosticSeverity)
 import           Data.Map.Strict       (Map)
 import qualified Data.Map.Strict       as M

@@ -18,19 +18,19 @@
 --     ─ 加えて cross-link (= a2→b3) を追加して、 A4 の TD+BU median 効果
 --       (= 親 + 子の中庸位置) を視覚化する。
 --
--- "before" は 'Hgg.Plot.Spec.LayoutManual' + 手計算 alphabetical 位置で
+-- "before" は 'Graphics.Hgg.Spec.LayoutManual' + 手計算 alphabetical 位置で
 -- v0.1 layout を再現 (= 旧 code を取り出さず、 既存の Manual layout 経路で simulate)。
--- "after" は通常の 'Hgg.Plot.DAG.dagPlot' (= LayoutHierarchical default、
+-- "after" は通常の 'Graphics.Hgg.DAG.dagPlot' (= LayoutHierarchical default、
 -- A2 network simplex + A3 median + transpose + A4 Brandes-Köpfe TD+BU median) を使う。
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVG)
-import           Hgg.Plot.Unit         (px, (*~))
-import qualified Hgg.Plot.DAG
-import           Hgg.Plot.DAG         ((~>))
-import           Hgg.Plot.Easy
-import qualified Hgg.Plot.Spec        as Spec
+import           Graphics.Hgg.Backend.SVG (saveSVG)
+import           Graphics.Hgg.Unit         (px, (*~))
+import qualified Graphics.Hgg.DAG
+import           Graphics.Hgg.DAG         ((~>))
+import           Graphics.Hgg.Easy
+import qualified Graphics.Hgg.Spec        as Spec
 import           Data.Text                (Text)
 
 main :: IO ()
@@ -65,7 +65,7 @@ main = do
               <> ("B" :: Text) ~> "Y"
               <> ("C" :: Text) ~> "X"
       k33AfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot k33Graph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot k33Graph <> size 22)
         <> title  "K3,3 reverse: AFTER (A2+A3, 0 crossings)"
         <> theme  ThemeLight
         <> widthUnit (600 *~ px) <> heightUnit (400 *~ px)
@@ -115,7 +115,7 @@ main = do
         <> ("tau2"    :: Text) ~> "y"
         <> ("tau3"    :: Text) ~> "y"
       hbmAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot hbmGraph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot hbmGraph <> size 22)
         <> title  "HBM 9-node: AFTER (A2 rank + A3 median+transpose)"
         <> theme  ThemeLight
         <> widthUnit (900 *~ px) <> heightUnit (600 *~ px)
@@ -156,7 +156,7 @@ main = do
         <> ("b2" :: Text) ~> "b3"
         <> ("a2" :: Text) ~> "b3"
       chainsAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot chainsGraph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot chainsGraph <> size 22)
         <> title  "Chains+cross: AFTER (A2+A3+A4 TD+BU median anchor)"
         <> theme  ThemeLight
         <> widthUnit (600 *~ px) <> heightUnit (400 *~ px)
@@ -194,7 +194,7 @@ main = do
         <> ("c" :: Text) ~> "d"
         <> ("a" :: Text) ~> "d"   -- long
       longAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot longGraph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot longGraph <> size 22)
         <> title  "Long skip edge: AFTER (A5 dummy + Catmull-Rom で迂回)"
         <> theme  ThemeLight
         <> widthUnit (600 *~ px) <> heightUnit (500 *~ px)
@@ -242,7 +242,7 @@ main = do
         <> ("a1"  :: Text) ~> "y"  <> ("a2"  :: Text) ~> "y"
         <> ("b1"  :: Text) ~> "y"  <> ("b2"  :: Text) ~> "y"
       plateAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates plateGraph [plateA, plateB]
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates plateGraph [plateA, plateB]
                     <> size 22)
         <> title  "Plate-aware: AFTER (A6 plate メンバ contiguous、 box 矩形)"
         <> theme  ThemeLight
@@ -261,7 +261,7 @@ main = do
               <> (("b" :: Text) ~> "c")
               <> (("b" :: Text) ~> "c")
       parAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot parGraph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot parGraph <> size 22)
         <> title  "Parallel edges: AFTER (= perpendicular bend、 3 本 / 2 本)"
         <> theme  ThemeLight
         <> widthUnit (500 *~ px) <> heightUnit (500 *~ px)
@@ -279,7 +279,7 @@ main = do
         <> ("s"  :: Text) ~> "y"
         <> ("mu" :: Text) ~> "y"   -- plate 跨ぎ skip edge
       pcAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates pcGraph [pcPlate]
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates pcGraph [pcPlate]
                     <> size 22)
         <> title  "Plate-crossing skip: mu->y は plate 箱を外迂回すべき"
         <> theme  ThemeLight
@@ -298,7 +298,7 @@ main = do
         <> ("p0"  :: Text) ~> "snk" <> ("p1" :: Text) ~> "snk"
         <> ("src" :: Text) ~> "snk"  -- box 直下を跨ぐ skip
       ptAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates ptGraph [ptPlate]
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates ptGraph [ptPlate]
                     <> size 22)
         <> title  "Plate-through skip: src->snk は box を貫通せず迂回すべき"
         <> theme  ThemeLight
@@ -322,7 +322,7 @@ main = do
       nestA     = Spec.DAGPlate "A (n=2)" ["xa1", "xa2"]
       nestB     = Spec.DAGPlate "B (n=2)" ["xb1", "xb2"]
       nestAfterSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates nestGraph
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates nestGraph
                     [nestOuter, nestA, nestB] <> size 22)
         <> title  "Nested plate: 外箱が内箱を内包・兄弟 A/B は非重複であるべき"
         <> theme  ThemeLight
@@ -339,7 +339,7 @@ main = do
       deepMid   = Spec.DAGPlate "L2" ["c", "d"]
       deepInner = Spec.DAGPlate "L3" ["d"]
       deepSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates deepGraph
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates deepGraph
                     [deepOuter, deepMid, deepInner] <> size 22)
         <> title  "Deep nest (L1 superset of L2 superset of L3): margin 累積"
         <> theme  ThemeLight
@@ -358,7 +358,7 @@ main = do
       triQ = Spec.DAGPlate "Q" ["q"]
       triR = Spec.DAGPlate "R" ["r"]
       triSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlotWithPlates triGraph
+        <> layer (Graphics.Hgg.DAG.dagPlotWithPlates triGraph
                     [triOuter, triP, triQ, triR] <> size 22)
         <> title  "3 兄弟 inner plate: box 重なり無しであるべき"
         <> theme  ThemeLight

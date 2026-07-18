@@ -5,14 +5,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.LaTeX (CJKMode (..), TeXConfig (..),
+import           Graphics.Hgg.Backend.LaTeX (CJKMode (..), TeXConfig (..),
                                              defaultTeXConfig, luaLaTeXConfig,
                                              renderPrimitivesTeX, renderTeX,
                                              renderTeXConfigured)
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Layout        (Rect (..))
-import           Hgg.Plot.Spec          (emptyResolver)
-import           Hgg.Plot.Render        (FillStyle (..), LineStyle (..),
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Layout        (Rect (..))
+import           Graphics.Hgg.Spec          (emptyResolver)
+import           Graphics.Hgg.Render        (FillStyle (..), LineStyle (..),
                                              PathSegment (..), Point (..),
                                              Primitive (..), Transform (..))
 import           Data.Text                  (Text)

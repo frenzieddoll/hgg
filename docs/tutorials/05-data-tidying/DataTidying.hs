@@ -39,10 +39,10 @@ import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Functions       as F
 import           DataFrame.Operators       ((|>))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame        ((|>>))
-import           Hgg.Plot.Backend.SVG  (saveSVGBound)
-import           Hgg.Plot.DataFrame    ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame        ((|>>))
+import           Graphics.Hgg.Backend.SVG  (saveSVGBound)
+import           Graphics.Hgg.DataFrame    ()
 
 -- ===========================================================================
 -- 列の型差を吸収する中間表現 Cell

@@ -25,7 +25,7 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.IHaskell
+  exposed-modules:  Graphics.Hgg.IHaskell
   hs-source-dirs:   src
   build-depends:    base               >= 4.17 && < 5
                   , text               >= 2.0  && < 2.2

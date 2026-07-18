@@ -39,11 +39,11 @@ import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Functions      as F
 import           DataFrame.Operators      ((|>))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
-import           Hgg.Plot.DataFrame   ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.DataFrame   ()
 
 -- ggplot geom_smooth の既定線色 (単一回帰線のとき)。
 smoothBlue :: Color

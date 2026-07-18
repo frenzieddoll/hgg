@@ -13,18 +13,18 @@ import           System.Directory                (createDirectoryIfMissing)
 import           Data.Text                       (Text)
 import qualified Data.Text                       as T
 
-import           Hgg.Plot.Backend.SVG        (savePrimitivesSVG)
+import           Graphics.Hgg.Backend.SVG        (savePrimitivesSVG)
 
-import           Hgg.Plot.ThreeD.Axes        (defaultAxes3D, Axes3D (..),
+import           Graphics.Hgg.ThreeD.Axes        (defaultAxes3D, Axes3D (..),
                                                   renderAxes3D)
-import           Hgg.Plot.ThreeD.Projection  (Viewport (..))
-import           Hgg.Plot.ThreeD.Line        (defaultLine3D, defaultWireframe3D,
+import           Graphics.Hgg.ThreeD.Projection  (Viewport (..))
+import           Graphics.Hgg.ThreeD.Line        (defaultLine3D, defaultWireframe3D,
                                                   renderLine3D, renderWireframe3D)
-import           Hgg.Plot.ThreeD.Scatter     (defaultScatter3D, Scatter3D (..),
+import           Graphics.Hgg.ThreeD.Scatter     (defaultScatter3D, Scatter3D (..),
                                                   renderScatter3D)
-import           Hgg.Plot.ThreeD.Surface     (renderSurface3D, surfaceFromFunction,
+import           Graphics.Hgg.ThreeD.Surface     (renderSurface3D, surfaceFromFunction,
                                                   sf3Grid, sf3XRange, sf3YRange)
-import           Hgg.Plot.ThreeD.Spec        (layer3D, surface3DGrid, colormap3D,
+import           Graphics.Hgg.ThreeD.Spec        (layer3D, surface3DGrid, colormap3D,
                                                   surfaceWire, color3D, xRange3D, yRange3D, layerToSurface,
                                                   contourX, contourY, contourZ,
                                                   axisTitles3D, zAspect3D,
@@ -39,14 +39,14 @@ import           Hgg.Plot.ThreeD.Spec        (layer3D, surface3DGrid, colormap3D
                                                   color3D, size3D, alpha3D,
                                                   xRange3D, yRange3D, camera, title3D,
                                                   axes3D, pane3D, width3DV, height3DV)
-import           Hgg.Plot.ThreeD.Easy        (saveSVG3D, saveSVG3DFacet,
+import           Graphics.Hgg.ThreeD.Easy        (saveSVG3D, saveSVG3DFacet,
                                                   savePDF3D, savePNG3D)
-import           Hgg.Plot.ThreeD.Bound       (saveSVG3DBound)
-import           Hgg.Plot.Frame              ((|>>))
-import           Hgg.Plot.Spec               (ColData (..))
-import           Hgg.Plot.Color              (fromHex)
+import           Graphics.Hgg.ThreeD.Bound       (saveSVG3DBound)
+import           Graphics.Hgg.Frame              ((|>>))
+import           Graphics.Hgg.Spec               (ColData (..))
+import           Graphics.Hgg.Color              (fromHex)
 import qualified Data.Vector                     as V
-import           Hgg.Plot.ThreeD.Types
+import           Graphics.Hgg.ThreeD.Types
 
 main :: IO ()
 main = do

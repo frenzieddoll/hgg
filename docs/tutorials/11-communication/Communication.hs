@@ -8,12 +8,12 @@
 module Main (main) where
 
 import qualified DataFrame.IO.CSV                     as DF
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Unit        (Pos (..))
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
-import           Hgg.Plot.DataFrame   ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Unit        (Pos (..))
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.DataFrame   ()
 
 main :: IO ()
 main = do

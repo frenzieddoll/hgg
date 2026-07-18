@@ -26,7 +26,7 @@ File-saving variants (`IO`, writes files) and rendering variants (pure, returns 
 | `plot path spec` | `IO ()` | inline | Alias for `saveSVG` (matplotlib `savefig` style) |
 
 ```haskell
-import Hgg.Plot.Backend.SVG (saveSVG, saveSVGInteractive)
+import Graphics.Hgg.Backend.SVG (saveSVG, saveSVGInteractive)
 
 main = do
   saveSVG            "static.svg"      spec
@@ -67,8 +67,8 @@ Rendering settings like size and margins are **on the spec side**, not backend a
 Simply import the `IHaskellDisplay` instance and cell evaluation values render inline.
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.IHaskell ()    -- just expose the instance
+import Graphics.Hgg.Easy
+import Graphics.Hgg.IHaskell ()    -- just expose the instance
 
 layer (points [0,1,2,3] [0,1,4,9]) <> title "demo"   -- cell evaluation → inline SVG
 ```
@@ -80,7 +80,7 @@ Figures with `ColByName` (= Resolver needed) pass the `BoundPlot` from `df |>> s
 Output vector PDF with `hgg-pdf` (for papers, reports). API symmetric with SVG backend: `savePDF path spec` (inline columns only) / `savePDFWith path r spec` (figures with `ColByName`) / `savePDFBound path bp` (`BoundPlot` from `df |>> spec`).
 
 ```haskell
-import Hgg.Plot.Backend.PDF (savePDF)
+import Graphics.Hgg.Backend.PDF (savePDF)
 
 savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 ```
@@ -92,7 +92,7 @@ savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 Output raster PNG with `hgg-rasterific` (pure Haskell · no external binary dependency). API symmetric with SVG/PDF backend: `savePNG path spec` (inline columns only) / `savePNGWith path r spec` (figures with `ColByName`) / `savePNGBound path bp` (`BoundPlot` from `df |>> spec`).
 
 ```haskell
-import Hgg.Plot.Backend.Rasterific (savePNG)
+import Graphics.Hgg.Backend.Rasterific (savePNG)
 
 savePNG "fig1.png" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1: scatter")
 ```
@@ -100,7 +100,7 @@ savePNG "fig1.png" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1: 
 Fonts use TrueType (.ttf) reading = **Japanese label support** (PNG backend as fallback for PDF v1 limitation). Search is fontconfig-independent: ① explicit `pngFontPath` → ② known directories (`~/.fonts`, `~/.local/share/fonts`, `/usr/share/fonts`, `/usr/local/share/fonts`, `/mnt/c/Windows/Fonts`) × known filenames (HackGen / Noto Sans CJK JP / IPA / Takao / DejaVu .ttf) in order. Not found lists paths and errors.
 
 ```haskell
-import Hgg.Plot.Backend.Rasterific
+import Graphics.Hgg.Backend.Rasterific
 
 -- Explicit font + Hi-DPI 2× (dimensions, line width, text scale 2×)
 savePNGConfigured defaultPNGConfig { pngFontPath = Just "/path/to/font.ttf"

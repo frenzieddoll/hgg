@@ -8,8 +8,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.SVG (saveSVG, saveSVGWith)
-import           Hgg.Plot.Easy
+import           Graphics.Hgg.Backend.SVG (saveSVG, saveSVGWith)
+import           Graphics.Hgg.Easy
 import qualified Data.Vector              as V
 import           System.Directory         (createDirectoryIfMissing)
 

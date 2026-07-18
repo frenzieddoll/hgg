@@ -10,12 +10,12 @@ module DocFig.Common
   , fig, figW, figR
   , renderFigure
   , linFit, lcg
-  , module Hgg.Plot.Easy
+  , module Graphics.Hgg.Easy
   ) where
 
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Unit        (px, (*~))
-import           Hgg.Plot.Backend.SVG (saveSVG, saveSVGWith)
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Unit        (px, (*~))
+import           Graphics.Hgg.Backend.SVG (saveSVG, saveSVGWith)
 
 -- | 出力先 (repo root から)。
 outDir :: FilePath

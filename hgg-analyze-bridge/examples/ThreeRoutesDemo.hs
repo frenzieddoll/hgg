@@ -26,7 +26,7 @@ import           Hanalyze.Model.HBM        (ModelGraph (..), Node (..),
 import qualified Hanalyze.Viz.ModelGraph   as Mermaid
 import qualified Hanalyze.Viz.ModelGraphDot as Dot
 
-import           Hgg.Plot.Bridge.Analyze
+import           Graphics.Hgg.Bridge.Analyze
                                            (renderModelGraphSVG)
 
 -- ===========================================================================

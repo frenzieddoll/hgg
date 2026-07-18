@@ -5,10 +5,10 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 module Main (main) where
 
-import           Hgg.Plot.Easy     (layer, points, scatter, title)
-import           Hgg.Plot.Frame    (BoundPlot, (|>>))
-import           Hgg.Plot.IHaskell (DisplayPlot (..))
-import           Hgg.Plot.Spec     (ColData (..), ColRef (..), Resolver,
+import           Graphics.Hgg.Easy     (layer, points, scatter, title)
+import           Graphics.Hgg.Frame    (BoundPlot, (|>>))
+import           Graphics.Hgg.IHaskell (DisplayPlot (..))
+import           Graphics.Hgg.Spec     (ColData (..), ColRef (..), Resolver,
                                         VisualSpec)
 import           Control.Monad         (unless)
 import           Data.Map.Strict       (Map)

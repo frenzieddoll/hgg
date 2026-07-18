@@ -35,9 +35,9 @@ spec には列「名」 (`scatter "x" "y"`) だけが入り、 実データは `
 置くと楽:
 
 ```haskell
-import           Hgg.Plot.Easy             -- Spec を re-export (scatter/layer/…/ColData)
-import           Hgg.Plot.Frame            ((|>>), BoundPlot, bpDiagnostics)
-import           Hgg.Plot.Backend.SVG      (saveSVGBound)
+import           Graphics.Hgg.Easy             -- Spec を re-export (scatter/layer/…/ColData)
+import           Graphics.Hgg.Frame            ((|>>), BoundPlot, bpDiagnostics)
+import           Graphics.Hgg.Backend.SVG      (saveSVGBound)
 import qualified Data.Map.Strict as M
 import qualified Data.Vector     as V
 import           Data.Text       (Text)
@@ -97,7 +97,7 @@ dfB |>> ( layer (bar "cat" "val" <> colorBy "grp" <> position PosDodge) )
 
 ```haskell
 import qualified DataFrame              as DF
-import           Hgg.Plot.DataFrame ()   -- instance を見せる
+import           Graphics.Hgg.DataFrame ()   -- instance を見せる
 
 main = do
   df <- DF.readCsv "cars.csv"

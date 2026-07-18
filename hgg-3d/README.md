@@ -18,9 +18,9 @@
 ### 1. Browser interactive 表示 (= showBrowser)
 
 ```haskell
-import Hgg.Plot.ThreeD
-import Hgg.Plot.ThreeD.Spec
-import Hgg.Plot.ThreeD.Browser  (showBrowser)
+import Graphics.Hgg.ThreeD
+import Graphics.Hgg.ThreeD.Spec
+import Graphics.Hgg.ThreeD.Browser  (showBrowser)
 
 main :: IO ()
 main = showBrowser $
@@ -38,7 +38,7 @@ main = showBrowser $
 ### 2. 静的 SVG 出力 (= saveSVG3D)
 
 ```haskell
-import Hgg.Plot.ThreeD.Easy (saveSVG3D)
+import Graphics.Hgg.ThreeD.Easy (saveSVG3D)
 
 main = saveSVG3D "out.svg" spec  -- 同じ spec を使い回し
 ```
@@ -48,7 +48,7 @@ CPU projection で SVG 生成。 印刷 / doc 埋込向け。
 ### 3. Self-contained HTML 配布 (= saveHTML3D)
 
 ```haskell
-import Hgg.Plot.ThreeD.Browser (saveHTML3D)
+import Graphics.Hgg.ThreeD.Browser (saveHTML3D)
 
 main = saveHTML3D "out.html" spec
 ```
@@ -106,9 +106,9 @@ purePlot3D <> layer3D (scatter3D pts <> color3D "red")
 ユーザコード (HS)
   ↓ purePlot3D <> layer3D (...) <> ...
 VisualSpec3D
-  ↓ saveSVG3D (= Hgg.Plot.ThreeD.Easy)
+  ↓ saveSVG3D (= Graphics.Hgg.ThreeD.Easy)
   CPU projection → [Primitive] → savePrimitivesSVG (hgg-svg)
-  ↓ saveHTML3D / showBrowser (= Hgg.Plot.ThreeD.Browser)
+  ↓ saveHTML3D / showBrowser (= Graphics.Hgg.ThreeD.Browser)
   aeson encode → JSON inline 埋込 + bundle JS (= data-files) inline → HTML
                   ↓
               ブラウザ (= WebGL2 backend、 事前 bundle 済 JS を同梱)

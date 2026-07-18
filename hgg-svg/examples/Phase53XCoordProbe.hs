@@ -19,16 +19,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.DAG            (dagPlot, dagPlotWithRankGroups,
+import           Graphics.Hgg.DAG            (dagPlot, dagPlotWithRankGroups,
                                               (~>))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Primitive      (Point (..))
-import           Hgg.Plot.Render.Special (bakeDAGRoutesInSpec, dagToScreen)
-import           Hgg.Plot.Spec           (DAGEdge (..), DAGNode (..),
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Primitive      (Point (..))
+import           Graphics.Hgg.Render.Special (bakeDAGRoutesInSpec, dagToScreen)
+import           Graphics.Hgg.Spec           (DAGEdge (..), DAGNode (..),
                                               DAGSpec (..), Layer,
                                               RoutedEdge (..),
                                               VisualSpec (..), lyDAG)
-import           Hgg.Plot.Unit           (px, (*~))
+import           Graphics.Hgg.Unit           (px, (*~))
 import           Data.List                   (sortOn)
 import           Data.Monoid                 (Last (..))
 import           Data.Text                   (Text)

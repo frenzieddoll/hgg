@@ -462,9 +462,9 @@ saveSVGBound "penguin-plot.svg" $
 
 | 形式 | 関数 | import |
 |---|---|---|
-| SVG | `saveSVG` / `saveSVGBound` | `Hgg.Plot.Backend.SVG` |
-| PDF | `savePDF` / `savePDFBound` | `Hgg.Plot.Backend.PDF` |
-| PNG | `savePNG` / `savePNGBound` | `Hgg.Plot.Backend.Rasterific`(日本語ラベル可) |
+| SVG | `saveSVG` / `saveSVGBound` | `Graphics.Hgg.Backend.SVG` |
+| PDF | `savePDF` / `savePDFBound` | `Graphics.Hgg.Backend.PDF` |
+| PNG | `savePNG` / `savePNGBound` | `Graphics.Hgg.Backend.Rasterific`(日本語ラベル可) |
 
 詳しくは [API リファレンス 05 backends](../../api-guide/05-backends.ja.md) を参照してください。
 

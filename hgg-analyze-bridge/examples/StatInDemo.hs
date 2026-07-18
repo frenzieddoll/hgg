@@ -12,9 +12,9 @@ import qualified Data.Map.Strict          as M
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
 
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Spec        (ColData (..), color, colorBy, fromHex,
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Spec        (ColData (..), color, colorBy, fromHex,
                                            layer, scatter, statLm, statLmLevel,
                                            statPoly, statResid, statSmooth,
                                            statSmoothCI, stroke, title)

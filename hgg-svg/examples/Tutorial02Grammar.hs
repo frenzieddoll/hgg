@@ -7,9 +7,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVG)
-import           Hgg.Plot.Unit         (px, (*~))
-import           Hgg.Plot.Spec
+import           Graphics.Hgg.Backend.SVG (saveSVG)
+import           Graphics.Hgg.Unit         (px, (*~))
+import           Graphics.Hgg.Spec
 import           Data.Text                (Text)
 
 main :: IO ()

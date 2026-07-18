@@ -3,52 +3,52 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Hgg.Plot.ThreeD.Types
-import Hgg.Plot.ThreeD.Projection
-import Hgg.Plot.ThreeD.Axes
-import Hgg.Plot.ThreeD.Surface (Surface3D (..), defaultSurface3D, renderSurface3D)
-import Hgg.Plot.ThreeD.Spec (surface3DGrid, surface3D, colormap3D, viridisStops3D, layerToSurface,
+import Graphics.Hgg.ThreeD.Types
+import Graphics.Hgg.ThreeD.Projection
+import Graphics.Hgg.ThreeD.Axes
+import Graphics.Hgg.ThreeD.Surface (Surface3D (..), defaultSurface3D, renderSurface3D)
+import Graphics.Hgg.ThreeD.Spec (surface3DGrid, surface3D, colormap3D, viridisStops3D, layerToSurface,
                                  xRange3D, yRange3D, lyr3XRange, lyr3YRange, lyr3Grid,
                                  contourX, contourY, contourZ, lyr3Contours,
                                  ContourDir(..), text3D, lyr3Labels,
                                  alpha3D)
-import Hgg.Plot.ThreeD.Easy (padAxes3D, normPoint3D, normLayer3D, renderProjectedContour3D,
+import Graphics.Hgg.ThreeD.Easy (padAxes3D, normPoint3D, normLayer3D, renderProjectedContour3D,
                                  saveSVG3DFacet, renderSpec3DInPanel,
                                  savePDF3D, savePNG3D)
-import Hgg.Plot.ThreeD.Spec (axisTitles3D, zAspect3D, pane3D, camera, title3D, width3DV, height3DV)
-import Hgg.Plot.ThreeD.Spec (colorBy3D, lyr3PtColors, lyr3Legend, layerToScatter,
+import Graphics.Hgg.ThreeD.Spec (axisTitles3D, zAspect3D, pane3D, camera, title3D, width3DV, height3DV)
+import Graphics.Hgg.ThreeD.Spec (colorBy3D, lyr3PtColors, lyr3Legend, layerToScatter,
                                  colorContinuousBy3D, sizeBy3D, sizeRange3D,
                                  lyr3PtSizes, lyr3Colorbar)
-import Hgg.Plot.ThreeD.Scatter (Scatter3D (..), defaultScatter3D)
-import Hgg.Plot.ThreeD.Spec (bar3D, bar3DPoints, barStyle3D, barWidth3D, errorBar3D,
+import Graphics.Hgg.ThreeD.Scatter (Scatter3D (..), defaultScatter3D)
+import Graphics.Hgg.ThreeD.Spec (bar3D, bar3DPoints, barStyle3D, barWidth3D, errorBar3D,
                                  layerToBar, BarStyle3D (..), lyr3BarBaseZ, lyr3PtErrs)
-import Hgg.Plot.ThreeD.Spec (text3DPoints, annotate3D, color3D, size3D, colorRGBA3D)
-import Hgg.Plot.ThreeD.Spec (xAspect3D, yAspect3D, logScale3D)
-import Hgg.Plot.ThreeD.Spec (stem3D, stem3DPoints, stemBaseZ, layerPoints,
+import Graphics.Hgg.ThreeD.Spec (text3DPoints, annotate3D, color3D, size3D, colorRGBA3D)
+import Graphics.Hgg.ThreeD.Spec (xAspect3D, yAspect3D, logScale3D)
+import Graphics.Hgg.ThreeD.Spec (stem3D, stem3DPoints, stemBaseZ, layerPoints,
                                  Mark3DKind (..), lyr3Kind)
-import Hgg.Plot.ThreeD.Spec (quiver3D, vecScale3D, layerToQuiver, trisurf)
-import Hgg.Plot.ThreeD.Line (Quiver3D (..), defaultQuiver3D, renderQuiver3D)
-import Hgg.Plot.ThreeD.Delaunay (delaunay2D)
-import Hgg.Plot.ThreeD.Surface (trianglesFacesDepth)
-import Hgg.Plot.ThreeD.Bar (Bar3D (..), defaultBar3D, barFacesDepth,
+import Graphics.Hgg.ThreeD.Spec (quiver3D, vecScale3D, layerToQuiver, trisurf)
+import Graphics.Hgg.ThreeD.Line (Quiver3D (..), defaultQuiver3D, renderQuiver3D)
+import Graphics.Hgg.ThreeD.Delaunay (delaunay2D)
+import Graphics.Hgg.ThreeD.Surface (trianglesFacesDepth)
+import Graphics.Hgg.ThreeD.Bar (Bar3D (..), defaultBar3D, barFacesDepth,
                                 renderBarSticks, renderStems3D, renderErrorBars3D)
-import Hgg.Plot.Palette (ggplotHue)
-import Hgg.Plot.Render.Common (continuousColor)
+import Graphics.Hgg.Palette (ggplotHue)
+import Graphics.Hgg.Render.Common (continuousColor)
 import Data.List (isInfixOf)
 import System.Directory (getFileSize, removeFile, doesFileExist)
 import Control.Monad (when)
-import Hgg.Plot.ThreeD.Bound (BoundPlot3D (..), unBound3D)
-import Hgg.Plot.ThreeD.Spec (layer3D, scatter3D, scatter3DPoints, line3DPoints,
+import Graphics.Hgg.ThreeD.Bound (BoundPlot3D (..), unBound3D)
+import Graphics.Hgg.ThreeD.Spec (layer3D, scatter3D, scatter3DPoints, line3DPoints,
                                  resolveLayer3D, lyr3Points, vs3Layers, VisualSpec3D (..))
-import Hgg.Plot.Frame ((|>>))
-import Hgg.Plot.Spec (ColData (..), inline, emptyResolver)
-import Hgg.Plot.Color (fromHex)
-import qualified Hgg.Plot.Validate
+import Graphics.Hgg.Frame ((|>>))
+import Graphics.Hgg.Spec (ColData (..), inline, emptyResolver)
+import Graphics.Hgg.Color (fromHex)
+import qualified Graphics.Hgg.Validate
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import Data.Monoid (Last (..), First (..))
 import Data.List (nub)
-import qualified Hgg.Plot.Render
+import qualified Graphics.Hgg.Render
 import Test.Hspec
 
 main :: IO ()
@@ -193,8 +193,8 @@ main = hspec $ do
           proj = Perspective (pi/4) 1 0.1 100
           vp = Viewport 0 0 400 400
           prims = renderAxes3D cam proj vp defaultAxes3D
-          nLines = length [() | Hgg.Plot.Render.PLine{} <- prims]
-          nTexts = length [() | Hgg.Plot.Render.PText{} <- prims]
+          nLines = length [() | Graphics.Hgg.Render.PLine{} <- prims]
+          nTexts = length [() | Graphics.Hgg.Render.PText{} <- prims]
       in (nLines > 0 && nTexts > 0) `shouldBe` True
 
   describe "Phase 24 A2: surface z colormap + colorbar" $ do
@@ -203,7 +203,7 @@ main = hspec $ do
         vp   = Viewport 0 0 400 400
         -- z が 0..1 へ単調増加する 3x3 grid
         grid = [[0, 0.1, 0.2], [0.3, 0.4, 0.5], [0.6, 0.8, 1.0]]
-        fills sf = [ c | Hgg.Plot.Render.PPath _ (Hgg.Plot.Render.FillStyle c _) _
+        fills sf = [ c | Graphics.Hgg.Render.PPath _ (Graphics.Hgg.Render.FillStyle c _) _
                            <- renderSurface3D cam proj vp sf ]
     it "colormap なし (shading off) = 全面同色 (後方互換)" $
       let sf = (defaultSurface3D grid) { sf3Shaded = False }
@@ -224,7 +224,7 @@ main = hspec $ do
         proj = Perspective (pi/4) 1 0.1 100
         vp   = Viewport 0 0 400 400
         grid = [[0, 0.1], [0.2, 0.3]]
-        alphas sf = nub [ a | Hgg.Plot.Render.PPath _ (Hgg.Plot.Render.FillStyle _ a) _
+        alphas sf = nub [ a | Graphics.Hgg.Render.PPath _ (Graphics.Hgg.Render.FillStyle _ a) _
                                 <- renderSurface3D cam proj vp sf ]
     it "既定 sf3Alpha = 1 (後方互換・全面不透明)" $
       alphas (defaultSurface3D grid) `shouldBe` [1.0]
@@ -282,8 +282,8 @@ main = hspec $ do
       getLast (lyr3PtErrs l) `shouldBe` Just [0.2, 0.2, 0.2]
     it "renderSpec3DInPanel: bar 直方体 (PPath) + 誤差棒 (PLine) が出る" $
       let prims = renderSpec3DInPanel 0 0 400 400 (resolved <> camera (defaultCameraZUp 4))
-          paths = [ () | Hgg.Plot.Render.PPath{} <- prims ]
-          lines = [ () | Hgg.Plot.Render.PLine{} <- prims ]
+          paths = [ () | Graphics.Hgg.Render.PPath{} <- prims ]
+          lines = [ () | Graphics.Hgg.Render.PLine{} <- prims ]
       in (length paths >= 15, length lines >= 9) `shouldBe` (True, True)
 
   describe "Phase 26 A4: 3D stem (lollipop)" $ do
@@ -365,20 +365,20 @@ main = hspec $ do
         ax   = defaultAxes3D
     it "renderAxes3DPanes: 奥壁 3 面 (PPath) + tick 格子線 (PLine) を出す" $
       let prims = renderAxes3DPanes id defaultPaneStyle3D cam proj vp ax
-          paths = [ () | Hgg.Plot.Render.PPath{}  <- prims ]
-          lines = [ () | Hgg.Plot.Render.PLine{}  <- prims ]
+          paths = [ () | Graphics.Hgg.Render.PPath{}  <- prims ]
+          lines = [ () | Graphics.Hgg.Render.PLine{}  <- prims ]
       in (length paths, length lines >= 6) `shouldBe` (3, True)
     it "renderAxes3DPanes: pane 塗りは defaultPaneStyle3D の色" $
       let prims = renderAxes3DPanes id defaultPaneStyle3D cam proj vp ax
-          fills = nub [ c | Hgg.Plot.Render.PPath _ (Hgg.Plot.Render.FillStyle c _) _ <- prims ]
+          fills = nub [ c | Graphics.Hgg.Render.PPath _ (Graphics.Hgg.Render.FillStyle c _) _ <- prims ]
       in fills `shouldBe` [paneFill defaultPaneStyle3D]
     it "renderSpec3DInPanel: 既定 (pane ON) は pane OFF より PPath/PLine が多い" $
       let base = layer3D (scatter3DPoints [Point3 0 0 0, Point3 1 1 1])
                    <> camera cam
           onP  = renderSpec3DInPanel 0 0 400 400 base
           offP = renderSpec3DInPanel 0 0 400 400 (base <> pane3D False)
-          npath p = length [ () | Hgg.Plot.Render.PPath{} <- p ]
-          nline p = length [ () | Hgg.Plot.Render.PLine{} <- p ]
+          npath p = length [ () | Graphics.Hgg.Render.PPath{} <- p ]
+          nline p = length [ () | Graphics.Hgg.Render.PLine{} <- p ]
       in (npath onP > npath offP, nline onP > nline offP) `shouldBe` (True, True)
 
   describe "Phase 25 A7 / 30 A6: 3D テキスト注釈 (text3DPoints / annotate3D)" $ do
@@ -387,7 +387,7 @@ main = hspec $ do
       let spec = layer3D (text3DPoints [(Point3 0 0 1, "peak"), (Point3 1 1 0, "corner")])
                    <> camera cam
           prims = renderSpec3DInPanel 0 0 400 400 spec
-          texts = [ t | Hgg.Plot.Render.PText _ t _ <- prims ]
+          texts = [ t | Graphics.Hgg.Render.PText _ t _ <- prims ]
       in (("peak" `elem` texts), ("corner" `elem` texts)) `shouldBe` (True, True)
     it "annotate3D: 単一ラベルは text3DPoints [(p,t)] と同値" $
       annotate3D (Point3 0 0 1) "x" `shouldBe` text3DPoints [(Point3 0 0 1, "x")]
@@ -396,14 +396,14 @@ main = hspec $ do
                             <> annotate3D (Point3 1 1 0) "B"
                             <> annotate3D (Point3 (-1) (-1) 0) "C") <> camera cam
           prims = renderSpec3DInPanel 0 0 400 400 spec
-          texts = [ t | Hgg.Plot.Render.PText _ t _ <- prims ]
+          texts = [ t | Graphics.Hgg.Render.PText _ t _ <- prims ]
       in (all (`elem` texts) ["A", "B", "C"]) `shouldBe` True
     it "color3D/size3D で文字色・サイズを上書きできる" $
       let spec = layer3D (annotate3D (Point3 0 0 0) "hi"
                             <> color3D (fromHex "#d62728") <> size3D 15) <> camera cam
           prims = renderSpec3DInPanel 0 0 400 400 spec
-          sty   = [ (c, s) | Hgg.Plot.Render.PText _ "hi"
-                               (Hgg.Plot.Render.TextStyle c s _ _ _ _ _) <- prims ]
+          sty   = [ (c, s) | Graphics.Hgg.Render.PText _ "hi"
+                               (Graphics.Hgg.Render.TextStyle c s _ _ _ _ _) <- prims ]
       in sty `shouldBe` [("#d62728", 15)]
 
   describe "Phase 25 A8: log 軸 + x/y アスペクト (G7)" $ do
@@ -423,8 +423,8 @@ main = hspec $ do
     it "xAspect3D 2 は軸 box を x 方向に広げる (PLine の x 範囲が拡大)" $
       let base = layer3D (scatter3DPoints [Point3 (-1) (-1) (-1), Point3 1 1 1])
                    <> camera (defaultCameraZUp 4)
-          xspan p = let xs = [ x | Hgg.Plot.Render.PLine (Hgg.Plot.Render.Point x _) _ _ <- p ]
-                             ++ [ x | Hgg.Plot.Render.PLine _ (Hgg.Plot.Render.Point x _) _ <- p ]
+          xspan p = let xs = [ x | Graphics.Hgg.Render.PLine (Graphics.Hgg.Render.Point x _) _ _ <- p ]
+                             ++ [ x | Graphics.Hgg.Render.PLine _ (Graphics.Hgg.Render.Point x _) _ <- p ]
                     in maximum xs - minimum xs
           p1 = renderSpec3DInPanel 0 0 400 400 base
           p2 = renderSpec3DInPanel 0 0 400 400 (base <> xAspect3D 2)
@@ -461,7 +461,7 @@ main = hspec $ do
                | j <- [0 .. 4 :: Int] ]
         surfC c = surface3DGrid grid <> xRange3D (-1, 1) <> yRange3D (-1, 1) <> c
         render l = renderProjectedContour3D (1, 1, 1) cam proj vp l
-        nLines l = length [ () | Hgg.Plot.Render.PLine{} <- render l ]
+        nLines l = length [ () | Graphics.Hgg.Render.PLine{} <- render l ]
     it "contour 未指定 = 線なし (OFF)" $
       render (surface3DGrid grid <> xRange3D (-1,1) <> yRange3D (-1,1)) `shouldBe` []
     it "contourZ (床等値面) = PLine 群を描く" $
@@ -484,11 +484,11 @@ main = hspec $ do
 
   describe "Phase 24 A7: 群別タイル配置 (facet)" $ do
     let spec = layer3D (scatter3DPoints [Point3 0 0 0, Point3 1 1 1])
-        xsOf p = [ x | Hgg.Plot.Render.PLine (Hgg.Plot.Render.Point x1 _)
-                                                 (Hgg.Plot.Render.Point x2 _) _
+        xsOf p = [ x | Graphics.Hgg.Render.PLine (Graphics.Hgg.Render.Point x1 _)
+                                                 (Graphics.Hgg.Render.Point x2 _) _
                          <- renderSpec3DInPanel p 0 400 400 spec, x <- [x1, x2] ]
-        ysOf p = [ y | Hgg.Plot.Render.PLine (Hgg.Plot.Render.Point _ y1)
-                                                 (Hgg.Plot.Render.Point _ y2) _
+        ysOf p = [ y | Graphics.Hgg.Render.PLine (Graphics.Hgg.Render.Point _ y1)
+                                                 (Graphics.Hgg.Render.Point _ y2) _
                          <- renderSpec3DInPanel p 0 400 400 spec, y <- [y1, y2] ]
     it "renderSpec3DInPanel: パネルを px ずらすと全 PLine x が px 平行移動 (y 不変)" $
       let dxs = zipWith (-) (xsOf 300) (xsOf 0)
@@ -527,21 +527,21 @@ main = hspec $ do
         vp   = Viewport 0 0 400 400
     it "renderAxes3DWithLabels: 指定した軸名が PText に出る" $
       let prims = renderAxes3DWithLabels id ("深さ", "幅", "高さ") cam proj vp defaultAxes3D
-          texts = [ s | Hgg.Plot.Render.PText _ s _ <- prims ]
+          texts = [ s | Graphics.Hgg.Render.PText _ s _ <- prims ]
       in (("深さ" `elem` texts), ("幅" `elem` texts), ("高さ" `elem` texts))
            `shouldBe` (True, True, True)
     it "renderAxes3DWith (= ラベル無版) は \"x\"/\"y\"/\"z\" (後方互換)" $
       let prims = renderAxes3D cam proj vp defaultAxes3D
-          texts = [ s | Hgg.Plot.Render.PText _ s _ <- prims ]
+          texts = [ s | Graphics.Hgg.Render.PText _ s _ <- prims ]
       in (("x" `elem` texts), ("y" `elem` texts), ("z" `elem` texts))
            `shouldBe` (True, True, True)
 
   describe "Phase 24 A8: z aspect box" $ do
     let surf = layer3D (surface3DGrid [[0, 0.5], [0.5, 1]] <> xRange3D (-1,1) <> yRange3D (-1,1))
                  <> camera (defaultCameraZUp 4)
-        ysOf za = [ y | Hgg.Plot.Render.PPath segs _ _
+        ysOf za = [ y | Graphics.Hgg.Render.PPath segs _ _
                           <- renderSpec3DInPanel 0 0 400 400 (surf <> zAspect3D za)
-                      , Hgg.Plot.Render.MoveTo (Hgg.Plot.Render.Point _ y) <- segs ]
+                      , Graphics.Hgg.Render.MoveTo (Graphics.Hgg.Render.Point _ y) <- segs ]
     it "zAspect 1 と 2 で surface の投影 y が変わる (= z スケール反映)" $
       (ysOf 1 /= ysOf 2) `shouldBe` True
     it "zAspect3D 既定 (未指定) = aspect 1 と同一出力" $
@@ -558,8 +558,8 @@ main = hspec $ do
              <> camera cam
         prims = renderSpec3DInPanel 0 0 400 400 spec
         tagged = zip [0 :: Int ..] prims
-        circleIdx = [ i | (i, Hgg.Plot.Render.PCircle{}) <- tagged ]
-        pathIdx   = [ i | (i, Hgg.Plot.Render.PPath{})   <- tagged ]
+        circleIdx = [ i | (i, Graphics.Hgg.Render.PCircle{}) <- tagged ]
+        pathIdx   = [ i | (i, Graphics.Hgg.Render.PPath{})   <- tagged ]
     it "surface 面と scatter 点が depth で interleave する (点が全部最前面でない)" $
       let ci = head circleIdx
       in ( not (null circleIdx)
@@ -598,8 +598,8 @@ main = hspec $ do
       getLast (lyr3Legend l) `shouldBe` Just [("A", hue !! 0), ("B", hue !! 1)]
     it "renderSpec3DInPanel: 凡例チップ (PRect) が出て scatter 点色が 2 種" $
       let prims = renderSpec3DInPanel 0 0 400 400 (resolved <> camera (defaultCameraZUp 4))
-          rects = [ () | Hgg.Plot.Render.PRect{} <- prims ]
-          cols  = nub [ c | Hgg.Plot.Render.PCircle _ _ (Hgg.Plot.Render.FillStyle c _) _ _
+          rects = [ () | Graphics.Hgg.Render.PRect{} <- prims ]
+          cols  = nub [ c | Graphics.Hgg.Render.PCircle _ _ (Graphics.Hgg.Render.FillStyle c _) _ _
                               <- prims ]
       in (length rects >= 2, length cols) `shouldBe` (True, 2)
     it "sc3Colors: layerToScatter が per-point 色を渡す" $
@@ -627,7 +627,7 @@ main = hspec $ do
                         , continuousColor viridisStops3D 1 ]
     it "renderSpec3DInPanel: colorbar strip (PRect) が出る" $
       let prims = renderSpec3DInPanel 0 0 400 400 (resolved <> camera (defaultCameraZUp 4))
-          rects = [ () | Hgg.Plot.Render.PRect{} <- prims ]
+          rects = [ () | Graphics.Hgg.Render.PRect{} <- prims ]
       in length rects >= 10 `shouldBe` True
 
   describe "Phase 30 A6: surface 案C (列駆動 surface3D・long → grid pivot)" $ do
@@ -696,8 +696,8 @@ main = hspec $ do
       let b = df |>> layer3D (scatter3D "x" "y" "zz")
       length (bp3Diagnostics b) `shouldBe` 1
       case head (bp3Diagnostics b) of
-        Hgg.Plot.Validate.PlotError
-          (Hgg.Plot.Validate.ColumnNotFound nm sugg) _ -> do
+        Graphics.Hgg.Validate.PlotError
+          (Graphics.Hgg.Validate.ColumnNotFound nm sugg) _ -> do
             nm `shouldBe` "zz"
             head sugg `shouldBe` "z"   -- 最近傍が先頭 (他候補も距離 2 以内で続く)
         d -> expectationFailure ("ColumnNotFound でない: " <> show d)

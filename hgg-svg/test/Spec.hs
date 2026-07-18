@@ -2,9 +2,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.SVG (renderBound)
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Spec        (ColData (..), layer, scatter)
+import           Graphics.Hgg.Backend.SVG (renderBound)
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Spec        (ColData (..), layer, scatter)
 import           Data.Map.Strict          (Map)
 import qualified Data.Map.Strict          as M
 import           Data.Text                (Text)

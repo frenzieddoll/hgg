@@ -29,7 +29,7 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.Custom.Dendrogram
+  exposed-modules:  Graphics.Hgg.Custom.Dendrogram
   build-depends:    base             >= 4.16 && < 5
                   , hgg-core ^>= 0.1
                   , aeson            >= 2.0 && < 3

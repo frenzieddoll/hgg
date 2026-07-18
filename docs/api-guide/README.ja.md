@@ -28,9 +28,9 @@
 
 | 層 | モジュール | 立ち位置 |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` 直渡し + `overlay` 既定 |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
+| **0. Quick** | `Graphics.Hgg.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Graphics.Hgg.Easy` | `[Double]` 直渡し + `overlay` 既定 |
+| **2. Grammar** | `Graphics.Hgg.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
 
 ## 2 つの黄金律
 

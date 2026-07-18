@@ -1,22 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Validate
-import           Hgg.Plot.Layout
-import           Hgg.Plot.Render
-import           Hgg.Plot.Render.Common  (pointShapeAt, alphaVector)
-import           Hgg.Plot.Primitive      (Point (..))
-import           Hgg.Plot.Render.Special (renderDAGStandalone, primsBBoxDAG, dagToScreen)
-import           Hgg.Plot.Layout.RangeOf (invNormCdf, qqPoints, ecdfPoints)
-import           Hgg.Plot.Layout.Grid    (GridCell (..), GridPlacement (..),
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Validate
+import           Graphics.Hgg.Layout
+import           Graphics.Hgg.Render
+import           Graphics.Hgg.Render.Common  (pointShapeAt, alphaVector)
+import           Graphics.Hgg.Primitive      (Point (..))
+import           Graphics.Hgg.Render.Special (renderDAGStandalone, primsBBoxDAG, dagToScreen)
+import           Graphics.Hgg.Layout.RangeOf (invNormCdf, qqPoints, ecdfPoints)
+import           Graphics.Hgg.Layout.Grid    (GridCell (..), GridPlacement (..),
                                               flattenSubplots, gridDims, toPTree)
-import           Hgg.Plot.Math.Special   (logGamma, regIncompleteBeta, betaQuantile)
-import qualified Hgg.Plot.Math.Griddata  as Griddata
-import qualified Hgg.Plot.DAG
-import           Hgg.Plot.DAG ((~>))
-import qualified Hgg.Plot.DAG.Internal.Sugiyama as Sugi
-import qualified Hgg.Plot.Render.EdgeRoute as ER
+import           Graphics.Hgg.Math.Special   (logGamma, regIncompleteBeta, betaQuantile)
+import qualified Graphics.Hgg.Math.Griddata  as Griddata
+import qualified Graphics.Hgg.DAG
+import           Graphics.Hgg.DAG ((~>))
+import qualified Graphics.Hgg.DAG.Internal.Sugiyama as Sugi
+import qualified Graphics.Hgg.Render.EdgeRoute as ER
 import qualified Data.Map.Strict as Map
 import           Data.List (sort)
 import qualified Data.List
@@ -27,7 +27,7 @@ import           Test.Hspec
 -- Phase 7 A7: gallery primitive count 回帰 test 用
 import qualified Data.ByteString.Lazy as BL
 import           Data.Aeson           (eitherDecode, encode)
-import           Hgg.Plot.Unit    (Length (..), LUnit (..), (*~),
+import           Graphics.Hgg.Unit    (Length (..), LUnit (..), (*~),
                                        mm, inch, px, mmToPt, toPt, lengthToPt,
                                        Pos (..), resolveLen)
 import           System.Directory     (listDirectory, doesDirectoryExist, doesFileExist)
@@ -54,7 +54,7 @@ main = hspec $ do
       (Map.lookup "a" rk, Map.lookup "b" rk, Map.lookup "c" rk)
         `shouldBe` (Just 0, Just 1, Just 2)
 
-  describe "Hgg.Plot.Layout.Grid (Phase 37 A2 統一グリッド平坦化)" $ do
+  describe "Graphics.Hgg.Layout.Grid (Phase 37 A2 統一グリッド平坦化)" $ do
     -- 各 leaf を title で識別し、 占有セルを title で引く。
     let leaf nm = title (Data.Text.pack nm)
         cellOf nm gp =
@@ -142,7 +142,7 @@ main = hspec $ do
     it "legendGuideWidth: ラベル空集合でも key+pad 分の最小幅は確保" $ do
       legendGuideWidth 8.8 11.0 "" [] `shouldBe` legendKeyW + ggHalfLine/2 + ggHalfLine
 
-  describe "Hgg.Plot.Unit (Phase 33 単位系)" $ do
+  describe "Graphics.Hgg.Unit (Phase 33 単位系)" $ do
     it "(*~) はスカラ倍で単位保存" $
       (7 *~ inch) `shouldBe` Length 7 In
     it "lengthToPt: inch は dpi 非依存 (7in = 504pt)" $
@@ -163,7 +163,7 @@ main = hspec $ do
     it "JSON は {v,u} 順固定・tag 小文字" $
       encode (180 *~ mm) `shouldBe` "{\"v\":180.0,\"u\":\"mm\"}"
 
-  describe "Hgg.Plot.Unit Pos + resolver (Phase 33 B3)" $ do
+  describe "Graphics.Hgg.Unit Pos + resolver (Phase 33 B3)" $ do
     -- panel rect: x=10,y=20,w=200,h=100。x scale: data 0..10→pt 10..210、
     -- y scale: data 0..5→pt 120(下)..20(上) の反転 (rY=上端 規約と整合)。
     let ctx = UCtx { uDpi = 96
@@ -407,7 +407,7 @@ main = hspec $ do
 
     it "Phase 26 §E-6: dagPlot (Graph builder + ~>) で arrow PPath 含む" $
       let g = ("alpha" :: Data.Text.Text) ~> "y" <> "beta" ~> "y"
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           paths = length [() | PPath{} <- ps]
@@ -774,7 +774,7 @@ main = hspec $ do
     -- 見て base 矩形を lpPlotArea (panelRect) に切替えるため各セルに収まる。 2 列に DAG を
     -- 並べ、 ノードラベル (PText) が左半分・右半分の両方に出ることを確認 (修正前は全て左上)。
     it "A11 subplot 内 DAG: 各セルに収まる (左右両半分にノードが出る)" $
-      let dagSpec = layer (Hgg.Plot.DAG.dagPlot
+      let dagSpec = layer (Graphics.Hgg.DAG.dagPlot
                             (("a" :: Data.Text.Text) ~> "b"))
           spec    = subplots [dagSpec, dagSpec] <> subplotCols 2  -- 横 2 セル
           lay     = computeLayout emptyResolver spec
@@ -993,7 +993,7 @@ main = hspec $ do
                   | (f, t) <- [("h","b0"),("h","b1"),("b0","mu"),("b1","mu")
                               ,("x","mu"),("mu","y"),("s","y")] ]
           plates = [ DAGPlate "G" ["b0", "b1"], DAGPlate "O" ["x", "mu", "y"] ]
-          (pos, _) = Hgg.Plot.DAG.layoutHierarchicalFullWithPlates nodes es plates
+          (pos, _) = Graphics.Hgg.DAG.layoutHierarchicalFullWithPlates nodes es plates
           xOf i = head [ dnX n | n <- pos, dnId n == i ]
           gXs = [xOf "b0", xOf "b1"]
           oXs = [xOf "x", xOf "mu", xOf "y"]
@@ -1019,7 +1019,7 @@ main = hspec $ do
           plates = [ DAGPlate "school" ["a0", "a1", "b0", "b1", "s0"]
                    , DAGPlate "classA" ["a0", "a1"]
                    , DAGPlate "classB" ["b0", "b1"] ]
-          (pos, _) = Hgg.Plot.DAG.layoutHierarchicalFullWithPlates nodes es plates
+          (pos, _) = Graphics.Hgg.DAG.layoutHierarchicalFullWithPlates nodes es plates
           xOf i = head [ dnX n | n <- pos, dnId n == i ]
           aXs = [xOf "a0", xOf "a1"]
           bXs = [xOf "b0", xOf "b1"]
@@ -1047,7 +1047,7 @@ main = hspec $ do
           es     = [ DAGEdge f t Nothing Nothing
                    | (f, t) <- [("a","b"),("b","d"),("a","c"),("c","d"),("a","d")] ]
           plates = [ DAGPlate "plate" ["b", "c"] ]
-          (pos, routed) = Hgg.Plot.DAG.layoutHierarchicalFullWithPlates nodes es plates
+          (pos, routed) = Graphics.Hgg.DAG.layoutHierarchicalFullWithPlates nodes es plates
           radius   = 20 :: Double
           toScreen = dagToScreen radius pos LayoutHierarchical
           nodeMap  = [ (dnId n, n) | n <- pos ]
@@ -1088,7 +1088,7 @@ main = hspec $ do
           nodes  = map mkN ["a", "b", "p", "q", "z"]
           es     = [ DAGEdge f t Nothing Nothing
                    | (f, t) <- [("a","p"),("b","p"),("p","q"),("q","z"),("a","z"),("b","z")] ]
-          (pos, routed) = Hgg.Plot.DAG.layoutHierarchicalFull nodes es
+          (pos, routed) = Graphics.Hgg.DAG.layoutHierarchicalFull nodes es
           radius   = 20 :: Double
           toScreen = dagToScreen radius pos LayoutHierarchical
           nodeMap  = [ (dnId n, n) | n <- pos ]
@@ -1137,7 +1137,7 @@ main = hspec $ do
       let g = ("mu" :: Data.Text.Text) ~> "t1" <> "mu" ~> "t2"
             <> "t1" ~> "y" <> "t2" ~> "y" <> "s" ~> "y" <> "mu" ~> "y"
           plate = DAGPlate "grp (n=2)" ["t1", "t2"]
-          lyr   = Hgg.Plot.DAG.dagPlotWithPlates g [plate]
+          lyr   = Graphics.Hgg.DAG.dagPlotWithPlates g [plate]
           pal   = themePalette ThemeLight
           eps   = 0.5  -- FP 誤差許容
           fits (w, h) =
@@ -1160,7 +1160,7 @@ main = hspec $ do
           es     = [ DAGEdge "x_duration_long" "y" Nothing Nothing ]
           plates = [ DAGPlate "obs (4)" ["x_duration_long", "y"] ]
           (pos, routed) =
-            Hgg.Plot.DAG.layoutHierarchicalFullWithPlates nodes es plates
+            Graphics.Hgg.DAG.layoutHierarchicalFullWithPlates nodes es plates
           spec = layer (dagFromListsWithPlates pos routed LayoutHierarchical plates)
                    <> widthUnit (760 *~ px) <> heightUnit (520 *~ px)
           ps = renderToPrimitives emptyResolver (computeLayout emptyResolver spec) spec
@@ -1193,7 +1193,7 @@ main = hspec $ do
 
     it "後方互換: dagPlot の y 座標は新 rank 経由でも旧 longest-path と一致" $
       let g = ("alpha" :: Data.Text.Text) ~> "y" <> "beta" ~> "y" <> "alpha" ~> "sigma" <> "sigma" ~> "y"
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           -- 旧実装と同じ rank 構造: alpha=0, beta=0, sigma=1, y=2
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
@@ -1400,7 +1400,7 @@ main = hspec $ do
     it "DAG.dagPlot 長 edge を含む graph で routedEdges の dePath が Just (= spline 描画)" $
       let g = ("a" :: Data.Text.Text) ~> "d"          -- 直接 long edge (rank 0 → 3 予定)
            <> "a" ~> "b" <> "b" ~> "c" <> "c" ~> "d"  -- 経路 chain
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           -- spline edge は PPath (= curve)、 矢印ヘッドも PPath。 多めに含まれるはず。
@@ -1409,7 +1409,7 @@ main = hspec $ do
 
     it "DAG.dagPlot 短 edge のみ graph では dePath が全て Nothing (= 直線描画)" $
       let g = ("a" :: Data.Text.Text) ~> "b" <> "b" ~> "c"
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           -- 短 edge では PLine (= 直線) が edge ごとに 1 本
@@ -1454,7 +1454,7 @@ main = hspec $ do
           plates = [ DAGPlate "plate-a" ["a1", "a2"]
                    , DAGPlate "plate-b" ["b1", "b2"]
                    ]
-          spec = layer (Hgg.Plot.DAG.dagPlotWithPlates g plates)
+          spec = layer (Graphics.Hgg.DAG.dagPlotWithPlates g plates)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           -- plate 2 個分の bounding box (= PRect) + plate label
@@ -1462,7 +1462,7 @@ main = hspec $ do
       in rects `shouldSatisfy` (>= 2)
 
     it "Phase 1 A7 (port snap): latent (ellipse) 水平方向 port は cx ± rx に snap" $
-      let n = Hgg.Plot.Easy.dagNode "v" "v" NodeLatent 0 0
+      let n = Graphics.Hgg.Easy.dagNode "v" "v" NodeLatent 0 0
           -- baseR = 20、 dist 無し → rx = ry = 20
           p = edgePortPoint n (Point 100 100) (Point 200 100) 20
       in case p of
@@ -1471,7 +1471,7 @@ main = hspec $ do
              abs (py - 100) `shouldSatisfy` (< 1e-9)
 
     it "Phase 1 A7 (port snap): data (rect) 水平方向 port は cx + rx に snap" $
-      let n = Hgg.Plot.Easy.dagNode "v" "v" NodeData 0 0
+      let n = Graphics.Hgg.Easy.dagNode "v" "v" NodeData 0 0
           p = edgePortPoint n (Point 0 0) (Point 100 0) 20
       in case p of
            Point px py -> do
@@ -1479,14 +1479,14 @@ main = hspec $ do
              abs py `shouldSatisfy` (< 1e-9)
 
     it "Phase 1 A8 決定論性: 全 pipeline (= layoutHierarchicalFullWithPlates) を 2 回実行で完全一致" $
-      let nodes = [ Hgg.Plot.Easy.dagNode i i NodeLatent 0 0
+      let nodes = [ Graphics.Hgg.Easy.dagNode i i NodeLatent 0 0
                   | i <- ["a","b","c","d","e","f"] ]
           edges_ = [ dagEdge "a" "c", dagEdge "b" "c", dagEdge "c" "d"
                    , dagEdge "c" "e", dagEdge "d" "f", dagEdge "e" "f"
                    , dagEdge "a" "f"  -- long edge → dummy 入る
                    ]
           plates = [ DAGPlate "P" ["c", "d"] ]
-          run = Hgg.Plot.DAG.layoutHierarchicalFullWithPlates nodes edges_ plates
+          run = Graphics.Hgg.DAG.layoutHierarchicalFullWithPlates nodes edges_ plates
           r1 = run
           r2 = run
       in r1 `shouldBe` r2
@@ -1502,7 +1502,7 @@ main = hspec $ do
 
     it "Phase 1 並列 edge: 同 (from, to) を 3 本書くと PPath spline が 3 本 描画される" $
       let g = ("a" :: Data.Text.Text) ~> "b" <> "a" ~> "b" <> "a" ~> "b"
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           -- 並列 3 本それぞれ spline edge (PPath) + 矢印 (PPath) = 6 PPath 増加 (+ node 2 個)
@@ -1511,7 +1511,7 @@ main = hspec $ do
 
     it "Phase 1 並列 edge: 1 本のみ (= parCount=1) なら従来の PLine 直線 (= spline 化しない)" $
       let g = ("a" :: Data.Text.Text) ~> "b"
-          spec = layer (Hgg.Plot.DAG.dagPlot g)
+          spec = layer (Graphics.Hgg.DAG.dagPlot g)
           ps = renderToPrimitives emptyResolver
                  (computeLayout emptyResolver spec) spec
           plines = length [() | PLine{} <- ps]
@@ -1528,7 +1528,7 @@ main = hspec $ do
       in c1 `shouldBe` c2
 
     it "Phase 1 A7 (port snap): rect 対角 45° は短辺の方向で先に交点 (= min(rx/|ux|, ry/|uy|))" $
-      let n = Hgg.Plot.Easy.dagNode "v" "v" NodeData 0 0
+      let n = Graphics.Hgg.Easy.dagNode "v" "v" NodeData 0 0
           p = edgePortPoint n (Point 0 0) (Point 100 100) 20
       in case p of
            -- ★A15: nodeExtent で可変サイズ。 NodeData "v" (1 行・dist 無し) は
@@ -1544,7 +1544,7 @@ main = hspec $ do
           plates = [ DAGPlate "A" ["a1", "a2"]
                    , DAGPlate "B" ["b1", "b2"]
                    ]
-          spec = layer (Hgg.Plot.DAG.dagPlotWithPlates g plates)
+          spec = layer (Graphics.Hgg.DAG.dagPlotWithPlates g plates)
           dagSpec = case getLast (lyDAG (head (vsLayers spec))) of
                       Just ds -> ds
                       Nothing -> error "no dag"
@@ -1606,7 +1606,7 @@ main = hspec $ do
     it "Phase 53 A3: dagPlotWithRankGroups end-to-end (同 dnY + 非隣接 flat edge の迂回 dePath)" $
       let g = ("r" :: Data.Text.Text) ~> "a" <> "r" ~> "m" <> "r" ~> "b"
            <> "a" ~> "m" <> "m" ~> "b" <> "a" ~> "b"
-          spec = layer (Hgg.Plot.DAG.dagPlotWithRankGroups g [["a","m","b"]])
+          spec = layer (Graphics.Hgg.DAG.dagPlotWithRankGroups g [["a","m","b"]])
           dagSpec = case getLast (lyDAG (head (vsLayers spec))) of
                       Just ds -> ds
                       Nothing -> error "no dag"

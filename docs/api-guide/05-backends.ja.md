@@ -27,7 +27,7 @@ plot 本体だけで完結する (df 等の追加依存は不要)。
 | `plot path spec` | `IO ()` | inline | `saveSVG` の別名 (matplotlib `savefig` 感) |
 
 ```haskell
-import Hgg.Plot.Backend.SVG (saveSVG, saveSVGInteractive)
+import Graphics.Hgg.Backend.SVG (saveSVG, saveSVGInteractive)
 
 main = do
   saveSVG            "static.svg"      spec
@@ -71,8 +71,8 @@ saveSVG "out.svg" (layer (scatter (inline ws) (inline ms)))
 `IHaskellDisplay` instance を import するだけで、 セル評価値がインライン描画される。
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.IHaskell ()    -- instance を見せるだけ
+import Graphics.Hgg.Easy
+import Graphics.Hgg.IHaskell ()    -- instance を見せるだけ
 
 layer (points [0,1,2,3] [0,1,4,9]) <> title "demo"   -- セル評価でインライン SVG
 ```
@@ -88,7 +88,7 @@ SVG backend と対称: `savePDF path spec` (inline 列のみ) /
 (`df |>> spec` の `BoundPlot`)。
 
 ```haskell
-import Hgg.Plot.Backend.PDF (savePDF)
+import Graphics.Hgg.Backend.PDF (savePDF)
 
 savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 ```
@@ -107,7 +107,7 @@ savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 (`df |>> spec` の `BoundPlot`)。
 
 ```haskell
-import Hgg.Plot.Backend.Rasterific (savePNG)
+import Graphics.Hgg.Backend.Rasterific (savePNG)
 
 savePNG "fig1.png" (layer (scatter (inline xs) (inline ys)) <> title "図 1: 散布図")
 ```
@@ -120,7 +120,7 @@ IPA / Takao / DejaVu の .ttf) の順。 見つからない場合は探索パス
 エラーになる。
 
 ```haskell
-import Hgg.Plot.Backend.Rasterific
+import Graphics.Hgg.Backend.Rasterific
 
 -- フォント明示 + Hi-DPI 2 倍 (寸法・線幅・文字が比例して 2x)
 savePNGConfigured defaultPNGConfig { pngFontPath = Just "/path/to/font.ttf"

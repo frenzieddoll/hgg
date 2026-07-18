@@ -466,9 +466,9 @@ saveSVGBound "penguin-plot.svg" $
 
 | Format | Functions | import |
 |---|---|---|
-| SVG | `saveSVG` / `saveSVGBound` | `Hgg.Plot.Backend.SVG` |
-| PDF | `savePDF` / `savePDFBound` | `Hgg.Plot.Backend.PDF` |
-| PNG | `savePNG` / `savePNGBound` | `Hgg.Plot.Backend.Rasterific` (supports Japanese labels) |
+| SVG | `saveSVG` / `saveSVGBound` | `Graphics.Hgg.Backend.SVG` |
+| PDF | `savePDF` / `savePDFBound` | `Graphics.Hgg.Backend.PDF` |
+| PNG | `savePNG` / `savePNGBound` | `Graphics.Hgg.Backend.Rasterific` (supports Japanese labels) |
 
 See [API Reference 05 backends](../../api-guide/05-backends.md) for details.
 

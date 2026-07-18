@@ -23,13 +23,13 @@ Core is backend-agnostic (base / vector / text / containers only). Choose a back
 
 | Module | Responsibility |
 |---|---|
-| `Hgg.Plot.Spec` | Declarative plot specification (Grammar API). geom / channel / scale / theme / facet |
-| `Hgg.Plot.Easy` | Introductory API. Re-exports Spec + `[Double]` direct-pass helpers + `overlay` |
-| `Hgg.Plot.Layout` | Domain computation, track placement, facet layout |
-| `Hgg.Plot.Render` | `Primitive` (geometric primitives) and backend abstraction |
-| `Hgg.Plot.Palette` | Hgg brand + academic palettes, sequential/diverging/cyclical |
-| `Hgg.Plot.DAG` | Graph plots (graphviz dot equivalent, Sugiyama layout) |
-| `Hgg.Plot.Validate` | Spec validity checking |
+| `Graphics.Hgg.Spec` | Declarative plot specification (Grammar API). geom / channel / scale / theme / facet |
+| `Graphics.Hgg.Easy` | Introductory API. Re-exports Spec + `[Double]` direct-pass helpers + `overlay` |
+| `Graphics.Hgg.Layout` | Domain computation, track placement, facet layout |
+| `Graphics.Hgg.Render` | `Primitive` (geometric primitives) and backend abstraction |
+| `Graphics.Hgg.Palette` | Hgg brand + academic palettes, sequential/diverging/cyclical |
+| `Graphics.Hgg.DAG` | Graph plots (graphviz dot equivalent, Sugiyama layout) |
+| `Graphics.Hgg.Validate` | Spec validity checking |
 
 PureScript (`hgg-canvas`) carries the **same ADT**, guaranteeing JSON round-trip fidelity via aeson ↔ Argonaut.
 Swap backends without changing the spec.

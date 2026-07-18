@@ -19,9 +19,9 @@
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
-import Hgg.Plot.Easy
-import Hgg.Plot.Primitive (Primitive(..), Point(..), solid)
-import Hgg.Plot.Spec      (RenderCtx(..), customMark)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Primitive (Primitive(..), Point(..), solid)
+import Graphics.Hgg.Spec      (RenderCtx(..), customMark)
 
 -- 左下 (0,0) から右上 (1,1) へ対角線を 1 本引くだけの mark
 diagonal :: RenderCtx -> [Primitive]
@@ -57,12 +57,12 @@ main = saveSVG "diag.svg" $
 | `rcTextColor` | `Text` | theme 既定の文字色 |
 | `rcAxisColor` | `Text` | theme 既定の軸色 |
 
-`RenderCtx(..)` は `Hgg.Plot.Spec` から import する。
+`RenderCtx(..)` は `Graphics.Hgg.Spec` から import する。
 
 ## 3. Primitive — 使える図形の語彙
 
-`drawFn` が返す backend 非依存の描画命令。 `Hgg.Plot.Primitive` (または再 export する
-`Hgg.Plot.Render`) から import する。 座標はすべて **device px** (= `rcProjectXY` の出力)。
+`drawFn` が返す backend 非依存の描画命令。 `Graphics.Hgg.Primitive` (または再 export する
+`Graphics.Hgg.Render`) から import する。 座標はすべて **device px** (= `rcProjectXY` の出力)。
 
 | 構築子 | 引数 | 意味 |
 |---|---|---|
@@ -92,9 +92,9 @@ dendrogram を作る。 最終形は **`dendrogram "leaf" "height"`** と `scatt
 完成例は `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`)。
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.Primitive (Primitive(..), Point(..), TextStyle(..), TextAnchor(..), solid)
-import Hgg.Plot.Spec (RenderCtx(..), ColRef, ColData(..), customMark, encX, encY, resolveNum)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Primitive (Primitive(..), Point(..), TextStyle(..), TextAnchor(..), solid)
+import Graphics.Hgg.Spec (RenderCtx(..), ColRef, ColData(..), customMark, encX, encY, resolveNum)
 import qualified Data.Vector as V
 
 -- ① draw: "leaf"/"height" 列を rcResolver で読み、 elbow を組む (簡単のため 4 葉固定)
@@ -143,7 +143,7 @@ main = saveSVGWith "dendro.svg" dat $
 
 ### 4.1 一級 mark 化の仕組み — `encX` / `encY`
 
-`encX` / `encY` は **mark 種別に依らず x/y 列を束ねる単独 setter** (`Hgg.Plot.Spec`):
+`encX` / `encY` は **mark 種別に依らず x/y 列を束ねる単独 setter** (`Graphics.Hgg.Spec`):
 
 ```haskell
 encX :: ColRef -> Layer          -- x encoding 列だけを束ねる
@@ -164,7 +164,7 @@ encY :: ColRef -> Layer          -- y encoding 列だけを束ねる
 - **列から引く**: layer に束縛した列を `rcResolver` で読む。 スクリーン上のデータ駆動に。
 
 ```haskell
-import Hgg.Plot.Spec (resolveNum)
+import Graphics.Hgg.Spec (resolveNum)
 
 fromCols :: RenderCtx -> [Primitive]
 fromCols ctx =
@@ -192,8 +192,8 @@ custom mark の描画 closure は **HS 専用** (関数は JSON 化できない)
 (= HS 専用 = SVG / PDF / Rasterific のみ)。
 
 ```purescript
-import Hgg.Plot.Custom (registerMark)          -- RenderCtx もここから
-import Hgg.Plot.Render.Common (Primitive(..), Point(..))
+import Graphics.Hgg.Custom (registerMark)          -- RenderCtx もここから
+import Graphics.Hgg.Render.Common (Primitive(..), Point(..))
 
 -- HS の drawFn と同じ図形を返すよう手で書く
 dendroDrawPS :: Json -> RenderCtx -> Array Primitive
@@ -224,7 +224,7 @@ scale / legend / color と本格統合したい場合のみ core の `MarkKind` 
 ## 8. API 早見
 
 ```haskell
--- Hgg.Plot.Spec (Easy でも可)
+-- Graphics.Hgg.Spec (Easy でも可)
 customMark     :: Text -> (RenderCtx -> [Primitive]) -> Layer
 customMarkWith :: Text -> Value -> (RenderCtx -> [Primitive]) -> Layer   -- PS へ渡す option 付き
 encX           :: ColRef -> Layer   -- x 列を束ねる (mark 非依存・一級 mark 化 / 軸 range 自動)
@@ -238,12 +238,12 @@ data RenderCtx = RenderCtx
 ```
 
 ```purescript
--- Hgg.Plot.Custom (PureScript)
+-- Graphics.Hgg.Custom (PureScript)
 registerMark :: String -> (Json -> RenderCtx -> Array Primitive) -> Effect Unit
 type RenderCtx = { projectXY :: Number -> Number -> { x :: Number, y :: Number }
                  , plotArea :: Rect, resolver :: Resolver
                  , color, fill, textColor, axisColor :: String }
--- PureScript でも同型の customMark / customMarkWith が Hgg.Plot.Spec にある
+-- PureScript でも同型の customMark / customMarkWith が Graphics.Hgg.Spec にある
 ```
 
 ## 関連

@@ -52,10 +52,10 @@ import           Hanalyze.Data.Wrangle
 -- plot
 -- ★ Phase 36: Plot の groupBy (群配置 aesthetic) は Data.Wrangle.groupBy (データ動詞)
 --   と同名。 この章はデータ側を使うので Plot 側を hiding (qualified 方針)。
-import           Hgg.Plot.Easy         hiding (groupBy)
-import           Hgg.Plot.Frame        ((|>>), toResolver)
-import           Hgg.Plot.Backend.SVG  (saveSVGBound, saveSVG)
-import           Hgg.Plot.DataFrame    ()
+import           Graphics.Hgg.Easy         hiding (groupBy)
+import           Graphics.Hgg.Frame        ((|>>), toResolver)
+import           Graphics.Hgg.Backend.SVG  (saveSVGBound, saveSVG)
+import           Graphics.Hgg.DataFrame    ()
 
 -- === 列抽出 (Joins.hs / Logicals.hs と同方式) =================================
 

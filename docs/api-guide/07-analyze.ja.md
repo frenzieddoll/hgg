@@ -65,9 +65,9 @@ fit 済みモデルを `toPlot :: m -> VisualSpec` で layer に変換して `<>
 import qualified Data.Vector              as V
 import qualified Numeric.LinearAlgebra    as LA   -- 後の生存/PCA 等で使う (lm/glm は df |-> で不要)
 import           Data.Text                (Text)
-import           Hgg.Plot.Spec        (ColData (..), layer, scatter)
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.Spec        (ColData (..), layer, scatter)
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
 import           Hanalyze.Plot            (toPlot, (|->), lm)
 
 -- 図が自己完結なモデル (散布図に重ねない) 用の空 df
@@ -166,7 +166,7 @@ import           Hanalyze.Plot ( toPlot, statModel, grid, gridRange, bandOn, sta
                                , interval, IntervalKind (..), statColor, statLabel, predAt
                                , statModelMulti, along, holdAt, byVar, HoldAgg (..)
                                , lmF, (|->) )
-import           Hgg.Plot.Color   (fromHex)   -- statColor は Color を受ける
+import           Graphics.Hgg.Color   (fromHex)   -- statColor は Color を受ける
 
 -- (1) grid 評価: 疎データのガタつき解消。 既定 grid=100 点、 範囲=説明変数 min/max。 既定は帯なし。
 df |>> (layer (scatter "x" "y") <> toPlot (statModel smod <> grid 200))    -- 200 点で滑らか (帯なし)
@@ -521,7 +521,7 @@ let dagCol = toPlot (dagOf fit) <> title "構造 (DAG)"
     epredCol = layer (scatter "x" "y") <> toPlot (epred fit "x" "mu") <> title "事後予測"
 
 -- 最後に 5 つの列を 1 行 5 列で束ねる。 DAG (構造) を左端に。 DAG 列ぶん横幅を 2000px に広げる
--- (画面向けの広い dashboard なので px 指定。要 import Hgg.Plot.Unit (px, (*~)))
+-- (画面向けの広い dashboard なので px 指定。要 import Graphics.Hgg.Unit (px, (*~)))
 df |>> ( subplots [ dagCol, postCol, traceCol, hdiPpcCol, epredCol ] <> subplotCols 5
        <> widthUnit (2000 *~ px) <> heightUnit (600 *~ px)
        <> title "HBM 診断ダッシュボード (構造 / 事後分布 / trace / HDI・PPC / 事後予測)" )
@@ -564,10 +564,10 @@ ggplot2 の `geom_smooth(method="lm")` のように、 **stat を通常 mark と
 > など多彩なモデルを図にしたいときは **ルート 1 (`toPlot`、 14 モデル)** を使う。
 
 ```haskell
-import           Hgg.Plot.Spec        ( statLm, statLmLevel, statSmooth, statSmoothCI
+import           Graphics.Hgg.Spec        ( statLm, statLmLevel, statSmooth, statSmoothCI
                                           , statPoly, statResid, colorBy, color, stroke )
-import           Hgg.Plot.Color       (fromHex)
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.Color       (fromHex)
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
 
 -- ggplot(df, aes(x,y)) + geom_point() + geom_smooth(method="lm", color="red")  に相当
 saveSVGBoundStats "out.svg" $
@@ -605,7 +605,7 @@ df |>> ( layer (scatter "x" "y" <> colorBy "g")
 ```
 
 ポイント:
-- **stat は `Layer`** (`Hgg.Plot.Spec`、 純タグ `MStatLM`/`MStatSmooth`/`MStatPoly`/`MStatResid`)。
+- **stat は `Layer`** (`Graphics.Hgg.Spec`、 純タグ `MStatLM`/`MStatSmooth`/`MStatPoly`/`MStatResid`)。
   通常 mark と同じく `layer (…)` で包み `<>` で重ねる。 装飾 (`color`/`stroke`/`alpha`) も
   Layer の `<>` でそのまま効き、 展開後の回帰線/帯/散布に引き継がれる。
 - **`colorBy "g"` で群別 fit**: lyColor が群列を指すと bridge が群ごとに分割 fit し、 群色
@@ -635,7 +635,7 @@ df |>> ( layer (scatter "x" "y" <> colorBy "g")
 import Hanalyze.Plot      (toPlot, statModel, statColor, statLabel, (|->), lm, glm, spline)
 import Hanalyze.Model.GLM (Family (..), LinkFn (..))
 import Hanalyze.Model.Spline (SplineKind (..))
-import Hgg.Plot.Color        (fromHex)   -- statColor は Color を受ける
+import Graphics.Hgg.Color        (fromHex)   -- statColor は Color を受ける
 
 df |>> ( layer (scatter "x" "y")
        <> toPlot (statModel (df |-> lm "x" "y")              <> statColor (fromHex "#1f77b4") <> statLabel "LM")      -- 青

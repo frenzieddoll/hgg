@@ -59,9 +59,9 @@ Convert fitted models using `toPlot :: m -> VisualSpec` into layers and combine 
 import qualified Data.Vector              as V
 import qualified Numeric.LinearAlgebra    as LA   -- Used later for survival/PCA etc (lm/glm use df |-> )
 import           Data.Text                (Text)
-import           Hgg.Plot.Spec        (ColData (..), layer, scatter)
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.Spec        (ColData (..), layer, scatter)
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
 import           Hanalyze.Plot            (toPlot, (|->), lm)
 
 -- Empty df for self-contained models (not overlaid on scatter)
@@ -157,7 +157,7 @@ import           Hanalyze.Plot ( toPlot, statModel, grid, gridRange, bandOn, sta
                                , interval, IntervalKind (..), statColor, statLabel, predAt
                                , statModelMulti, along, holdAt, byVar, HoldAgg (..)
                                , lmF, (|->) )
-import           Hgg.Plot.Color   (fromHex)   -- statColor takes Color
+import           Graphics.Hgg.Color   (fromHex)   -- statColor takes Color
 
 -- (1) Grid evaluation: Eliminate jag from sparse data. Default grid=100 points, range=explanatory min/max. Default no band.
 df |>> (layer (scatter "x" "y") <> toPlot (statModel smod <> grid 200))    -- Smooth at 200 points (no band)
@@ -489,7 +489,7 @@ let dagCol = toPlot (dagOf fit) <> title "Structure (DAG)"
     epredCol = layer (scatter "x" "y") <> toPlot (epred fit "x" "mu") <> title "Posterior predictive"
 
 -- Combine 5 columns in 1-row-5-column. DAG left. Widen to 2000px for DAG column
--- (wide-screen dashboard, pixel spec. Needs import Hgg.Plot.Unit (px, (*~)))
+-- (wide-screen dashboard, pixel spec. Needs import Graphics.Hgg.Unit (px, (*~)))
 df |>> ( subplots [ dagCol, postCol, traceCol, hdiPpcCol, epredCol ] <> subplotCols 5
        <> widthUnit (2000 *~ px) <> heightUnit (600 *~ px)
        <> title "HBM diagnostic dashboard (structure / posterior / trace / HDI·PPC / posterior predictive)" )
@@ -518,10 +518,10 @@ Regression computed by bridge (`hgg-analyze-bridge`) delegates to hanalyze. **df
 > For diverse models (GLM / GP / survival / Bayesian, etc.), **use Route 1 (`toPlot`, 14 models)**.
 
 ```haskell
-import           Hgg.Plot.Spec        ( statLm, statLmLevel, statSmooth, statSmoothCI
+import           Graphics.Hgg.Spec        ( statLm, statLmLevel, statSmooth, statSmoothCI
                                           , statPoly, statResid, colorBy, color, stroke )
-import           Hgg.Plot.Color       (fromHex)
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.Color       (fromHex)
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
 
 -- Equivalent to ggplot(df, aes(x,y)) + geom_point() + geom_smooth(method="lm", color="red")
 saveSVGBoundStats "out.svg" $
@@ -559,7 +559,7 @@ df |>> ( layer (scatter "x" "y" <> colorBy "g")
 ```
 
 Key points:
-- **Stat is `Layer`** (`Hgg.Plot.Spec`, pure tags `MStatLM` / `MStatSmooth` / `MStatPoly` / `MStatResid`).
+- **Stat is `Layer`** (`Graphics.Hgg.Spec`, pure tags `MStatLM` / `MStatSmooth` / `MStatPoly` / `MStatResid`).
   Wrap in `layer (…)`, overlay with `<>`. Decorations (`color` / `stroke` / `alpha`) work via Layer `<>`,
   applying to resulting regression lines / bands / scatter.
 - **`colorBy "g"` for group-wise fit**: When lyColor names group column, bridge splits per group and fits,
@@ -588,7 +588,7 @@ and **`statLabel`** (legend label), models color-code and legends stack:
 import Hanalyze.Plot      (toPlot, statModel, statColor, statLabel, (|->), lm, glm, spline)
 import Hanalyze.Model.GLM (Family (..), LinkFn (..))
 import Hanalyze.Model.Spline (SplineKind (..))
-import Hgg.Plot.Color        (fromHex)   -- statColor takes Color
+import Graphics.Hgg.Color        (fromHex)   -- statColor takes Color
 
 df |>> ( layer (scatter "x" "y")
        <> toPlot (statModel (df |-> lm "x" "y")              <> statColor (fromHex "#1f77b4") <> statLabel "LM")      -- Blue

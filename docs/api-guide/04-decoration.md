@@ -325,7 +325,7 @@ purePlot <> layer (scatter "x" "y")
 
 ## Enum values quick reference {#enum-tables}
 
-Settings with fixed values (`position` etc.) are listed **completely** here. Definition = ultimate truth is module **`Hgg.Plot.Spec`** (if values grow, source is authoritative).
+Settings with fixed values (`position` etc.) are listed **completely** here. Definition = ultimate truth is module **`Graphics.Hgg.Spec`** (if values grow, source is authoritative).
 
 | Setting Function | Type | All possible values |
 |---|---|---|
@@ -367,9 +367,9 @@ Easy layer's `overlay [a, b]` (= `foldMap layer`) abbreviates this pattern.
 Stacking settings with `<>` loads one figure with many encodings / decorations. Below is an example stacking **continuous color gradient + point size encoding + regression line overlay + reference line + theme + labs + legend** (combinations of settings in this page). Written with df integration ([06 dataframe](06-dataframe.md) detailed), encodings use just column names, reusing the same column (`"y"`) for color:
 
 ```haskell
-import           Hgg.Plot.Easy             -- re-export Spec (scatter/layer/ColData…)
-import           Hgg.Plot.Frame            ((|>>))
-import           Hgg.Plot.Backend.SVG      (saveSVGBound)
+import           Graphics.Hgg.Easy             -- re-export Spec (scatter/layer/ColData…)
+import           Graphics.Hgg.Frame            ((|>>))
+import           Graphics.Hgg.Backend.SVG      (saveSVGBound)
 import qualified Data.Map.Strict as M
 import qualified Data.Vector     as V
 

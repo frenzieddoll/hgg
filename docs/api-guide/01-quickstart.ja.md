@@ -22,11 +22,11 @@ hgg で 1 枚出すための最短経路と、 **書き方の 3 層** (Easy / Gr
 
 | 層 | モジュール | 立ち位置 |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` 直渡し + `overlay` 既定 |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
-| **3. Typed** | `Hgg.Plot.Spec` + `Resolver` | 型付き channel / scale / Resolver で encoding 制御 |
-| **4. Low-level** | `Hgg.Plot.Render` | `Primitive` 直書き (backend 自作・特殊描画) |
+| **0. Quick** | `Graphics.Hgg.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Graphics.Hgg.Easy` | `[Double]` 直渡し + `overlay` 既定 |
+| **2. Grammar** | `Graphics.Hgg.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
+| **3. Typed** | `Graphics.Hgg.Spec` + `Resolver` | 型付き channel / scale / Resolver で encoding 制御 |
+| **4. Low-level** | `Graphics.Hgg.Render` | `Primitive` 直書き (backend 自作・特殊描画) |
 
 > `Easy` は `Spec` を丸ごと再 export + 値直渡しヘルパ。 `Quick` は `Easy` を再 export +
 > `IO` 保存ヘルパ。 **どれを import しても下位層の全機能が使える**。
@@ -35,10 +35,10 @@ hgg で 1 枚出すための最短経路と、 **書き方の 3 層** (Easy / Gr
 
 ## 30 秒で 1 枚 (Quick 層) {#quickstart-30s}
 
-データ以外を何も決めずに 1 枚出す。 `hgg-svg` の `Hgg.Plot.Quick`。
+データ以外を何も決めずに 1 枚出す。 `hgg-svg` の `Graphics.Hgg.Quick`。
 
 ```haskell
-import Hgg.Plot.Quick
+import Graphics.Hgg.Quick
 
 main :: IO ()
 main = do
@@ -59,9 +59,9 @@ main = do
 `inline` を書かず `[Double]` を直接渡し、 重畳は `overlay` で包む。 飾りは `<>` で足す。
 
 ```haskell
-import Hgg.Plot.Easy
-import Hgg.Plot.Backend.SVG (saveSVG)
-import Hgg.Plot.Unit (px, (*~))   -- px サイズ指定用 (既定単位は mm・省略時 6.5×4in)
+import Graphics.Hgg.Easy
+import Graphics.Hgg.Backend.SVG (saveSVG)
+import Graphics.Hgg.Unit (px, (*~))   -- px サイズ指定用 (既定単位は mm・省略時 6.5×4in)
 
 main :: IO ()
 main = saveSVG "easy.svg" $
@@ -84,8 +84,8 @@ main = saveSVG "easy.svg" $
 `inlineCat` (カテゴリ) で作る。 aesthetic は **mark の中で** `<>`。
 
 ```haskell
-import Hgg.Plot.Spec
-import Hgg.Plot.Backend.SVG (saveSVG)
+import Graphics.Hgg.Spec
+import Graphics.Hgg.Backend.SVG (saveSVG)
 import Data.Text (Text)
 
 main :: IO ()

@@ -5,9 +5,9 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame       ((|>>), BoundPlot, bpDiagnostics)
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame       ((|>>), BoundPlot, bpDiagnostics)
 import           Data.Text                (Text)
 import qualified Data.Map.Strict          as M
 import qualified Data.Vector              as V

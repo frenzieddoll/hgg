@@ -17,20 +17,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG    (saveSVG)
-import           Hgg.Plot.DAG            (dagPlot, (~>))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Primitive      (Point (..))
-import           Hgg.Plot.Render.EdgeRoute (Box (..), Obstacles (..),
+import           Graphics.Hgg.Backend.SVG    (saveSVG)
+import           Graphics.Hgg.DAG            (dagPlot, (~>))
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Primitive      (Point (..))
+import           Graphics.Hgg.Render.EdgeRoute (Box (..), Obstacles (..),
                                               buildChannel, dagObstacles,
                                               edgePortPoint, proutespline)
-import qualified Hgg.Plot.Render.EdgeRoute as ER
-import           Hgg.Plot.Render.Special (bakeDAGRoutesInSpec, dagToScreen)
-import           Hgg.Plot.Spec           (DAGEdge (..), DAGNode (..),
+import qualified Graphics.Hgg.Render.EdgeRoute as ER
+import           Graphics.Hgg.Render.Special (bakeDAGRoutesInSpec, dagToScreen)
+import           Graphics.Hgg.Spec           (DAGEdge (..), DAGNode (..),
                                               DAGSpec (..), Layer,
                                               RoutedEdge (..),
                                               VisualSpec (..), lyDAG)
-import           Hgg.Plot.Unit           (px, (*~))
+import           Graphics.Hgg.Unit           (px, (*~))
 import           Data.Monoid                 (Last (..))
 import           Data.Text                   (Text)
 import qualified Data.Text                   as T

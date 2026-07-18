@@ -29,10 +29,10 @@ import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Functions    as F
 import           DataFrame.Operators    ((|>), (.<), (.==))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame     ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound)
-import           Hgg.Plot.DataFrame ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame     ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound)
+import           Graphics.Hgg.DataFrame ()
 import           System.Directory       (getCurrentDirectory, createDirectoryIfMissing)
 
 main :: IO ()

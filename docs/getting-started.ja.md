@@ -24,8 +24,8 @@ PureScript (frontend) 側は `hgg-canvas` を spago 依存に追加する (Halog
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Hgg.Plot.Easy                 -- Layer 1: 入門 API (Spec 全体も再 export)
-import Hgg.Plot.Backend.SVG (saveSVG)
+import Graphics.Hgg.Easy                 -- Layer 1: 入門 API (Spec 全体も再 export)
+import Graphics.Hgg.Backend.SVG (saveSVG)
 
 main :: IO ()
 main = saveSVG "quick.svg" $
@@ -76,8 +76,8 @@ helper に `Text` を渡すだけの薄い配線で、 `ihaskell` 依存は本 p
 
 ```haskell
 :set -XOverloadedStrings
-import Hgg.Plot.Easy
-import Hgg.Plot.IHaskell (DisplayPlot(..))   -- インスタンス + DisplayPlot
+import Graphics.Hgg.Easy
+import Graphics.Hgg.IHaskell (DisplayPlot(..))   -- インスタンス + DisplayPlot
 
 -- inline 列だけの図はそのままセル末尾に置けば描画される
 layer (scatter (inline [0,1,2,3]) (inline [0,1,4,9])) <> title "demo"

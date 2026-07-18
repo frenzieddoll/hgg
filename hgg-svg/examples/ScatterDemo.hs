@@ -7,12 +7,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVG, saveSVGWith, saveSVGInteractive)
-import           Hgg.Plot.Unit         (px, (*~))
-import qualified Hgg.Plot.DAG
-import           Hgg.Plot.DAG         ((~>))
-import           Hgg.Plot.Easy
-import qualified Hgg.Plot.Spec
+import           Graphics.Hgg.Backend.SVG (saveSVG, saveSVGWith, saveSVGInteractive)
+import           Graphics.Hgg.Unit         (px, (*~))
+import qualified Graphics.Hgg.DAG
+import           Graphics.Hgg.DAG         ((~>))
+import           Graphics.Hgg.Easy
+import qualified Graphics.Hgg.Spec
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
 
@@ -109,7 +109,7 @@ main = do
                <> alphaN ~> yN
                <> betaN  ~> yN
       dagSpec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot hbmGraph <> size 22)
+        <> layer (Graphics.Hgg.DAG.dagPlot hbmGraph <> size 22)
         <> title  "HBM ModelGraph (§E-6 DAG, hierarchical layout)"
         <> theme  ThemeLight
         <> widthUnit (600 *~ px) <> heightUnit (400 *~ px)
@@ -117,8 +117,8 @@ main = do
   -- ユーザ PyMC モデル再現 (= s_C/s_P/b_C/b_P/b1〜b4 priors + Weather/A/Score MutableData
   --   + x_J/x_C/x_P/x deterministic + Y Bernoulli observed、 record/course/person plates)
   let pymcLikeSpec = purePlot
-        <> layer (Hgg.Plot.Spec.dagFromListsWithPlates pymcNodes pymcEdges
-                    Hgg.Plot.Spec.LayoutManual pymcPlates
+        <> layer (Graphics.Hgg.Spec.dagFromListsWithPlates pymcNodes pymcEdges
+                    Graphics.Hgg.Spec.LayoutManual pymcPlates
                   <> size 24)
         <> title "PyMC モデル再現 (自作 hgg)"
         <> theme  ThemeLight
@@ -164,51 +164,51 @@ main = do
     -- PyMC モデル node 定義 (= LayoutManual で位置手動指定、 ユーザ画像と同じ配置)
     -- 画像から読み取り: 4 階層 (= prior super → prior → deterministic → observed)
     -- 上から: s_C/s_P → b_C/b_P/b1〜b4 + Weather/A/Score → x_J/x_C/x_P → x → Y
-    pymcNodes :: [Hgg.Plot.Spec.DAGNode]
+    pymcNodes :: [Graphics.Hgg.Spec.DAGNode]
     pymcNodes =
       [ -- 階層 0 (= 超事前、 y=0.05): HalfCauchy hyper-priors (s_C / s_P)
-        Hgg.Plot.Spec.dagNodeDist "sC" "s_C" Hgg.Plot.Spec.NodeLatent "HalfCauchy" 0.30 0.05
-      , Hgg.Plot.Spec.dagNodeDist "sP" "s_P" Hgg.Plot.Spec.NodeLatent "HalfCauchy" 0.55 0.05
+        Graphics.Hgg.Spec.dagNodeDist "sC" "s_C" Graphics.Hgg.Spec.NodeLatent "HalfCauchy" 0.30 0.05
+      , Graphics.Hgg.Spec.dagNodeDist "sP" "s_P" Graphics.Hgg.Spec.NodeLatent "HalfCauchy" 0.55 0.05
         -- 階層 1 (= prior + data、 y=0.30)
-      , Hgg.Plot.Spec.dagNodeDist "weather" "Weather" Hgg.Plot.Spec.NodeData    "MutableData" 0.05 0.30
-      , Hgg.Plot.Spec.dagNodeDist "b4"      "b4"      Hgg.Plot.Spec.NodeLatent  "Flat" 0.18 0.30
-      , Hgg.Plot.Spec.dagNodeDist "bC"      "b_C"     Hgg.Plot.Spec.NodeLatent  "Normal" 0.30 0.30
-      , Hgg.Plot.Spec.dagNodeDist "b2"      "b2"      Hgg.Plot.Spec.NodeLatent  "Flat" 0.45 0.30
-      , Hgg.Plot.Spec.dagNodeDist "bP"      "b_P"     Hgg.Plot.Spec.NodeLatent  "Normal" 0.55 0.30
-      , Hgg.Plot.Spec.dagNodeDist "A"       "A"       Hgg.Plot.Spec.NodeData    "MutableData" 0.66 0.30
-      , Hgg.Plot.Spec.dagNodeDist "score"   "Score"   Hgg.Plot.Spec.NodeData    "MutableData" 0.78 0.30
-      , Hgg.Plot.Spec.dagNodeDist "b3"      "b3"      Hgg.Plot.Spec.NodeLatent  "Flat" 0.92 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "weather" "Weather" Graphics.Hgg.Spec.NodeData    "MutableData" 0.05 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "b4"      "b4"      Graphics.Hgg.Spec.NodeLatent  "Flat" 0.18 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "bC"      "b_C"     Graphics.Hgg.Spec.NodeLatent  "Normal" 0.30 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "b2"      "b2"      Graphics.Hgg.Spec.NodeLatent  "Flat" 0.45 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "bP"      "b_P"     Graphics.Hgg.Spec.NodeLatent  "Normal" 0.55 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "A"       "A"       Graphics.Hgg.Spec.NodeData    "MutableData" 0.66 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "score"   "Score"   Graphics.Hgg.Spec.NodeData    "MutableData" 0.78 0.30
+      , Graphics.Hgg.Spec.dagNodeDist "b3"      "b3"      Graphics.Hgg.Spec.NodeLatent  "Flat" 0.92 0.30
         -- 階層 2 (= deterministic、 y=0.55)
-      , Hgg.Plot.Spec.dagNodeDist "xJ" "x_J" Hgg.Plot.Spec.NodeOther "Deterministic" 0.05 0.55
-      , Hgg.Plot.Spec.dagNodeDist "b1" "b1"  Hgg.Plot.Spec.NodeLatent "Flat" 0.20 0.55
-      , Hgg.Plot.Spec.dagNodeDist "xC" "x_C" Hgg.Plot.Spec.NodeOther  "Deterministic" 0.30 0.55
-      , Hgg.Plot.Spec.dagNodeDist "xP" "x_P" Hgg.Plot.Spec.NodeOther  "Deterministic" 0.66 0.55
+      , Graphics.Hgg.Spec.dagNodeDist "xJ" "x_J" Graphics.Hgg.Spec.NodeOther "Deterministic" 0.05 0.55
+      , Graphics.Hgg.Spec.dagNodeDist "b1" "b1"  Graphics.Hgg.Spec.NodeLatent "Flat" 0.20 0.55
+      , Graphics.Hgg.Spec.dagNodeDist "xC" "x_C" Graphics.Hgg.Spec.NodeOther  "Deterministic" 0.30 0.55
+      , Graphics.Hgg.Spec.dagNodeDist "xP" "x_P" Graphics.Hgg.Spec.NodeOther  "Deterministic" 0.66 0.55
         -- 階層 3 (= 合算 deterministic、 y=0.78)
-      , Hgg.Plot.Spec.dagNodeDist "x"  "x"   Hgg.Plot.Spec.NodeOther  "Deterministic" 0.10 0.78
+      , Graphics.Hgg.Spec.dagNodeDist "x"  "x"   Graphics.Hgg.Spec.NodeOther  "Deterministic" 0.10 0.78
         -- 階層 4 (= observed、 y=0.96)
-      , Hgg.Plot.Spec.dagNodeDist "Y"  "Y"   Hgg.Plot.Spec.NodeObserved "Bernoulli" 0.10 0.96
+      , Graphics.Hgg.Spec.dagNodeDist "Y"  "Y"   Graphics.Hgg.Spec.NodeObserved "Bernoulli" 0.10 0.96
       ]
-    pymcEdges :: [Hgg.Plot.Spec.DAGEdge]
+    pymcEdges :: [Graphics.Hgg.Spec.DAGEdge]
     pymcEdges =
-      [ Hgg.Plot.Spec.dagEdge "sC" "bC"
-      , Hgg.Plot.Spec.dagEdge "sP" "bP"
-      , Hgg.Plot.Spec.dagEdge "weather" "xJ"
-      , Hgg.Plot.Spec.dagEdge "b4" "xJ"
-      , Hgg.Plot.Spec.dagEdge "bC" "xC"
-      , Hgg.Plot.Spec.dagEdge "b2" "xP"
-      , Hgg.Plot.Spec.dagEdge "bP" "xP"
-      , Hgg.Plot.Spec.dagEdge "A" "xP"
-      , Hgg.Plot.Spec.dagEdge "score" "xP"
-      , Hgg.Plot.Spec.dagEdge "b3" "x"
-      , Hgg.Plot.Spec.dagEdge "xJ" "x"
-      , Hgg.Plot.Spec.dagEdge "b1" "x"
-      , Hgg.Plot.Spec.dagEdge "xC" "x"
-      , Hgg.Plot.Spec.dagEdge "xP" "x"
-      , Hgg.Plot.Spec.dagEdge "x"  "Y"
+      [ Graphics.Hgg.Spec.dagEdge "sC" "bC"
+      , Graphics.Hgg.Spec.dagEdge "sP" "bP"
+      , Graphics.Hgg.Spec.dagEdge "weather" "xJ"
+      , Graphics.Hgg.Spec.dagEdge "b4" "xJ"
+      , Graphics.Hgg.Spec.dagEdge "bC" "xC"
+      , Graphics.Hgg.Spec.dagEdge "b2" "xP"
+      , Graphics.Hgg.Spec.dagEdge "bP" "xP"
+      , Graphics.Hgg.Spec.dagEdge "A" "xP"
+      , Graphics.Hgg.Spec.dagEdge "score" "xP"
+      , Graphics.Hgg.Spec.dagEdge "b3" "x"
+      , Graphics.Hgg.Spec.dagEdge "xJ" "x"
+      , Graphics.Hgg.Spec.dagEdge "b1" "x"
+      , Graphics.Hgg.Spec.dagEdge "xC" "x"
+      , Graphics.Hgg.Spec.dagEdge "xP" "x"
+      , Graphics.Hgg.Spec.dagEdge "x"  "Y"
       ]
-    pymcPlates :: [Hgg.Plot.Spec.DAGPlate]
+    pymcPlates :: [Graphics.Hgg.Spec.DAGPlate]
     pymcPlates =
-      [ Hgg.Plot.Spec.DAGPlate "record (2396)"  ["xJ", "x", "Y"]
-      , Hgg.Plot.Spec.DAGPlate "course (10)"    ["bC", "xC"]
-      , Hgg.Plot.Spec.DAGPlate "person (50)"    ["bP", "A", "score", "xP"]
+      [ Graphics.Hgg.Spec.DAGPlate "record (2396)"  ["xJ", "x", "Y"]
+      , Graphics.Hgg.Spec.DAGPlate "course (10)"    ["bC", "xC"]
+      , Graphics.Hgg.Spec.DAGPlate "person (50)"    ["bP", "A", "score", "xP"]
       ]

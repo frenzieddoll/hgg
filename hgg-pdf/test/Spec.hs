@@ -4,8 +4,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main (main) where
 
-import           Hgg.Plot.Backend.PDF (savePDF)
-import           Hgg.Plot.Easy
+import           Graphics.Hgg.Backend.PDF (savePDF)
+import           Graphics.Hgg.Easy
 import qualified Data.ByteString.Char8    as BS
 import           System.Directory         (getTemporaryDirectory, removeFile)
 import           System.FilePath          ((</>))

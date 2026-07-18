@@ -81,7 +81,7 @@ in subplots [ layer (scatter xs ys <> colorBy g  <> size 6)    -- category → c
 
 ### Specifying fixed colors — `Color` type
 
-Fixed colors (`color` / `colorRGBA`) are passed using the type-safe `Color` (`Hgg.Plot.Color`). Constructors are `fromHex :: Text -> Color` (`fromHex "#dc2626"` · 3-digit supported · invalid raises `error`), `fromHexMaybe` (total), and `rgb :: Word8 -> Word8 -> Word8 -> Color`. R's 657 color names are available as constants in `Hgg.Plot.Color.Named` (`import qualified … as N` · `color N.steelblue`). When pasting 8-digit RGBA hex directly, use `colorRGBA "#88888855"` (= `color (fromHex "#888888") <> alpha (85/255)` · total version `colorRGBAMaybe`). Internal helpers are `fromHexA` / `fromHexAMaybe :: Text -> (Maybe) (Color, Double)`. 3D version at [08 3d](08-3d.md).
+Fixed colors (`color` / `colorRGBA`) are passed using the type-safe `Color` (`Graphics.Hgg.Color`). Constructors are `fromHex :: Text -> Color` (`fromHex "#dc2626"` · 3-digit supported · invalid raises `error`), `fromHexMaybe` (total), and `rgb :: Word8 -> Word8 -> Word8 -> Color`. R's 657 color names are available as constants in `Graphics.Hgg.Color.Named` (`import qualified … as N` · `color N.steelblue`). When pasting 8-digit RGBA hex directly, use `colorRGBA "#88888855"` (= `color (fromHex "#888888") <> alpha (85/255)` · total version `colorRGBAMaybe`). Internal helpers are `fromHexA` / `fromHexAMaybe :: Text -> (Maybe) (Color, Double)`. 3D version at [08 3d](08-3d.md).
 
 ---
 

@@ -1110,7 +1110,7 @@ in purePlot <> layer (autocorr (inline series) <> autocorrMaxLag 40)
 **最小例**
 
 ```haskell
-import Hgg.Plot.Spec   -- dag, dagNode, dagNodeDist, dagEdge, DAGNodeKind (..), ...
+import Graphics.Hgg.Spec   -- dag, dagNode, dagNodeDist, dagEdge, DAGNodeKind (..), ...
 
 let nodes = [ dagNodeDist "a"  "a"  NodeLatent        "Normal(0,10)"  0.15 0.0
             , dagNodeDist "b"  "b"  NodeLatent        "Normal(0,10)"  0.45 0.0

@@ -30,19 +30,19 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.ThreeD
-                    Hgg.Plot.ThreeD.Bound
-                    Hgg.Plot.ThreeD.Types
-                    Hgg.Plot.ThreeD.Projection
-                    Hgg.Plot.ThreeD.Axes
-                    Hgg.Plot.ThreeD.Scatter
-                    Hgg.Plot.ThreeD.Line
-                    Hgg.Plot.ThreeD.Surface
-                    Hgg.Plot.ThreeD.Delaunay
-                    Hgg.Plot.ThreeD.Bar
-                    Hgg.Plot.ThreeD.Spec
-                    Hgg.Plot.ThreeD.Browser
-                    Hgg.Plot.ThreeD.Easy
+  exposed-modules:  Graphics.Hgg.ThreeD
+                    Graphics.Hgg.ThreeD.Bound
+                    Graphics.Hgg.ThreeD.Types
+                    Graphics.Hgg.ThreeD.Projection
+                    Graphics.Hgg.ThreeD.Axes
+                    Graphics.Hgg.ThreeD.Scatter
+                    Graphics.Hgg.ThreeD.Line
+                    Graphics.Hgg.ThreeD.Surface
+                    Graphics.Hgg.ThreeD.Delaunay
+                    Graphics.Hgg.ThreeD.Bar
+                    Graphics.Hgg.ThreeD.Spec
+                    Graphics.Hgg.ThreeD.Browser
+                    Graphics.Hgg.ThreeD.Easy
   other-modules:    Paths_hgg_3d
   autogen-modules:  Paths_hgg_3d
   hs-source-dirs:   src

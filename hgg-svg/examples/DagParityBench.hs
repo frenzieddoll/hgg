@@ -11,15 +11,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVG)
-import qualified Hgg.Plot.DAG
-import           Hgg.Plot.DAG         ((~>))
-import           Hgg.Plot.DAG.Internal.Sugiyama
+import           Graphics.Hgg.Backend.SVG (saveSVG)
+import qualified Graphics.Hgg.DAG
+import           Graphics.Hgg.DAG         ((~>))
+import           Graphics.Hgg.DAG.Internal.Sugiyama
                                           (assignOrderFull, assignRanks,
                                            buildLayoutGraph, countCrossings)
-import           Hgg.Plot.Easy
-import qualified Hgg.Plot.Spec        as Spec
-import           Hgg.Plot.Unit        (px, (*~))
+import           Graphics.Hgg.Easy
+import qualified Graphics.Hgg.Spec        as Spec
+import           Graphics.Hgg.Unit        (px, (*~))
 import           Data.Text                (Text)
 import qualified Data.Text                as T
 import qualified Data.Text.IO             as TIO
@@ -110,7 +110,7 @@ runCase (name, (nodeIds, edges), desc, w, h) = do
   -- hgg SVG 生成 (canvas は case ごとに調整、 dot の auto sizing に合わせる)
   let g = mkGraph nodeIds edges
       spec = purePlot
-        <> layer (Hgg.Plot.DAG.dagPlot g <> size 11)
+        <> layer (Graphics.Hgg.DAG.dagPlot g <> size 11)
         <> title (T.pack (name <> " (" <> desc <> ")"))
         <> theme  ThemeLight
         <> widthUnit (w *~ px) <> heightUnit (h *~ px)
@@ -139,9 +139,9 @@ runCase (name, (nodeIds, edges), desc, w, h) = do
 -- | Text 列 + edge 列を Graph に。
 -- 全 nodeIds を 'vertex' で先に登録してから edge を overlay する。 これで edge に
 -- 含まれない孤立 node も Graph に残り、 dot の DOT (= 全 node 宣言) と挙動が揃う。
-mkGraph :: [Text] -> [(Text, Text)] -> Hgg.Plot.DAG.Graph Text
+mkGraph :: [Text] -> [(Text, Text)] -> Graphics.Hgg.DAG.Graph Text
 mkGraph nodeIds edges =
-  let vs = foldr (\v acc -> acc <> Hgg.Plot.DAG.vertex v) mempty nodeIds
+  let vs = foldr (\v acc -> acc <> Graphics.Hgg.DAG.vertex v) mempty nodeIds
       es = foldr (\(f, t) acc -> acc <> (f ~> t)) mempty edges
   in vs <> es
 

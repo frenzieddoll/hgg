@@ -8,12 +8,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.ThreeD          (defaultCameraZUp, defaultPerspective,
+import           Graphics.Hgg.ThreeD          (defaultCameraZUp, defaultPerspective,
                                                 Point3 (..))
-import           Hgg.Plot.ThreeD.Axes     (defaultAxes3D)
-import           Hgg.Plot.ThreeD.Browser  (showBrowser)
-import           Hgg.Plot.ThreeD.Spec
-import           Hgg.Plot.Color           (fromHex)
+import           Graphics.Hgg.ThreeD.Axes     (defaultAxes3D)
+import           Graphics.Hgg.ThreeD.Browser  (showBrowser)
+import           Graphics.Hgg.ThreeD.Spec
+import           Graphics.Hgg.Color           (fromHex)
 
 main :: IO ()
 main = showBrowser $

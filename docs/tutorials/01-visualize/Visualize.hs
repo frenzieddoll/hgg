@@ -31,11 +31,11 @@ import qualified DataFrame.Operations.Core            as DF
 import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Functions      as F
 import           DataFrame.Operators      ((|>))
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame       ((|>>))
-import           Hgg.Plot.Backend.SVG (saveSVGBound, saveSVG)
-import           Hgg.Plot.Bridge.Stat (saveSVGBoundStats)
-import           Hgg.Plot.DataFrame   ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame       ((|>>))
+import           Graphics.Hgg.Backend.SVG (saveSVGBound, saveSVG)
+import           Graphics.Hgg.Bridge.Stat (saveSVGBoundStats)
+import           Graphics.Hgg.DataFrame   ()
 
 -- lm 回帰直線 (statLm) の既定線色 (= 単一回帰線のとき、 R4DS と同じ青)。
 smoothBlue :: Color

@@ -27,11 +27,11 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.Semi.WaferMap
-                    Hgg.Plot.Semi.ControlChart
-                    Hgg.Plot.Semi.ProbabilityPlot
-                    Hgg.Plot.Semi.ParetoChart
-                    Hgg.Plot.Semi.BoxCoxPlot
+  exposed-modules:  Graphics.Hgg.Semi.WaferMap
+                    Graphics.Hgg.Semi.ControlChart
+                    Graphics.Hgg.Semi.ProbabilityPlot
+                    Graphics.Hgg.Semi.ParetoChart
+                    Graphics.Hgg.Semi.BoxCoxPlot
   hs-source-dirs:   src
   build-depends:    base             >= 4.17 && < 5
                   , text             >= 2.0  && < 2.2

@@ -41,10 +41,10 @@ import qualified DataFrame.Internal.Column as DFC
 import           Hanalyze.Data.Factor
 
 -- plot
-import           Hgg.Plot.Easy
-import           Hgg.Plot.Frame        ((|>>))
-import           Hgg.Plot.Backend.SVG  (saveSVGBound)
-import           Hgg.Plot.DataFrame    ()
+import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Frame        ((|>>))
+import           Graphics.Hgg.Backend.SVG  (saveSVGBound)
+import           Graphics.Hgg.DataFrame    ()
 
 -- ============================================================================
 -- 列抽出 (Strings.hs / Numbers.hs と同方式・型不一致は [] / Nothing に倒す)

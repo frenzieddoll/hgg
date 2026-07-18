@@ -9,11 +9,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import           Hgg.Plot.Backend.SVG (saveSVG, saveSVGWith)
-import           Hgg.Plot.DAG         (layoutHierarchicalFull)
-import           Hgg.Plot.Render.Special (bakeDAGRoutesInSpec)
-import           Hgg.Plot.Unit         (px, (*~))
-import           Hgg.Plot.Easy
+import           Graphics.Hgg.Backend.SVG (saveSVG, saveSVGWith)
+import           Graphics.Hgg.DAG         (layoutHierarchicalFull)
+import           Graphics.Hgg.Render.Special (bakeDAGRoutesInSpec)
+import           Graphics.Hgg.Unit         (px, (*~))
+import           Graphics.Hgg.Easy
 import qualified Data.Aeson
 import qualified Data.ByteString.Lazy
 import           Data.Text                (Text)

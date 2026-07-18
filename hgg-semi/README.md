@@ -11,17 +11,17 @@ PNG / Canvas 出力は既存 backend package がそのまま consume する。`h
 
 | チャート | module | 状態 |
 |---|---|---|
-| WaferMap | `Hgg.Plot.Semi.WaferMap` | ✅ §A (die grid + bin 色塗り + edge 除外 + reticle 境界 + notch + yield/zone サマリ) |
-| ControlChart | `Hgg.Plot.Semi.ControlChart` | ⚪ §B 予定 (X̄-R / I-MR / CUSUM / EWMA / WE・Nelson ルール) |
-| ProbabilityPlot | `Hgg.Plot.Semi.ProbabilityPlot` | ⚪ §C 予定 (Q-Q / Weibull / log-normal + rank CI) |
-| ParetoChart | `Hgg.Plot.Semi.ParetoChart` | ⚪ §D 予定 (件数 + 累積 % dual-Y) |
-| BoxCoxPlot | `Hgg.Plot.Semi.BoxCoxPlot` | ⚪ §E 予定 (λ vs log-likelihood + 最適 λ マーク) |
+| WaferMap | `Graphics.Hgg.Semi.WaferMap` | ✅ §A (die grid + bin 色塗り + edge 除外 + reticle 境界 + notch + yield/zone サマリ) |
+| ControlChart | `Graphics.Hgg.Semi.ControlChart` | ⚪ §B 予定 (X̄-R / I-MR / CUSUM / EWMA / WE・Nelson ルール) |
+| ProbabilityPlot | `Graphics.Hgg.Semi.ProbabilityPlot` | ⚪ §C 予定 (Q-Q / Weibull / log-normal + rank CI) |
+| ParetoChart | `Graphics.Hgg.Semi.ParetoChart` | ⚪ §D 予定 (件数 + 累積 % dual-Y) |
+| BoxCoxPlot | `Graphics.Hgg.Semi.BoxCoxPlot` | ⚪ §E 予定 (λ vs log-likelihood + 最適 λ マーク) |
 
 ## 使い方 (WaferMap)
 
 ```haskell
-import Hgg.Plot.Semi.WaferMap
-import Hgg.Plot.Backend.SVG (savePrimitivesSVG)
+import Graphics.Hgg.Semi.WaferMap
+import Graphics.Hgg.Backend.SVG (savePrimitivesSVG)
 
 main :: IO ()
 main = do

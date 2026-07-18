@@ -27,9 +27,9 @@ common warnings
 
 library
   import:           warnings
-  exposed-modules:  Hgg.Plot.Bridge.Analyze
-                    Hgg.Plot.Bridge.Analyze.Internal
-                    Hgg.Plot.Bridge.Stat
+  exposed-modules:  Graphics.Hgg.Bridge.Analyze
+                    Graphics.Hgg.Bridge.Analyze.Internal
+                    Graphics.Hgg.Bridge.Stat
   hs-source-dirs:   src
   build-depends:    base                 >= 4.17 && < 5
                   , text                 >= 2.0  && < 2.2

@@ -24,8 +24,8 @@ For PureScript (frontend), add `hgg-canvas` to your spago dependencies (Halogen 
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Hgg.Plot.Easy                 -- Layer 1: introductory API (Spec also re-exported)
-import Hgg.Plot.Backend.SVG (saveSVG)
+import Graphics.Hgg.Easy                 -- Layer 1: introductory API (Spec also re-exported)
+import Graphics.Hgg.Backend.SVG (saveSVG)
 
 main :: IO ()
 main = saveSVG "quick.svg" $
@@ -73,8 +73,8 @@ Rendering uses the SVG backend's `renderSVG`, passed to iHaskell's `svg` display
 
 ```haskell
 :set -XOverloadedStrings
-import Hgg.Plot.Easy
-import Hgg.Plot.IHaskell (DisplayPlot(..))   -- Instance + DisplayPlot
+import Graphics.Hgg.Easy
+import Graphics.Hgg.IHaskell (DisplayPlot(..))   -- Instance + DisplayPlot
 
 -- Plots with only inline columns can be placed at the end of a cell for rendering
 layer (scatter (inline [0,1,2,3]) (inline [0,1,4,9])) <> title "demo"
