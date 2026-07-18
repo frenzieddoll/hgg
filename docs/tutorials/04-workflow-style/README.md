@@ -1,45 +1,46 @@
-# 04. コードスタイル (R4DS 2e Ch.4 "Workflow: code style")
+# 04. Workflow: Code Style (R4DS 2e Ch.4 "Workflow: code style")
 
-> 一次情報: **R for Data Science 2e, Ch.4 "Workflow: code style"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.4 "Workflow: code style"**
 > <https://r4ds.hadley.nz/workflow-style>
-> データ: **nycflights13** の `flights`(全量)。
+> Data: **nycflights13** `flights` (complete).
 
-R4DS 第 4 章は **図を描かない**「コードスタイル」章です(本文の R コードはすべて
-`eval: false` のスタイル見本、 図は RStudio のスクリーンショットのみ)。 ここでは
-[tidyverse style guide](https://style.tidyverse.org) の各ルールを **Haskell /
-本プロジェクト規約(`../../../CLAUDE.md`)に対応づけ**、
-「**Strive for(こう書く)/ Avoid(避ける)**」で示します。 実行コードは
-[`WorkflowStyle.hs`](WorkflowStyle.hs)(Strive 版を実際に動かして確認)。
+R4DS Ch.4 is a **plot-free** "code style" chapter (all R code in the text is `eval: false`
+style examples; plots are RStudio screenshots only). Here we map rules from
+[tidyverse style guide](https://style.tidyverse.org) **to Haskell / this project's conventions
+(`CLAUDE.md`)**, showing "**Strive for** / **Avoid**". Executable code is in
+[`WorkflowStyle.hs`](WorkflowStyle.hs) (running the Strive version for verification).
 
 ```sh
 cd docs/tutorials/04-workflow-style
 cabal run tut-04-workflow-style
 ```
 
-このファイル群自体が本プロジェクトのスタイル見本です(2 スペース字下げ・`camelCase`・
-セクション境界の `-- ===` 罫線・`=` の揃え・パイプは 1 行 1 動詞)。
+This file set itself exemplifies the project's style (2-space indentation, `camelCase`,
+`-- ===` section lines, aligned `=`, one verb per pipe).
 
 ---
 
-## §4.2 名前(Names)
+## §4.2 Names
 
-R: 変数名は小文字 + 数字 + `_`(snake_case)。 本プロジェクト規約は **`camelCase`**
-(関数・束縛)/ `PascalCase`(型・コンストラクタ)。 長く説明的な名前を短い略語より
-優先する点は R と同じです。
+R: Variable names are lowercase + digits + `_` (snake_case). This project uses **`camelCase`**
+(functions/bindings) / **`PascalCase`** (types/constructors). Like R, prefer long descriptive
+names over short abbreviations.
 
 ```haskell
--- Strive for: 説明的・camelCase
+-- Strive for: descriptive, camelCase
 shortFlights = flights |> DF.filterJust "air_time"
                        |> DF.filterWhere (F.col @Int "air_time" .< 60)
 
--- Avoid: 略語・全大文字
-sf = ...        -- 何の略か後で分からない
+-- Avoid: abbreviations, all caps
+sf = ...        -- unclear what abbreviation means later
 ```
 
-## §4.3 空白(Spaces)
+## §4.3 Spaces
 
-R: 二項演算子(`+ - == <` …)の両側に空白(`^` は例外)、 代入(`<-`)の周りにも
-空白。 関数呼び出しの括弧の内外には空白を入れない。 カンマの後に空白。 Haskell も同じ。
+R: Space around binary operators (`+ - == <` …), except `^`; space around assignment `<-`.
+No spaces inside parentheses in function calls; space after commas. Haskell is the same.
 
 ```haskell
 -- Strive for
@@ -49,9 +50,9 @@ z = (a + b) ^ 2 / d
 z=( a+b )^2/d
 ```
 
-`=` の **揃え**も R と同じく有効です。 複数列を作るときに `=`(dataframe では
-`` `F.as` ``)を縦に揃えると読みやすくなります(`dep_time` は HHMM 形式なので、
-R の `%/% 100`・`%% 100` は dataframe の `div`・`mod`):
+**Aligning** `=` is equally effective in Haskell. When creating multiple columns,
+aligning `=` (`` `F.as` `` in dataframe) vertically improves readability
+(`dep_time` is in HHMM format, so R's `%/% 100`·`%% 100` become dataframe's `div`·`mod`):
 
 ```haskell
 flights |> DF.deriveMany
@@ -61,11 +62,11 @@ flights |> DF.deriveMany
   , F.nullLift (\t -> t `mod` 100) (F.col @(Maybe Int) "dep_time") `F.as` "dep_minute" ]
 ```
 
-## §4.4 パイプ(Pipes)
+## §4.4 Pipes
 
-R: `|>` の前に空白・行末に置き、 **1 行 1 動詞**。 名前付き引数を持つ関数
-(`mutate` / `summarize`)は **引数を 1 行ずつ・2 スペース追加字下げ**、 閉じ括弧 `)` は
-独立行で関数名の位置に揃える。 dataframe の `|>` も同じ流儀:
+R: Place `|>` with space before it, at end of line. **One verb per line**.
+Functions with named arguments (`mutate` / `summarize`): **one argument per line, extra 2-space indent**;
+closing `)` on its own line, aligned to function name. Dataframe's `|>` follows the same convention:
 
 ```haskell
 -- Strive for
@@ -79,10 +80,10 @@ flights
 flights|>DF.filterJust "arr_delay"|>DF.groupBy["dest"]|>DF.aggregate[F.countAll `F.as` "n"]
 ```
 
-名前付き引数(集計式)が複数あるときは 1 行ずつに分け、 リストの括弧を揃えます:
+With multiple named arguments (aggregations), split one per line, aligning list brackets:
 
 ```haskell
--- Strive for (集計式を 1 行ずつ)
+-- Strive for (one aggregation per line)
 byTail =
   flights
     |> DF.groupBy ["tailnum"]
@@ -91,51 +92,52 @@ byTail =
          , F.countAll                      `F.as` "n" ]
 ```
 
-> ★この `group_by(tailnum)` 例は**整形の見本**です。 `tailnum` は元が `Maybe Text`
-> (欠損あり)で、 この版の `dataframe` は**元が欠損列だった列での `groupBy` が
-> クラッシュ**します。 そのため実行デモ([`WorkflowStyle.hs`](WorkflowStyle.hs))は、
-> R4DS のもう一つの §4.4 例 `… |> count(dest)`(`dest` は非 null)で行っています。
+> ★ This `group_by(tailnum)` example is a **formatting model**. `tailnum` is originally `Maybe Text`
+> (has missing), and this version of `dataframe` **crashes when `groupBy` on originally-nullable columns**.
+> So the executable demo ([`WorkflowStyle.hs`](WorkflowStyle.hs)) uses R4DS's other §4.4 example
+> `… |> count(dest)` (`dest` is non-null) instead (formatting rules are identical).
 
 ## §4.5 ggplot2
 
-R: ggplot の `+` もパイプと同じ流儀で整形(`+` を `|>` と同じに扱う)。
-hgg では、 データを `|>>` で束ね、 レイヤを `<>` で重ねます(= ggplot の `+`)。
-整形ルールは同じ(1 行 1 レイヤ、 引数が長ければ 1 行ずつ):
+R: ggplot's `+` follows the same pipe formatting (treat `+` like `|>`).
+In hgg, we bind data with `|>>` and layer with `<>` (= ggplot's `+`).
+Formatting rules are the same (one layer per line; if args are long, one per line):
 
 ```haskell
--- Strive for (|>> でデータ束ね、 <> でレイヤ重ね、 1 行 1 レイヤ)
+-- Strive for (|>> binds data, <> layers, one layer per line)
 delayByMonth
   |>> layer (line    "month" "delay")
    <> layer (scatter "month" "delay")
 
--- 引数が多いレイヤは 1 行ずつ
+-- Long-argument layers, one per line
 plotData
   |>> layer (statSmooth "distance" "speed" 8
-               <> colorStatic "#FFFFFF"
+               <> color (fromHex "#FFFFFF")
                <> stroke 4)
    <> layer (scatter "distance" "speed")
 ```
 
-R の `|>` → `+` の切り替えに相当するのが、 本ライブラリの `|>>`(データ束ね)→ `<>`
-(レイヤ重ね)の切り替えです。 ★R4DS はこの章で図を生成しない(例は `eval: false`)ので、
-本チュートリアルでも図は作らず、 プロット元の集計(月別平均遅延)だけ出力します。
+The switch from R's `|>` → `+` corresponds to this library's switch `|>>` (data bind) → `<>`
+(layer combine). ★ R4DS doesn't generate plots in this chapter (examples are `eval: false`),
+so this tutorial also produces no plots, only the aggregated source (monthly average delay).
 
-## §4.6 セクション罫線(Sectioning comments)
+## §4.6 Section Markers (Sectioning Comments)
 
-R: `# Load data ----------` のような区切りコメントでスクリプトを分割。 本プロジェクト
-規約は **`-- ===` 罫線**(`../../../CLAUDE.md`)。
-[`WorkflowStyle.hs`](WorkflowStyle.hs) の各セクションがその見本です。
+R: Divide scripts with section comments like `# Load data ----------`.
+This project's convention is **`-- ===` lines** (`CLAUDE.md`).
+Sections in [`WorkflowStyle.hs`](WorkflowStyle.hs) exemplify this.
 
 ```haskell
 -- =========================================================================
--- §4.2 Names — 変数名
+-- §4.2 Names — variable naming
 -- =========================================================================
 ```
 
-## できないこと / 近似せず記録した相違
+## What We Can't Do / Faithfully Recorded Differences
 
-- **△ 元欠損列での `groupBy`**: `tailnum`(元 `Maybe Text`)のように欠損を含んでいた列で
-  `groupBy` するとこの版の `dataframe` はクラッシュします。 §4.4 の実行デモは非 null の
-  `dest` を使う R4DS のもう一つの例で代用しました(整形ルール自体は同一)。
-- **R の実行時挙動**: R4DS のスタイル例は `eval: false`(描画・実行しない見本)です。
-  本章も Strive 版だけを実際に動かし、 Avoid 版は対比のために示すだけです。
+- **△ `groupBy` on originally-nullable columns**: Columns like `tailnum` (originally `Maybe Text`)
+  with missing values cause this version of `dataframe` to crash when `groupBy` is applied.
+  The executable demo (§4.4) substitutes R4DS's other example using non-null `dest`
+  (formatting rules themselves are identical).
+- **R's runtime behavior**: R4DS style examples are `eval: false` (demonstration, not executed).
+  This chapter runs only the Strive version; the Avoid version is shown for contrast.

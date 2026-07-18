@@ -1,87 +1,86 @@
 # Getting Started
 
-## インストール
+> 🌐 **English** | [日本語](getting-started.ja.md)
 
-> ⚠️ hgg は **まだ Hackage / npm 未公開** (OSS 公開は 正式版 リリース後)。
-> 現状はリポジトリ内のローカルパッケージとして利用する。
+## Installation
 
-`cabal.project` に各パッケージへの `packages:` 行があり、 `cabal build` で全体が解決される。
-自分のプロジェクトから使う場合は、 必要なパッケージを `build-depends` に足す:
+> ⚠️ hgg is **not yet published to Hackage / npm** (public release after official version).
+> Currently use it as a local package within the repository.
+
+The `cabal.project` has `packages:` entries for each package, resolved by `cabal build`.
+To use from your own project, add the required packages to `build-depends`:
 
 ```cabal
 build-depends:
-    hgg-core    -- Spec / Layout / Palette / DAG (純 Haskell、 base+vector+text+containers のみ)
-  , hgg-svg     -- SVG backend (saveSVG で書き出す場合)
+    hgg-core    -- Spec / Layout / Palette / DAG (pure Haskell, only base+vector+text+containers)
+  , hgg-svg     -- SVG backend (when using saveSVG)
 ```
 
-PureScript (frontend) 側は `hgg-canvas` を spago 依存に追加する (Halogen / web-canvas)。
+For PureScript (frontend), add `hgg-canvas` to your spago dependencies (Halogen / web-canvas).
 
-## Quick Start ─ 最短で 1 枚
+## Quick Start ─ One Plot in Seconds
 
 ```haskell
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Hgg.Plot.Easy                 -- Layer 1: 入門 API (Spec 全体も再 export)
+import Hgg.Plot.Easy                 -- Layer 1: introductory API (Spec also re-exported)
 import Hgg.Plot.Backend.SVG (saveSVG)
 
 main :: IO ()
 main = saveSVG "quick.svg" $
-     overlay [ points [1,2,3,4,5] [1,4,9,16,25] ]   -- [Double] を直接渡す
+     overlay [ points [1,2,3,4,5] [1,4,9,16,25] ]   -- Pass [Double] directly
   <> title "y = x²"
   <> xLabel "x" <> yLabel "y"
   <> width 600 <> height 400
 ```
 
 ```bash
-cabal run tutorial-01-easy    # 上とほぼ同じ内容を実行 → tutorial-01-easy.svg
+cabal run tutorial-01-easy    # Run nearly identical code → tutorial-01-easy.svg
 ```
 
-ポイント:
+Key points:
 
-- **副作用は最後の `saveSVG` だけ**。 図は純粋値 (`VisualSpec`) として組み立てる。
-- **`<>` で合成**。 `title` も `width` も `VisualSpec` を返すので Monoid で足すだけ。
-- 重畳は **`overlay [...]`** で包む (`scatter <> line` を直接足す落とし穴を回避。 理由は
-  [api-guide/](./api-guide/README.md) と `design/monoid-semantics.md`)。
+- **Only the final `saveSVG` has a side effect**. Plots are built as pure values (`VisualSpec`).
+- **Compose with `<>`**. `title` and `width` both return `VisualSpec`, so just add them via Monoid.
+- Overlay must be **wrapped in `overlay [...]`** (avoid the pitfall of directly adding `scatter <> line`.
+  See [api-guide/](./api-guide/README.md) and `design/monoid-semantics.md` for details).
 
-## backend の選び方
+## Choosing a Backend
 
-core (`hgg-core`) は描画先非依存。 出力先で package を選ぶ:
+The core (`hgg-core`) is backend-agnostic. Choose a package based on your output target:
 
-| やりたいこと | package | 関数 / 入口 | 状態 |
+| Goal | Package | Function / Entry | Status |
 |---|---|---|---|
-| SVG ファイルに書き出す | `hgg-svg` | `saveSVG` (簡単) / `saveSVGWith` (Resolver) / `saveSVGBound` (df) | ✅ 実用 |
-| ブラウザで対話的に描く (Halogen) | `hgg-canvas` (PureScript) | Canvas backend | ✅ 実戦投入中 |
-| 3D を CPU 投影 (SVG/PDF/PNG) | `hgg-3d` | scatter3D / surface3D 等 | ✅ |
-| 3D をブラウザで orbit/zoom | `hgg-canvas` (WebGL2) | `showBrowser` | ✅ |
-| Jupyter (iHaskell) でセルにインライン描画 | `hgg-ihaskell` | `display` (SVG をインライン) | 🧪 Experimental |
-| PDF / PNG に書き出す | `hgg-pdf` / `hgg-rasterific` | ─ | 🚧 placeholder |
+| Write to SVG file | `hgg-svg` | `saveSVG` (simple) / `saveSVGWith` (Resolver) / `saveSVGBound` (df) | ✅ Production-ready |
+| Interactive browser drawing (Halogen) | `hgg-canvas` (PureScript) | Canvas backend | ✅ In active use |
+| 3D with CPU projection (SVG/PDF/PNG) | `hgg-3d` | scatter3D / surface3D etc. | ✅ |
+| 3D in browser with orbit/zoom | `hgg-canvas` (WebGL2) | `showBrowser` | ✅ |
+| Jupyter (iHaskell) inline rendering | `hgg-ihaskell` | `display` (SVG inline) | 🧪 Experimental |
+| Write to PDF / PNG | `hgg-pdf` / `hgg-rasterific` | ─ | 🚧 Placeholder |
 
-入口の使い分け (詳細は [api-guide 05 dataframe](./api-guide/05-dataframe.md)):
+Entry point usage (details in [api-guide 05 dataframe](./api-guide/06-dataframe.md)):
 
-- `saveSVG :: FilePath -> VisualSpec -> IO ()` ― Resolver 不要 (= `inline` のみの図)。 **通常はこれ**。
-- `saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()` ― `ColByName` を含む図に `Resolver` を渡す。
-- `saveSVGBound :: FilePath -> BoundPlot -> IO ()` ― DataFrame の `df |>> spec` を保存。
-- 文字列でなく SVG テキストが欲しいときは `renderSVG` / `renderSVGWith`。
+- `saveSVG :: FilePath -> VisualSpec -> IO ()` ─ No Resolver needed (inline only plots). **Usually this**.
+- `saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()` ─ Pass `Resolver` for plots with `ColByName`.
+- `saveSVGBound :: FilePath -> BoundPlot -> IO ()` ─ Save DataFrame `df |>> spec`.
+- For SVG text instead of files, use `renderSVG` / `renderSVGWith`.
 
-## Jupyter (iHaskell) で使う
+## Using in Jupyter (iHaskell)
 
-`hgg-ihaskell` を import すると、 セル評価値の図がそのまま**インライン
-描画**される (matplotlib inline 相当だが、 現状 **SVG のみ**。 PNG/PDF は未対応)。
-描画は SVG backend の `renderSVG` をそのまま使い、 iHaskell の `svg` display
-helper に `Text` を渡すだけの薄い配線で、 `ihaskell` 依存は本 package に隔離して
-ある (core/svg は無依存)。
+Import `hgg-ihaskell` and plot values render **inline** in cells (matplotlib-style, currently **SVG only**; PNG/PDF forthcoming).
+Rendering uses the SVG backend's `renderSVG`, passed to iHaskell's `svg` display helper — minimal wiring, and the `ihaskell` dependency is isolated in this package (core/svg are dependency-free).
 
 ```haskell
 :set -XOverloadedStrings
 import Hgg.Plot.Easy
-import Hgg.Plot.IHaskell (DisplayPlot(..))   -- インスタンス + DisplayPlot
+import Hgg.Plot.IHaskell (DisplayPlot(..))   -- Instance + DisplayPlot
 
--- inline 列だけの図はそのままセル末尾に置けば描画される
+-- Plots with only inline columns can be placed at the end of a cell for rendering
 layer (scatter (inline [0,1,2,3]) (inline [0,1,4,9])) <> title "demo"
 ```
 
-列名参照 (`ColByName`) を含む図は `Resolver` が要るので `DisplayPlot` で包む:
+For plots using column name references (`ColByName`), a `Resolver` is needed, so wrap in `DisplayPlot`:
 
 ```haskell
 import qualified Data.Vector as V
@@ -92,15 +91,12 @@ let spec     = layer (scatter (ColByName "x") (ColByName "y"))
 DisplayPlot (resolver, spec)
 ```
 
-- `DisplayPlot` は df 統合 (spec-2 の `BoundPlot`) が入るまでの**暫定**。 着手時に
-  `BoundPlot` へ寄せる。
-- 動く notebook = `design/ihaskell/demo.ipynb`。
-  各セルが出す図は `cabal run ihaskell-demo-svg` で SVG として書き出せる (同一描画経路)。
-- GHC 9.6.7 で `ihaskell-0.13.0.0` の build 実測済。 kernel 環境にこれらの package を
-  登録しておくこと。
+- `DisplayPlot` is **provisional** until DataFrame integration (spec-2's `BoundPlot`) is complete.
+- Working notebook = `design/ihaskell/demo.ipynb`. Run `cabal run ihaskell-demo-svg` to write cells' plots as SVG (same rendering path).
+- Tested build: GHC 9.6.7 with `ihaskell-0.13.0.0`. Register these packages in your kernel environment.
 
-## 次に読む
+## Next Steps
 
-- API リファレンス (層・mark・装飾・backend・df・analyze・3D) → **[api-guide/](./api-guide/README.md)**
-- 何が描けるか一覧 → **[modules.md](./modules.md)**
-- matplotlib / ggplot からの移行 → **[comparison.md](./comparison.md)**
+- API Reference (layers, marks, decoration, backends, dataframe, analyze, 3D) → **[api-guide/](./api-guide/README.md)**
+- What's drawable checklist → **[modules.md](./modules.md)**
+- Migrating from matplotlib / ggplot → **[comparison.md](./comparison.md)**

@@ -14,7 +14,13 @@
 {-# LANGUAGE TypeApplications  #-}
 module Main (main) where
 
-import qualified DataFrame           as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Expression        as DF
+import qualified DataFrame.Operations.Aggregation     as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Permutation     as DF
+import qualified DataFrame.Operations.Subset          as DF
+import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Functions as F
 import           DataFrame.Operators ((|>), (.<))
 

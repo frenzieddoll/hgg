@@ -26,7 +26,16 @@ import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Data.Vector               as V
 import qualified Data.Map.Strict           as M
-import qualified DataFrame                 as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Internal.Schema            as DF
+import qualified DataFrame.Operators                  as DF
+import qualified DataFrame.Operations.Aggregation     as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Permutation     as DF
+import qualified DataFrame.Operations.Subset          as DF
+import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Functions       as F
 import           DataFrame.Operators       ((|>))
@@ -220,9 +229,9 @@ main = do
   -- R: ggplot(table1, aes(year, cases)) + geom_line(aes(group=country)) +
   --      geom_point(aes(color=country, shape=country)) + scale_x_continuous(breaks=c(1999,2000))
   saveSVGBound "tb-cases.svg" $
-    table1 |>> layer (line "year" "cases" <> color "country")
+    table1 |>> theme ThemeGrey <> layer (line "year" "cases" <> colorBy "country")
            <> layer (scatter "year" "cases"
-                       <> color "country" <> shapeBy "country" <> size 7)
+                       <> colorBy "country" <> shapeBy "country")
            <> palette okabeIto
            <> xAxis (axisBreaksAt [1999, 2000])   -- scale_x_continuous(breaks=c(1999,2000))
            <> title "結核の罹患者数 (年次・国別)"
@@ -244,8 +253,8 @@ main = do
   -- === 図2 (R4DS): billboard の順位推移 (曲ごとの折れ線・1 位を上に) ===
   -- R: ggplot(bbLong, aes(week, rank, group=track)) + geom_line(alpha=1/4) + scale_y_reverse()
   saveSVGBound "billboard-ranks.svg" $
-    bbLong |>> layer (line "week" "rank" <> linetypeBy "track" <> linetype LtSolid
-                        <> colorStatic "#88888855")
+    bbLong |>> theme ThemeGrey <> layer (line "week" "rank" <> linetypeBy "track" <> linetype LtSolid
+                        <> color (fromHex "#888888") <> alpha (85/255))
            <> reverseY        -- scale_y_reverse: rank 1 を上に
            <> title "billboard の順位推移 (曲ごと・2000 年)"
            <> xLabel "week (chart 入り後の週)" <> yLabel "rank (1 位が上)"

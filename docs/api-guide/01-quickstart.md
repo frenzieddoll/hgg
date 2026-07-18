@@ -1,36 +1,42 @@
-# クイックスタート ─ 30 秒で 1 枚 + 書き方の 3 層
+# Quickstart — 30 seconds to a plot + 3 API layers
 
-> [📚 索引](README.md) ｜ **01 quickstart** ｜ [02 layers](02-layers.md) ｜ [03 decoration](03-decoration.md) ｜ [04 backends](04-backends.md) ｜ [05 dataframe](05-dataframe.md) ｜ [06 analyze](06-analyze.md) ｜ [07 3d](07-3d.md) ｜ [08 appendix](08-appendix.md)
+> 🌐 **English** | [日本語](01-quickstart.ja.md)
 
-hgg で 1 枚出すための最短経路と、 **書き方の 3 層** (Easy / Grammar / DataFrame) を示す。
-設定の一覧は [02 layers](02-layers.md) / [03 decoration](03-decoration.md)、 backend の選択は
-[04 backends](04-backends.md)、 列名で書く DataFrame 連携は [05 dataframe](05-dataframe.md)、
-回帰・GLM・HBM を描くなら [06 analyze](06-analyze.md) が辞書になる。
+> [📚 Index](README.md) | **01 quickstart** | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
 
-> **2 つの黄金律 (これだけ先に覚える)**
+Fastest path to one plot in hgg, plus the **3 API layers** (Easy / Grammar / DataFrame). 
+Settings reference: [02 layers](02-layers.md) / [03 encoding & scale](03-encoding-scale.md) / [04 decoration](04-decoration.md).
+Backend choice: [05 backends](05-backends.md).
+DataFrame column-name binding: [06 dataframe](06-dataframe.md).
+Regression/GLM/HBM plotting: [07 analyze](07-analyze.md) is your dictionary.
+
+Page structure:
+**[30 seconds (Quick layer)](#quickstart-30s)** | **[Easy layer](#easy)** | **[Grammar layer](#grammar)**
+
+> **Two golden rules (memorize these)**
 >
-> 1. 図は **`purePlot <> layer (mark …) <> 設定 …`** の形。 `<>` で部品を足していく
->    (`mark` = `scatter`/`line`/`bar`/… の描画種。 型は `MarkKind`)。
-> 2. `<>` には **2 種類**ある。 mark・見た目は **`Layer`** を返し `layer (…)` の**中**で `<>`、
->    タイトル・テーマ・facet 等は **`VisualSpec`** を返し `layer (…)` の**外**で `<>`。
->    → 型を見れば置き場所が分かる ([重畳の仕組み](03-decoration.md#overlay) で詳説)。
+> 1. Plots follow **`purePlot <> layer (mark …) <> settings …`**. Add components with `<>`.
+>    (`mark` = plot type like `scatter`/`line`/`bar`…; type is `MarkKind`).
+> 2. `<>` has **two kinds**: marks/appearance return **`Layer`** and compose **inside** `layer (…)`,
+>    titles/theme/facet return **`VisualSpec`** and compose **outside**.
+>    → Type tells you placement ([layering rules](04-decoration.md#overlay) explained later).
 
-| 層 | モジュール | 立ち位置 |
+| Layer | Module | Role |
 |---|---|---|
-| **0. Quick** | `Hgg.Plot.Quick` | `IO` ワンショット。 `quickScatter "out.svg" xs ys` |
-| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` 直渡し + `overlay` 既定 |
-| **2. Grammar** | `Hgg.Plot.Spec` | ggplot 同型の channel + `<>` 合成 (主役) |
-| **3. Typed** | `Hgg.Plot.Spec` + `Resolver` | 型付き channel / scale / Resolver で encoding 制御 |
-| **4. Low-level** | `Hgg.Plot.Render` | `Primitive` 直書き (backend 自作・特殊描画) |
+| **0. Quick** | `Hgg.Plot.Quick` | `IO` one-shot. `quickScatter "out.svg" xs ys` |
+| **1. Easy** | `Hgg.Plot.Easy` | `[Double]` direct pass + `overlay` default |
+| **2. Grammar** | `Hgg.Plot.Spec` | ggplot-like channels + `<>` composition (primary) |
+| **3. Typed** | `Hgg.Plot.Spec` + `Resolver` | Typed channels / scales / Resolver-controlled encoding |
+| **4. Low-level** | `Hgg.Plot.Render` | Direct `Primitive` (custom backends, special rendering) |
 
-> `Easy` は `Spec` を丸ごと再 export + 値直渡しヘルパ。 `Quick` は `Easy` を再 export +
-> `IO` 保存ヘルパ。 **どれを import しても下位層の全機能が使える**。
+> `Easy` re-exports `Spec` + value-passing helpers. `Quick` re-exports `Easy` + `IO` save helpers.
+> **Any import gives you all lower-layer features**.
 
 ---
 
-## 30 秒で 1 枚 (Quick 層) {#quickstart-30s}
+## 30 seconds to a plot (Quick layer) {#quickstart-30s}
 
-データ以外を何も決めずに 1 枚出す。 `hgg-svg` の `Hgg.Plot.Quick`。
+One plot, data only, zero configuration. Uses `hgg-svg`'s `Hgg.Plot.Quick`.
 
 ```haskell
 import Hgg.Plot.Quick
@@ -43,39 +49,40 @@ main = do
   quickHist    "hist.svg"    [1,1,2,3,3,3,4,5,5]
 ```
 
-`quickScatter / quickLine / quickBar :: FilePath -> [Double] -> [Double] -> IO ()`、
-`quickHist :: FilePath -> [Double] -> IO ()`。 複数 geom を 1 枚にするなら
-`quickPlot :: FilePath -> [Layer] -> IO ()`。
+`quickScatter / quickLine / quickBar :: FilePath -> [Double] -> [Double] -> IO ()`,
+`quickHist :: FilePath -> [Double] -> IO ()`. Multiple geoms on one plot:
+`quickPlot :: FilePath -> [Layer] -> IO ()`.
 
 ---
 
-## Easy 層 ─ 値を直接渡す {#easy}
+## Easy layer — pass values directly {#easy}
 
-`inline` を書かず `[Double]` を直接渡し、 重畳は `overlay` で包む。 飾りは `<>` で足す。
+Pass `[Double]` without `inline`, wrap overlays in `overlay`, add decoration with `<>`.
 
 ```haskell
 import Hgg.Plot.Easy
 import Hgg.Plot.Backend.SVG (saveSVG)
+import Hgg.Plot.Unit (px, (*~))   -- px sizing (default unit mm, omit for 6.5×4in)
 
 main :: IO ()
 main = saveSVG "easy.svg" $
      overlay [ points [1,2,3,4,5] [1,4,9,16,25] ]
   <> title "y = x²" <> xLabel "x" <> yLabel "y"
-  <> width 600 <> height 400
+  <> widthUnit (600 *~ px) <> heightUnit (400 *~ px)
 ```
 
-![Easy 層の出力](images/lesson1-easy.svg)
+![Easy layer output](images/lesson1-easy.svg)
 
-値直渡しヘルパ: `points` / `lineXY` / `bars` / `hist` / `plotY` (index を x に取る)。
-重畳は `overlay [layer群]` (= `plots` も同義)。
-→ 動く例: `cabal run tutorial-01-easy`
+Value-passing helpers: `points` / `lineXY` / `bars` / `hist` / `plotY` (index as x).
+Overlay: `overlay [layer list]` (alias `plots`).
+→ Live example: `cabal run tutorial-01-easy`
 
 ---
 
-## Grammar ─ ggplot 文法で書く {#grammar}
+## Grammar — write ggplot-style {#grammar}
 
-`purePlot` (空の図) に `layer (mark …)` を足し、 channel は `inline` (数値) /
-`inlineCat` (カテゴリ) で作る。 aesthetic は **mark の中で** `<>`。
+Start with `purePlot` (empty plot), add `layer (mark …)`, build channels with `inline` (numeric) /
+`inlineCat` (categorical). Aesthetics compose **inside** the mark with `<>`.
 
 ```haskell
 import Hgg.Plot.Spec
@@ -89,15 +96,14 @@ main = do
       gs = inlineCat (concatMap (replicate 4) (["alpha","beta"] :: [Text]))
   saveSVG "grammar.svg" $
        purePlot
-    <> layer (scatter xs ys <> color gs <> size 6)   -- ← aesthetic は layer の中
-    <> scaleColorManual [("alpha","#1B9E77"), ("beta","#D95F02")]  -- ← scale は外
+    <> layer (scatter xs ys <> colorBy gs <> size 6)   -- ← aesthetics inside layer
+    <> scaleColorManual [("alpha","#1B9E77"), ("beta","#D95F02")]  -- ← scale outside
     <> legend
     <> title "scale_color_manual"
 ```
 
-![Grammar の出力](images/lesson2-grammar.svg)
+![Grammar output](images/lesson2-grammar.svg)
 
-ggplot2 でいう `ggplot(d, aes(x,y,color=g)) + geom_point(size=6) +
-scale_color_manual(...)`。
-→ 動く例: `cabal run tutorial-02-grammar`
-
+Equivalent to ggplot2: `ggplot(d, aes(x,y,color=g)) + geom_point(size=6) +
+scale_color_manual(...)`.
+→ Live example: `cabal run tutorial-02-grammar`

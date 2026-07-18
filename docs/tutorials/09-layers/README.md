@@ -1,179 +1,183 @@
-# 09. 層 (R4DS 2e Ch.9 "Layers")
+# 09. Layers
 
-> 一次情報: **R for Data Science 2e, Ch.9 "Layers"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.9 "Layers"**
 > <https://r4ds.hadley.nz/layers>
-> データ: **mpg**(234 台。 `../_data/mpg.csv`)と **diamonds**(53,940 個。
-> `../_data/_raw/diamonds.csv`)。 いずれも ggplot2 同梱。
+> Data: **mpg** (234 vehicles, `../_data/mpg.csv`) and **diamonds** (53,940 observations,
+> `../_data/_raw/diamonds.csv`). Both included with ggplot2.
 
-R4DS 第 9 章 "Layers" が **本文で表示する図を、 順番どおり・全数(32 枚)** 再現します。
-本章は Visualize パートの中核で、 layered grammar of graphics を深掘りします
-(aesthetic mappings / geometric objects / facets / statistical transformations /
-position adjustments / coordinate systems)。 以下は R4DS の流れに沿って
-**解説 → コード → 図** を並べた walkthrough です。 完全な実行コードは
-[`Layers.hs`](Layers.hs)。
+Chapter 9 "Layers" of R4DS **reproduces all figures (32 total) shown in the text, in order**. This
+chapter is central to the Visualize part, diving deep into layered grammar of graphics (aesthetic
+mappings, geometric objects, facets, statistical transformations, position adjustments, coordinate
+systems). Below follows R4DS's flow with **explanation → code → figure** walkthroughs. Complete
+execution code is in [`Layers.hs`](Layers.hs).
 
 ```sh
 cd docs/tutorials/09-layers
-cabal run tut-09-layers    # 01-aes-color.svg .. 32-coord-polar.svg を生成
+cabal run tut-09-layers    # generates 01-aes-color.svg .. 32-coord-polar.svg
 ```
 
-## 忠実性メモ(R4DS との差異を実測して honest 記録)
+## Fidelity note (measuring differences from R4DS and recording honestly)
 
-hgg は ggplot2 のクローンではないので、 いくつかの図は R と完全一致しません。
-**近似・省略・置換でごまかさず**、 差異を実測して以下に明記します(各図の注にも再掲)。
+hgg is not a ggplot2 clone, so some figures won't exactly match R. We **record measured differences
+honestly, without approximation or omission**, noting them below (and repeating in each figure's
+note):
 
-- **geom_smooth**: R 既定は loess(n<1000)。 hgg の `statSmooth` は **B-spline**
-  平滑(knot 数 6)。 曲線形状はおおむね一致しますが loess とビット一致はしません。
-- **stat の群分割は color aesthetic のみ**で駆動します(`Bridge.Stat.groupColumn` が
-  `ColorByCol` だけを判定)。 R の「`linetype=drv` で 3 本」「`group=drv` で灰色 3 本」は
-  未対応のため、 群分割した平滑は **color 版で代表**させます(§9.3)。
-- **shape**: R の 26 種 pch 参照図(`fig-shapes`)は R 内部仕様。 hgg の `MarkShape`
-  は **8 種**(circle/square/triangle/diamond/cross/spade/heart/club)なので、 使える 8 種の
-  一覧図に置換します(§9.2)。
-- **alpha を変数にマップする aesthetic は未対応**(R も discrete への alpha は非推奨)。
-  §9.2 の size/alpha 対の図は size 版だけを示します。
-- **bar の color(枠)と fill(面)は分離しません**(`color` = 面色)。 §9.6 の
-  「color vs fill」 は 1 図に集約します。
-- **地図**(`map_data("nz")` + `geom_polygon` + `coord_quickmap`)は未実装です。 R4DS 自身
-  「本書では地図を扱わない」 と断る節なので、 概念のみ対応表で触れます(§9.7)。
-- **カテゴリ順**は ggplot factor 既定 = アルファベット順。 ordered factor(cut / clarity)は
-  `scaleXDiscreteLimits` / `colorCats` で水準順を明示します。
+- **geom_smooth**: R defaults to loess (n<1000). hgg's `statSmooth` uses **B-spline smoothing**
+  (knot count 6). Curve shapes roughly agree, but not bit-identical to loess.
+- **Stat grouping drives off color aesthetic only** (`Bridge.Stat.groupColumn` checks only
+  `ColorByCol`). R's "`linetype=drv` for 3 lines" and "`group=drv` for 3 grey lines" are unsupported;
+  grouped smooths are **represented by the color version** (§9.3).
+- **shape**: R's 26 pch reference figure (`fig-shapes`) is R-internal. hgg's `MarkShape` has
+  **8 types** (circle/square/triangle/diamond/cross/spade/heart/club), so we substitute a list of
+  the 8 usable types (§9.2).
+- **Aesthetic mapping alpha to a variable unsupported** (R also discourages alpha for discrete).
+  §9.2's size/alpha pair shows only the size version.
+- **Bar color (stroke) and fill not separated** (`color` = fill color). §9.6's "color vs fill" is
+  consolidated to 1 figure.
+- **Maps** (`map_data("nz")` + `geom_polygon` + `coord_quickmap`) unimplemented. R4DS itself states
+  "this book doesn't address maps", so we touch the concept only in a correspondence table (§9.7).
+- **Category order** defaults to ggplot factor order = alphabetical. Ordered factor (cut / clarity)
+  is made explicit via `scaleXDiscreteLimits` / `colorCats`.
 
 ---
 
 ## 9.2 Aesthetic mappings
 
-`mpg` は車 234 台の燃費データです。 `displ`(排気量)と `hwy`(高速燃費)の関係を、
-カテゴリ変数 `class`(車種)で色分けして見ます。 変数を `aes()` 内のエステティック
-(`color` / `shape` / `size` / `alpha`)にマップすると、 ggplot2 が尺度と凡例を作ります。
+`mpg` is fuel economy data for 234 vehicles. We examine the relationship between `displ` (displacement)
+and `hwy` (highway fuel economy), color-coded by categorical `class` (vehicle class). Mapping variables
+to aesthetics (`color` / `shape` / `size` / `alpha`) inside `aes()` lets ggplot2 create scales and
+legends.
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> color "class" <> size 4 <> alpha 0.9)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "class" <> alpha 0.9)
       <> xLabel "displ" <> yLabel "hwy" <> legendTitle "class"
 ```
 
-![class で色分け](01-aes-color.svg)
+![Color by class](01-aes-color.svg)
 
-`color` を `shape`(形状)に替えると、 各 class が別々のプロット文字になります。 R では
-shape は最大 6 種までで 7 番目(suv)は描かれず警告が出ますが、 **hgg の `MarkShape`
-は 8 種なので 7 class すべてに形状が付きます**(R より多く描ける。 honest 記録)。
-
-```haskell
-mpg |>> layer (scatter "displ" "hwy" <> shapeBy "class" <> size 4 <> alpha 0.9)
-```
-
-![class で形状分け](02-aes-shape.svg)
-
-同様に `size`(点の大きさ)にもマップできます。 順序のないカテゴリを順序エステティックに
-マップするのは、 実在しない順位を示唆するので一般に良くありません(R は警告)。
+Replacing `color` with `shape` makes each class a different plot character. R limits shape to 6 types
+maximum, so the 7th (suv) doesn't render and triggers a warning; **hgg's `MarkShape` has 8 types, so
+all 7 classes get shapes** (rendering more than R. Honest record).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> sizeBy "class" <> alpha 0.6)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> shapeBy "class" <> alpha 0.9)
 ```
 
-![class でサイズ分け](03-aes-size.svg)
+![Shape by class](02-aes-shape.svg)
 
-> **honest 記録**: R はこの後 `aes(alpha = class)`(透明度にマップ)も示しますが、
-> **alpha を変数にマップする aesthetic は hgg 未対応**です(R も discrete への
-> alpha は非推奨)。 順序エステティックにカテゴリをマップする例は上の size 版が担います。
-
-エステティックは **`aes()` の外**(geom 関数の引数)で**値を固定**することもできます。
-このとき色は変数の情報を持たず、 見た目だけを変えます。
+Similarly, `size` (point size) can be mapped. Mapping unordered categories to ordered aesthetics is
+generally unwise, as it implies nonexistent ranking (R warns).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> colorStatic "blue" <> size 4 <> alpha 0.9)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> sizeBy "class" <> alpha 0.6)
 ```
 
-![全点を青に固定](04-aes-blue.svg)
+![Size by class](03-aes-size.svg)
 
-> **honest 記録 (fig-shapes)**: R はここで 26 種の番号付き shape(pch 0–25)の参照図を
-> 示します。 これは R 内部の pch 体系の解説で、 hgg の `MarkShape` は 8 種です。
-> 使える 8 種を一覧にしました(形状は `shapeMapEntry` で名前に固定)。
+> **Honest record**: R then shows `aes(alpha = class)` (transparency mapped), but **mapping alpha to
+> a variable is unsupported in hgg** (R also discourages alpha for discrete). The size version above
+> handles the example of mapping unordered categories to ordered aesthetics.
 
-![hgg の 8 shapes](05-shapes.svg)
+Aesthetics can also be **fixed to a value** **outside `aes()`** (as geom function arguments). Color
+then carries no variable information, just visual change.
+
+```haskell
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> color (fromHex "#0000ff") <> alpha 0.9)
+```
+
+![All points fixed to blue](04-aes-blue.svg)
+
+> **Honest record (fig-shapes)**: R shows a reference figure of 26 numbered shapes (pch 0–25), which
+> explains R's internal pch system. hgg's `MarkShape` has 8 types. We list the 8 usable types
+> (shapes are fixed by name via `shapeMapEntry`).
+
+![hgg's 8 shapes](05-shapes.svg)
 
 ---
 
 ## 9.3 Geometric objects
 
-同じ x・y・データでも、 **geom(幾何オブジェクト)**を変えると見え方が変わります。
-点(`geom_point`)と平滑曲線(`geom_smooth`)を比べます。
+Even with the same x, y, and data, changing **geom (geometric object)** changes appearance. We compare
+points (`geom_point`) and smooth curves (`geom_smooth`).
 
 ```haskell
--- 点
-mpg |>> layer (scatter "displ" "hwy" <> size 4 <> alpha 0.9)
--- 平滑 (信頼帯つき)
-mpg |>> layer (statSmoothCI "displ" "hwy" 6 <> colorStatic "#3366FF" <> stroke 2)
+-- points
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
+-- smooth (with confidence band)
+mpg |>> theme ThemeGrey <> layer (statSmoothCI "displ" "hwy" 6 <> color (fromHex "#3366FF"))
 ```
 
 ![geom_point](06-geom-point.svg)
 ![geom_smooth](07-geom-smooth.svg)
 
-> **honest 記録**: R の `geom_smooth` 既定は loess。 hgg の `statSmooth` は
-> **B-spline**(knot 6)なので、 端での曲がり方が loess と少し異なります。
+> **Honest record**: R's `geom_smooth` default is loess. hgg's `statSmooth` uses **B-spline**
+> (knot 6), so curvature at the ends differs slightly from loess.
 
-平滑曲線は群ごとに分けられます。 R は `linetype=drv` で線種を変え 3 本に分けますが、
-**hgg の stat 群分割は color aesthetic で駆動**するので、 `color "drv"` で 3 本に
-分けます(色で区別。 honest 記録)。
-
-```haskell
-mpg |>> layer (statSmoothCI "displ" "hwy" 6 <> color "drv" <> stroke 2)
-```
-
-![drv で 3 本の平滑](08-smooth-color-drv.svg)
-
-geom を**重ねる**と、 1 つのグラフに複数の層を置けます。 層ごとに局所マッピングを
-持てるのが grammar of graphics の要です。 点と平滑を両方 `drv` で色分けします
-(R は点=color・平滑=linetype。 ここは両方 color)。
+Smooth curves can be grouped. R changes line type with `linetype=drv` for 3 lines; **hgg's stat
+grouping drives off the color aesthetic**, so we use `colorBy "drv"` for 3 lines (distinguished by
+color. Honest record).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> color "drv" <> size 4 <> alpha 0.9)
-      <> layer (statSmoothCI "displ" "hwy" 6 <> color "drv" <> stroke 2)
+mpg |>> theme ThemeGrey <> layer (statSmoothCI "displ" "hwy" 6 <> colorBy "drv")
 ```
 
-![点と平滑を drv で重畳](09-point-smooth-drv.svg)
+![3 smooth curves by drv](08-smooth-color-drv.svg)
 
-局所マッピングの典型例: 点だけを `class` で色分けし、 平滑は**全体で 1 本**にします。
-`geom_point` のマッピングはその層だけに効き、 `geom_smooth` には伝わりません。
+**Layering** geoms lets one plot hold multiple layers. Having local mapping per layer is key to grammar
+of graphics. We color both points and smooths by `drv` (R uses points=color, smooth=linetype; we use
+color for both).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> color "class" <> size 4 <> alpha 0.9)
-      <> layer (statSmoothCI "displ" "hwy" 6 <> colorStatic "#3366FF" <> stroke 2)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "drv" <> alpha 0.9)
+      <> layer (statSmoothCI "displ" "hwy" 6 <> colorBy "drv")
 ```
 
-![点=class・平滑=全体](10-point-class-smooth.svg)
+![Points and smooth overlaid by drv](09-point-smooth-drv.svg)
 
-層ごとに**別データ**も使えます。 全点を描いた上に、 2 人乗り(`class == "2seater"`)だけを
-赤点と赤い中抜き円で強調します(局所 `data` 引数の相当)。
+Classic local mapping example: color points by `class`, keep smooth as **single line for all data**.
+`geom_point` mapping affects only that layer; `geom_smooth` doesn't receive it.
+
+```haskell
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> colorBy "class" <> alpha 0.9)
+      <> layer (statSmoothCI "displ" "hwy" 6 <> color (fromHex "#3366FF"))
+```
+
+![Points=class, smooth=overall](10-point-class-smooth.svg)
+
+Layers can use **different data**. Plot all points, then highlight only 2-seaters (`class ==
+"2seater"`) with red points and red hollow circles (equivalent to local `data` argument).
 
 ```haskell
 let twoSeater = mpg |> DF.filterBy (== "2seater") (F.col @Text "class")
-mpg |>> layer (scatter "displ" "hwy" <> size 4 <> alpha 0.9)
-      <> layer (scatter (inline displ2) (inline hwy2) <> colorStatic "red" <> size 4)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
+      <> layer (scatter (inline displ2) (inline hwy2) <> color (fromHex "#ff0000"))
       <> layer (scatter (inline displ2) (inline hwy2)
-                 <> shapeBy (inlineCat circles) <> colorStatic "red" <> size 7)
+                 <> color (fromHex "#ff0000") <> hollow <> size 9 <> stroke 1.2)
 ```
 
-![2seater を強調](11-2seater.svg)
+![2seater highlighted](11-2seater.svg)
 
-geom を変えると分布の別の側面が見えます。 `hwy` の分布を histogram / density / boxplot で。
+Changing geoms reveals different distribution aspects. View `hwy` distribution via histogram / density
+/ boxplot.
 
 ```haskell
-mpg |>> layer (histogram "hwy" <> binWidth 2)   -- 二峰性・右裾
-mpg |>> layer (density "hwy")
-mpg |>> layer (boxplot "hwy")                    -- 外れ値 2 つ
+mpg |>> theme ThemeGrey <> layer (histogram "hwy" <> binWidth 2)   -- bimodal, right tail
+mpg |>> theme ThemeGrey <> layer (density "hwy")
+mpg |>> theme ThemeGrey <> layer (boxplot "hwy")                    -- 2 outliers
 ```
 
 ![histogram](12-histogram.svg)
 ![density](13-density.svg)
 ![boxplot](14-boxplot.svg)
 
-拡張パッケージの geom も使えます。 R は **ggridges** の `geom_density_ridges` で、
-カテゴリ別の density を縦に積みます。 hgg は `ridge` で同等です
-(同じ `drv` を `y` / `fill` / `color` にマップし、 `alpha 0.5` で半透明に)。
+Extension package geoms also work. R uses **ggridges**' `geom_density_ridges` to stack densities by
+category vertically. hgg's `ridge` is equivalent (mapping same `drv` to `y` / `fill` / `color`, with
+`alpha 0.5` for transparency).
 
 ```haskell
-mpg |>> layer (ridge "hwy" "drv" <> color "drv" <> alpha 0.5) <> legendOff
+mpg |>> theme ThemeGrey <> layer (ridge "hwy" <> colorBy "drv" <> alpha 0.5) <> legendOff
 ```
 
 ![ridgeline plot](15-ridges.svg)
@@ -182,31 +186,31 @@ mpg |>> layer (ridge "hwy" "drv" <> color "drv" <> alpha 0.5) <> legendOff
 
 ## 9.4 Facets
 
-**facet** はカテゴリ変数でプロットを小さなサブプロットに分割します。 `facet_wrap(~cyl)` は
-1 変数で折り返します(R は `cyl` を離散ラベル "4".."8" で表示。 ここも `cyl` を Text 化)。
+**Facets** split a plot into small subplots by categorical variable. `facet_wrap(~cyl)` wraps by one
+variable (R displays `cyl` as discrete labels "4".."8"; we convert `cyl` to Text too).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
       <> facetWrap "cyl_f" 2
 ```
 
 ![facet_wrap(~cyl)](16-facet-wrap-cyl.svg)
 
-2 変数の組み合わせには `facet_grid(rows ~ cols)`。 行=`drv`・列=`cyl` の 2 次元 grid に
-なります(観測のない組は空セル: 5 気筒×4WD、 4/5 気筒×FF 等)。
+For two variables, `facet_grid(rows ~ cols)` creates a 2D grid: rows=`drv`, columns=`cyl` (empty cells
+for unobserved combinations: 5-cylinder×4WD, 4/5-cylinder×FF, etc.).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
       <> facetGrid "drv" "cyl_f"
 ```
 
 ![facet_grid(drv ~ cyl)](17-facet-grid-drv-cyl.svg)
 
-既定では全 facet が同じスケールを共有します。 `scales="free"` で行ごとに y・列ごとに x の
-スケールを自由化できます(`facetScales FacetFree`)。
+By default, all facets share the same scale. `scales="free"` frees y per row and x per column
+(`facetScales FacetFree`).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> alpha 0.9)
       <> facetGrid "drv" "cyl_f" <> facetScales FacetFree
 ```
 
@@ -216,54 +220,52 @@ mpg |>> layer (scatter "displ" "hwy" <> size 3 <> alpha 0.9)
 
 ## 9.5 Statistical transformations
 
-棒グラフは生データでなく**新しい値を計算**して描きます。 `geom_bar(aes(x=cut))` は
-`diamonds` の `cut` ごとの**件数**(`count`)を計算します。 hgg の `bar` は
-集計済の y を高さに取るので、 `geom_bar` の `stat_count` 相当を `groupBy + countAll` で
-先に行います(値は不変。 Fair 1610 .. Ideal 21551)。
+Bar plots don't render raw data—they **compute new values**. `geom_bar(aes(x=cut))` computes `count`
+per `cut` in `diamonds`. hgg's `bar` takes aggregated y as height, so we first do the `stat_count`
+equivalent via `groupBy + countAll` (values unchanged: Fair 1610 .. Ideal 21551).
 
 ```haskell
 let byCut = diamonds |> DF.groupBy ["cut"] |> DF.aggregate [ F.countAll `F.as` "n" ]
-byCut |>> layer (bar "cut" "n") <> scaleXDiscreteLimits cutOrder
+byCut |>> theme ThemeGrey <> layer (bar "cut" "n") <> scaleXDiscreteLimits cutOrder
 ```
 
-![cut ごとの件数](19-bar-cut.svg)
+![Count per cut](19-bar-cut.svg)
 
-「生データ → 集計(stat)→ プロット」 の流れを R4DS は次の図で説明します(R4DS 原典の
-説明図をそのまま引用):
+R4DS explains the raw data → stat(aggregate) → plot flow with this figure (quoting R4DS original):
 
-![stat の仕組み](images/visualization-stat-bar.png)
+![stat mechanism](images/visualization-stat-bar.png)
 
-**stat を明示する 3 つの理由**:
+**Three reasons to make stat explicit**:
 
-1. 既定の stat を上書きする。 R は `count(cut)` で集計してから `geom_bar(stat="identity")` で
-   生の `n` を棒高にします。 hgg の `bar` は元々「集計済 y を高さに」 取るので、
-   同じ集計を `y=n` で描けば等価です。
+1. Override default stat. R counts with `count(cut)` then uses `geom_bar(stat="identity")` to render
+   raw `n` as height. hgg's `bar` takes aggregated y as-is, so plotting the same aggregation with
+   `y=n` is equivalent.
 
    ```haskell
-   byCut |>> layer (bar "cut" "n") <> scaleXDiscreteLimits cutOrder
+   byCut |>> theme ThemeGrey <> layer (bar "cut" "n") <> scaleXDiscreteLimits cutOrder
    ```
 
    ![stat=identity](20-bar-identity.svg)
 
-2. 計算変数→エステティックの既定マッピングを上書きする。 件数でなく**割合**
-   (`after_stat(prop)`)を棒高にします。 `prop = n / 総数` を派生列で作ります。
+2. Override default mapping of computed variable to aesthetic. Plot **proportion** (`after_stat(prop)`)
+   as height, not count. Create `prop = n / total` as a derived column.
 
    ```haskell
    let byProp = byCut |> DF.derive "prop"
                   (F.lift (\k -> fromIntegral k / total) (F.col @Int "n"))
-   byProp |>> layer (bar "cut" "prop") <> scaleXDiscreteLimits cutOrder
+   byProp |>> theme ThemeGrey <> layer (bar "cut" "prop") <> scaleXDiscreteLimits cutOrder
    ```
 
-   ![割合](21-bar-prop.svg)
+   ![proportion](21-bar-prop.svg)
 
-3. 統計変換を前面に出す。 R の `stat_summary` は cut ごとに `depth` の最小〜最大の縦線と
-   中央値の点を描きます。 dataframe には median 集約がないので、 cut ごとに `depth` を
-   抽出して Haskell で厳密計算し、 `lineRange`(縦線)+ `scatter`(中央値点)で再現します
-   (`lineRange` は連続 x を取るので cut を 0..4 の数値位置にして目盛ラベルを差し替え)。
+3. Front-and-center statistical transform. R's `stat_summary` draws min–max vertical lines and median
+   point per cut for `depth`. dataframe lacks median aggregation, so we extract `depth` per cut,
+   compute exactly in Haskell, and recreate with `lineRange` (lines) + `scatter` (median points)
+   (`lineRange` takes continuous x, so we position cut at 0..4 numeric positions and relabel ticks).
 
    ```haskell
    let depthStats = [ (minimum ds, median ds, maximum ds) | c <- cutOrder, let ds = ... ]
-   DF.empty |>> layer (lineRange (inline cutXs) (inline mids) (inline halves) <> stroke 1.5)
+   DF.empty |>> theme ThemeGrey <> layer (lineRange (inline cutXs) (inline mids) (inline halves) <> stroke 1.5)
             <> layer (scatter (inline cutXs) (inline meds) <> size 7)
             <> xAxis (axisBreaksLabeled (zip cutXs cutOrder))
    ```
@@ -274,68 +276,68 @@ byCut |>> layer (bar "cut" "n") <> scaleXDiscreteLimits cutOrder
 
 ## 9.6 Position adjustments
 
-棒グラフは `color`(枠)/ `fill`(面)で色を付けられます。 **hgg は枠と面を
-分離せず `color` = 面色**なので、 R の `color=drv` と `fill=drv` は同一図になります
-(honest 記録)。 ここは面色版を示します。
+Bars get color via `color` (stroke) / `fill` (fill). **hgg doesn't separate stroke and fill**
+(`color` = fill color), so R's `color=drv` and `fill=drv` produce the same figure (honest record).
+We show the fill-color version.
 
 ```haskell
 let byDrv = mpg |> DF.groupBy ["drv"] |> DF.aggregate [ F.countAll `F.as` "n" ]
-byDrv |>> layer (bar "drv" "n" <> color "drv") <> legendOff
+byDrv |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "drv") <> legendOff
 ```
 
-![drv を色分け](23-bar-fill-drv.svg)
+![Color by drv](23-bar-fill-drv.svg)
 
-`fill` を別変数(`class`)にマップすると、 棒が自動で**積み上がり**ます(既定 = stack)。
-各色の矩形が `drv` × `class` の組み合わせを表します。
+Mapping `fill` to another variable (`class`) makes bars **stack automatically** (default = stack).
+Each colored rectangle represents a `drv` × `class` combination.
 
 ```haskell
 let byDrvClass = mpg |> DF.groupBy ["drv","class"] |> DF.aggregate [ F.countAll `F.as` "n" ]
-byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosStack)
+byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosStack)
 ```
 
-![stack (既定)](24-bar-stack-class.svg)
+![stack (default)](24-bar-stack-class.svg)
 
-積み上げ以外に `"identity"` / `"fill"` / `"dodge"` の 3 つの `position` があります。
+Besides stacking, there are 3 other `position` options: `"identity"` / `"fill"` / `"dodge"`.
 
-- `position = "identity"` は各オブジェクトをそのままの位置に置きます。 棒では重なるので、
-  `alpha` を下げて半透明にして重なりを見せます。
+- `position = "identity"` places each object at its exact position. Bars overlap, so we lower `alpha`
+  to transparent to show overlap.
 
   ```haskell
-  byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosIdentity <> alpha 0.2)
+  byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosIdentity <> alpha 0.2)
   ```
 
-  ![identity (半透明)](25-bar-identity.svg)
+  ![identity (transparent)](25-bar-identity.svg)
 
-- `position = "fill"` は各積み上げを高さ 1 に揃え、 割合を比較しやすくします。
+- `position = "fill"` normalizes each stack to height 1, making proportions easier to compare.
 
   ```haskell
-  byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosFill)
+  byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosFill)
   ```
 
   ![fill](26-bar-fill.svg)
 
-- `position = "dodge"` は重なるオブジェクトを横に並べ、 個別値を比較しやすくします。
+- `position = "dodge"` places overlapping objects side-by-side, easing individual value comparison.
 
   ```haskell
-  byDrvClass |>> layer (bar "drv" "n" <> color "class" <> position PosDodge)
+  byDrvClass |>> theme ThemeGrey <> layer (bar "drv" "n" <> colorBy "class" <> position PosDodge)
   ```
 
   ![dodge](27-bar-dodge.svg)
 
-散布図には `"jitter"` が有効です。 最初の散布図は 234 観測のうち 126 点しか見えません
-(値が丸められ点が重なる = **overplotting**)。
+For scatter plots, `"jitter"` is effective. The first scatter shows only 126 of 234 observations
+(values are rounded, points overlap = **overplotting**).
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> size 4)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy")
 ```
 
 ![overplotting](28-scatter-overplot.svg)
 
-`position = "jitter"` は各点に微小ノイズを足して重なりを散らします(`jitterX`/`jitterY`)。
-小さなスケールでは不正確になりますが、 大きなスケールでは分布がよく見えます。
+`position = "jitter"` adds tiny noise to each point, scattering overlaps (`jitterX`/`jitterY`).
+Small scales lose accuracy, but large scales reveal distribution well.
 
 ```haskell
-mpg |>> layer (scatter "displ" "hwy" <> size 4 <> jitterX 0.02 <> jitterY 0.02)
+mpg |>> theme ThemeGrey <> layer (scatter "displ" "hwy" <> jitterX 0.02 <> jitterY 0.02)
 ```
 
 ![jitter](29-jitter.svg)
@@ -344,56 +346,58 @@ mpg |>> layer (scatter "displ" "hwy" <> size 4 <> jitterX 0.02 <> jitterY 0.02)
 
 ## 9.7 Coordinate systems
 
-既定の座標系は直交座標(Cartesian)です。 ここでは `clarity`(透明度)の棒グラフを基に
-座標系を変えます。
+The default coordinate system is Cartesian. Here we vary the system starting from a bar plot of
+`clarity` (diamond clarity).
 
 ```haskell
 let byClarity = diamonds |> DF.groupBy ["clarity"] |> DF.aggregate [ F.countAll `F.as` "n" ]
-byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
             <> scaleXDiscreteLimits clarityOrder <> legendOff
 ```
 
-![clarity の棒グラフ](30-bar-clarity.svg)
+![clarity bar plot](30-bar-clarity.svg)
 
-`coord_flip()` は x と y を入れ替え、 横棒にします(`coordFlip`)。
+`coord_flip()` swaps x and y, making horizontal bars (`coordFlip`).
 
 ```haskell
-byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
             <> scaleXDiscreteLimits clarityOrder <> coordFlip <> legendOff
 ```
 
 ![coord_flip](31-coord-flip.svg)
 
-`coord_polar()` は極座標を使い、 棒グラフと **Coxcomb chart** の関係を見せます(`coordPolar`)。
+`coord_polar()` uses polar coordinates, showing the bar plot–**Coxcomb chart** relationship
+(`coordPolar`).
 
 ```haskell
-byClarity |>> layer (bar "clarity" "n" <> color "clarity" <> colorCats clarityOrder)
+byClarity |>> theme ThemeGrey <> layer (bar "clarity" "n" <> colorBy "clarity" <> colorCats clarityOrder)
             <> scaleXDiscreteLimits clarityOrder <> coordPolar <> legendOff
 ```
 
 ![coord_polar (Coxcomb)](32-coord-polar.svg)
 
-> **honest 記録 (地図)**: R はもう 1 つ `coord_quickmap()`(地図のアスペクト比補正)を
-> `map_data("nz")` + `geom_polygon` で示します。 **hgg には polygon geom も地図投影も
-> 未実装**です(R4DS 自身「本書では地図を深入りしない」)。 概念だけ対応表で示します:
+> **Honest record (maps)**: R shows one more, `coord_quickmap()` (aspect ratio correction for maps),
+> with `map_data("nz")` + `geom_polygon`. **hgg lacks both polygon geom and map projection**
+> (R4DS itself states "this book doesn't go deep on maps"). We address the concept only in a
+> correspondence table:
 >
-> | R | 役割 | hgg |
+> | R | Role | hgg |
 > |---|---|---|
-> | `map_data("nz")` | 地図境界データ | 未実装(地理データ取得なし) |
-> | `geom_polygon` | 閉路の塗り | 未実装(将来候補) |
-> | `coord_quickmap()` | 緯度経度のアスペクト比補正 | 未実装 |
+> | `map_data("nz")` | Map boundary data | Unimplemented (no geographic data fetch) |
+> | `geom_polygon` | Closed path fill | Unimplemented (future candidate) |
+> | `coord_quickmap()` | Lat/lon aspect ratio correction | Unimplemented |
 
 ---
 
 ## 9.8 The layered grammar of graphics
 
-grammar of graphics は、 **データ・geom・マッピング・stat・position・座標系・facet・theme**
-の組み合わせで *任意の* プロットを一意に記述できる、 という洞察に基づきます。 生データから
-プロットへ至る流れを R4DS は次の図で説明します(R4DS 原典の説明図をそのまま引用):
+Grammar of graphics rests on the insight that **any** plot can be uniquely described by combining
+**data, geom, mapping, stat, position, coordinate system, facet, theme**. R4DS explains the flow
+from raw data to plot with this figure (quoting R4DS original):
 
 ![grammar of graphics](images/visualization-grammar.png)
 
-テンプレートに position・stat・座標系・facet を加えると、 数十万通りの図を組み立てられます:
+Adding position, stat, coordinate, and facet to the template lets us build tens of thousands of plots:
 
 ```
 ggplot(data = <DATA>) +
@@ -402,13 +406,13 @@ ggplot(data = <DATA>) +
   <FACET_FUNCTION>
 ```
 
-hgg では `layer (mark <> aes... <> position ...) <> coord... <> facet...` を `<>` で
-合成し、 `df |>> spec` でデータに束ねます(本章の各図がその実例)。
+In hgg, we compose `layer (mark <> aes... <> position ...) <> coord... <> facet...` with `<>`, then
+bundle to data via `df |>> spec` (all figures in this chapter exemplify this).
 
 ---
 
-## 関連
+## Related
 
-- 完全コード: [`Layers.hs`](Layers.hs)
-- R4DS 原典: <https://r4ds.hadley.nz/layers>
-- 前章: [`../08-getting-help`](../08-getting-help)(Whole Game の締め)
+- Complete code: [`Layers.hs`](Layers.hs)
+- R4DS original: <https://r4ds.hadley.nz/layers>
+- Previous chapter: [`../08-getting-help`](../08-getting-help) (Whole Game close)

@@ -19,7 +19,15 @@ module Main (main) where
 
 import           Data.Text                (Text)
 import qualified Data.Text                as T
-import qualified DataFrame                as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Internal.Expression        as DF
+import qualified DataFrame.Operations.Aggregation     as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Join            as DF
+import qualified DataFrame.Operations.Permutation     as DF
+import qualified DataFrame.Operations.Subset          as DF
+import qualified DataFrame.Operations.Transformations as DF
 import qualified DataFrame.Functions      as F
 import           DataFrame.Internal.Column (columnTypeString)
 import           DataFrame.Operators      ((|>), (.>), (.==), (.&&), (.||))
@@ -313,8 +321,8 @@ main = do
   sect "batters |> filter(n > 100)  → batters.svg"
   print (DF.dimensions battersBig)
   saveSVGBoundStats "batters.svg" $
-    battersBig |>> layer (scatter "n" "performance" <> colorStatic "#000000" <> size 3 <> alpha 0.1)
-               <> layer (statSmooth "n" "performance" 8 <> colorStatic "#3366FF" <> stroke 2)
+    battersBig |>> theme ThemeGrey <> layer (scatter "n" "performance" <> color (fromHex "#000000") <> alpha 0.1)
+               <> layer (statSmooth "n" "performance" 8 <> color (fromHex "#3366FF"))
                <> xLabel "n" <> yLabel "performance"
 
   -- R: batters |> arrange(desc(performance))

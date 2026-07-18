@@ -1,92 +1,95 @@
-# 13. 数値ベクトル — Numbers
+# 13. Numbers
 
-> 一次情報: **R for Data Science 2e, Ch.13 "Numbers"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.13 "Numbers"**
 > <https://r4ds.hadley.nz/numbers>
-> データ: **nycflights13** の `flights`(全 336,776 行)+ ダミーベクトル。
+> Data: **nycflights13** `flights` (all 336,776 rows) + dummy vectors.
 
-数値ベクトルでできることを体系的に概観します。文字列→数値・`count()`・数値変換
-(リサイクル・剰余算・丸め・区間化・累積)・汎用変換(順位・オフセット・連続識別子)・
-数値要約(中心・分位点・分散・分布・位置)を扱います。実行コードは
-[`Numbers.hs`](Numbers.hs)。
+We systematically survey what's possible with numerical vectors: string-to-number conversion, `count()`,
+numerical transforms (recycling, remainder, rounding, binning, cumulative), general transforms (rank,
+offset, consecutive ID), and numerical summaries (center, quantile, spread, distribution, position).
+Execution code is in [`Numbers.hs`](Numbers.hs).
 
 ```sh
 cd docs/tutorials/13-numbers
 cabal run tut-13-numbers
 ```
 
-> **★高レベル API を既定で使用。** R4DS の数値関数は **hanalyze の公開 API**
-> として実装しました(デモコードに毎回自前実装しない方針):
-> - **記述統計** `mean`/`median`/`quantile`(R type-7)/`sd`/`var`/`IQR` →
->   `Hanalyze.Stat.Descriptive`(Phase 65)
-> - **dplyr 動詞** `min_rank`/`lag`/`lead`/`cumsum`/`cut`/`consecutive_id` →
->   `Hanalyze.Data.Transform`(Phase 66)
-> - **`summarise`/`mutate`/`groupBy`**(DataFrame 直結・plot の `df |>>` と対称)→
->   `Hanalyze.Data.Wrangle`(Phase 67)
+> **High-level API by default.** R4DS numerical functions are implemented as **hanalyze public APIs**
+> (avoiding re-implementation in every demo):
+> - **Descriptive statistics** `mean`/`median`/`quantile`(R type-7)/`sd`/`var`/`IQR` →
+>   `Hanalyze.Stat.Descriptive` (Phase 65)
+> - **dplyr verbs** `min_rank`/`lag`/`lead`/`cumsum`/`cut`/`consecutive_id` →
+>   `Hanalyze.Data.Transform` (Phase 66)
+> - **`summarise`/`mutate`/`groupBy`** (DataFrame-coupled, symmetric to plot's `df |>>`) →
+>   `Hanalyze.Data.Wrangle` (Phase 67)
 >
-> 文字列→数値 (`parse_number`) や `pmin/pmax` 等の小物のみチュートリアル local。
+> Only small items like string-to-number (`parse_number`) and `pmin/pmax` are tutorial-local.
 
 ---
 
-## 13.1 数を作る
+## 13.1 Making numbers
 
-文字列を数値にする 2 関数(`Numbers.hs` の local helper)。`parseDouble` は数値文字列を
-そのまま(`read`・科学表記 `1e3` も)、`parseNumber` は通貨記号・カンマ・% 等の非数値を
-除いて数値部分を取り出します。
+Two string-to-number functions (tutorial local helper in `Numbers.hs`). `parseDouble` takes numeric
+strings directly (`read`, scientific notation `1e3` too); `parseNumber` strips currency symbols, commas,
+`%`, etc., extracting the numeric part.
 
 ```haskell
 map (show . parseDouble) ["1.2", "5.6", "1e3"]          -- R parse_double
 map (show . parseNumber) ["$1,234", "USD 3,513", "59%"]  -- R parse_number
 ```
 
-出力:
+Output:
 
 ```
 parse_double(c("1.2","5.6","1e3"))          = 1.2 5.6 1000.0
 parse_number(c("$1,234","USD 3,513","59%")) = 1234.0 3513.0 59.0
 ```
 
-## 13.2 カウント
+## 13.2 Counting
 
-`count()` は探索の定番です。`groupBy [...] |> summarise [ "n" =: nOf ]` で再現できます。
+`count()` is exploration staple. Reproduce via `groupBy [...] |> summarise [ "n" =: nOf ]`:
 
 ```haskell
 flights |> groupBy ["dest"] |> summarise [ "n" =: nOf ]                  -- count(dest)
 flights |> groupBy ["dest"] |> summarise [ "n" =: nOf, "delay" =: meanOf "arr_delay" ]
 ```
 
-`sort = TRUE` 相当は `n` 降順に並べ替え。最頻の就航先は ORD(17,283)・ATL(17,215)・
-LAX(16,174)…。`n_distinct(carrier)`(就航社数)・加重カウント `sum(distance)`・
-欠損カウント `sum(is.na(dep_time))`(=キャンセル便数)も同様です。
+`sort = TRUE` equivalent is reordering by `n` descending. Top destinations: ORD (17,283), ATL
+(17,215), LAX (16,174), etc. `n_distinct(carrier)` (carrier count), weighted counts `sum(distance)`,
+missing count `sum(is.na(dep_time))` (= cancelled count) work similarly.
 
 | R | hgg |
 |---|---|
 | `count(dest)` | `groupBy ["dest"] \|> summarise ["n" =: nOf]` |
-| `summarize(delay = mean(arr_delay, na.rm=T))` | `meanOf "arr_delay"`(na.rm 既定) |
-| `summarize(carriers = n_distinct(carrier))` | Text 列は `Set` で distinct 数(Wrangle v1 の `nDistinctOf` は数値専用) |
+| `summarize(delay = mean(arr_delay, na.rm=T))` | `meanOf "arr_delay"` (na.rm default) |
+| `summarize(carriers = n_distinct(carrier))` | Text columns → distinct count via `Set` (Wrangle v1's `nDistinctOf` is numeric-only) |
 | `count(tailnum, wt = distance)` | `summarise ["miles" =: sumOf "distance"]` |
 
-## 13.3 数値変換
+## 13.3 Numerical transforms
 
-### 13.3.1 算術とリサイクル規則
+### 13.3.1 Arithmetic and recycling rules
 
-長さの違うベクトルは短い方を**リサイクル**(繰り返し)します。`x / 5` は `5` を
-4 回使うのと同じ。`==` でもリサイクルされるため `filter(month == c(1,2))` は罠で、
-奇数行=1月・偶数行=2月 だけを拾います(正しくは `month %in% c(1,2)`)。
+Vectors of different length **recycle** (repeat) the shorter. `x / 5` uses `5` four times. Recycling
+also applies to `==`, so `filter(month == c(1,2))` is a trap: it matches odd rows = month 1, even rows
+= month 2 (correct: `month %in% c(1,2)`).
 
-### 13.3.2 pmin / pmax(行ごと)vs min / max(要約)
+### 13.3.2 pmin / pmax (row-wise) vs min / max (summary)
 
-`pmin(x, y)` は**行ごと**の最小(`Numbers.hs` の local helper `pmin'`/`pmax'` =
-`zipWith`)、`min(x, y)` は**全体の単一値**です。出力:
+`pmin(x, y)` is **row-wise** minimum (tutorial local helpers `pmin'`/`pmax'` = `zipWith`); `min(x, y)`
+is **single whole value**. Output:
 
 ```
 pmin(x,y,na.rm=T) = 1.0 2.0 7.0      pmax(x,y,na.rm=T) = 3.0 5.0 7.0
-min(x,y,na.rm=T)  = 1.0              max(x,y,na.rm=T)  = 7.0   (= 取り違え注意)
+min(x,y,na.rm=T)  = 1.0              max(x,y,na.rm=T)  = 7.0   (= easy to confuse)
 ```
 
-### 13.3.3 剰余算 `%/%` `%%`
+### 13.3.3 Remainder `%/%` and `%%`
 
-R の `%/%`(整数除算)・`%%`(剰余)は Haskell の `div` / `mod` です。`sched_dep_time` を
-時・分に分解します(R `mutate(hour = …, minute = …)` 相当・実コードは `insertVector`):
+R's `%/%` (integer division) and `%%` (remainder) are Haskell's `div` / `mod`. Decompose
+`sched_dep_time` to hours and minutes (R's `mutate(hour = …, minute = …)` equivalent; actual code
+uses `insertVector`):
 
 ```haskell
 let schedV  = colPlain @Int "sched_dep_time" flights
@@ -95,70 +98,70 @@ let schedV  = colPlain @Int "sched_dep_time" flights
             $ DF.select ["sched_dep_time"] flights
 ```
 
-R `1:10 %/% 3` / `1:10 %% 3` は次のとおり:
+R's `1:10 %/% 3` / `1:10 %% 3`:
 
 ```haskell
 map (`div` 3) [1..10]   -- %/%
 map (`mod` 3) [1..10]   -- %%
 ```
 
-これとキャンセル率 `is.na(dep_time)` の割合を時刻ごとに集計し、**時刻ごとのキャンセル率**を
-見ます(`fig1`)。
+Combine with cancellation rate `is.na(dep_time)` proportion by time, viewing **cancellation rate by
+departure time** (`fig1`):
 
-![キャンセル率 vs 出発時刻](fig1-prop-cancelled.svg)
+![cancellation rate vs departure time](fig1-prop-cancelled.svg)
 
-キャンセル率は朝 0.5% 程度から 19 時頃の 4% へ増え、その後深夜にかけて急減します
-(点の大きさ = 便数)。
+Cancellation rate rises from ~0.5% morning to ~4% around 7 PM, then drops sharply toward midnight
+(point size = flight count).
 
-### 13.3.4 丸め(Banker's rounding)
+### 13.3.4 Rounding (banker's rounding)
 
-`round(x)` は最近接整数へ。第 2 引数で桁を指定(`round(x,-1)` は十の位)。`round` は
-**半偶数丸め**(round half to even)で、`round(c(1.5, 2.5))` = `2 2`(両方偶数へ)。
-Haskell の `round` は既に半偶数丸め・桁指定は local helper `roundTo`。出力:
+`round(x)` rounds to nearest integer. 2nd arg specifies digits (`round(x,-1)` = tens place).
+`round` uses **round half to even**, so `round(c(1.5, 2.5))` = `2 2` (both round to even). Haskell's
+`round` already uses half-to-even; digit specification is a local helper `roundTo`. Output:
 
 ```
 round(123.456)=123  round(.,2)=123.46  round(.,1)=123.5  round(.,-1)=120  round(.,-2)=100
 floor(123.456)=123  ceiling(123.456)=124
 ```
 
-### 13.3.5 区間化 `cut`
+### 13.3.5 Binning `cut`
 
-数値ベクトルを離散の箱に分けます(`Data.Transform` の `cut`/`cutLabels`・既定は
-右閉区間 `(a, b]`・範囲外は `Nothing`=NA)。
+Divide numerical vectors into discrete boxes (`Data.Transform`'s `cut`/`cutLabels`; default is
+right-closed interval `(a, b]`; out-of-range is `Nothing`=NA).
 
 ```haskell
 Tr.cut [0,5,10,15,20] [1,2,5,10,15,20]                       -- bin index
 Tr.cutLabels ["sm","md","lg","xl"] [0,5,10,15,20] [1,2,5,10,15,20]
 ```
 
-出力:
+Output:
 
 ```
 cut(x, breaks=c(0,5,10,15,20)) = bin 1 1 1 2 3 4
-ラベル付き (sm/md/lg/xl)         = sm sm sm md lg xl
+With labels (sm/md/lg/xl)      = sm sm sm md lg xl
 ```
 
-### 13.3.6 累積 `cumsum`
+### 13.3.6 Cumulative `cumsum`
 
-`Data.Transform` の `cumsum`/`cumprod`/`cummin`/`cummax`/`cummean`。
-`Tr.cumsum [1..10]` = `1 3 6 … 55`。
+`Data.Transform`'s `cumsum`/`cumprod`/`cummin`/`cummax`/`cummean`. `Tr.cumsum [1..10]` =
+`1 3 6 … 55`.
 
-## 13.4 汎用変換
+## 13.4 General transforms
 
-### 13.4.1 順位
+### 13.4.1 Rank
 
-`minRank` が基本(tie は 1,2,2,4)。降順は `Data.Ord.Down` を被せます。`rowNumber`/
-`denseRank`/`percentRank`/`cumeDist` も。`*NA` 変種は NA(`Nothing`)を保ったまま順位付け
+`minRank` is fundamental (ties: 1,2,2,4). Descending via `Data.Ord.Down`. Also `rowNumber` /
+`denseRank` / `percentRank` / `cumeDist`. `*NA` variants rank while preserving NA (`Nothing`)
 (`Data.Transform`):
 
 ```haskell
 let xrk = [Just 1, Just 5, Just 5, Just 17, Just 22, Nothing] :: [Maybe Int]
 Tr.minRankNA xrk                       -- min_rank(x)
 Tr.minRankNA (map (fmap Down) xrk)     -- min_rank(desc(x))
-Tr.rowNumberNA xrk                     -- row_number(x)  ほか denseRankNA / percentRankNA / cumeDistNA
+Tr.rowNumberNA xrk                     -- row_number(x), plus denseRankNA / percentRankNA / cumeDistNA
 ```
 
-出力:
+Output:
 
 ```
 x = c(1,5,5,17,22,NA)
@@ -167,23 +170,23 @@ row_number(x) = 1 2 3 4 5 NA      dense_rank(x)     = 1 2 2 3 4 NA
 percent_rank  = 0 .25 .25 .75 1 NA  cume_dist       = .2 .6 .6 .8 1 NA
 ```
 
-`row_number()` を `%%` / `%/%` と組み合わせると、データを同サイズの群に分けられます。
+Combine `row_number()` with `%%` / `%/%` to divide data into same-size groups.
 
-### 13.4.2 オフセット `lag` / `lead`
+### 13.4.2 Offset `lag` / `lead`
 
-直前/直後の値を参照(端は NA で埋める)。`x - lag(x)` で前との差、`x == lag(x)` で
-変化点が分かります。
+Reference previous/next value (ends filled with NA). `x - lag(x)` gives difference from previous;
+`x == lag(x)` finds change points.
 
-### 13.4.3 連続識別子 `consecutive_id`
+### 13.4.3 Consecutive ID `consecutive_id`
 
-引数が変わるたびに新しい群 id を振ります。`c("a","a","a","b","c","c",…)` →
-`1 1 1 2 3 3 …`。
+Assign new group ID whenever argument changes. `c("a","a","a","b","c","c",…)` →
+`1 1 1 2 3 3 …`.
 
-## 13.5 数値要約
+## 13.5 Numerical summaries
 
-### 13.5.1 中心 — mean vs median
+### 13.5.1 Center — mean vs median
 
-平均は外れ値に敏感、中央値は頑健です。日ごとの出発遅延の平均と中央値を比べます。
+Mean is sensitive to outliers; median is robust. Compare daily departure delay mean and median.
 
 ```haskell
 flights |> groupBy ["year","month","day"]
@@ -192,121 +195,121 @@ flights |> groupBy ["year","month","day"]
                      , "n"      =: nOf ]
 ```
 
-![日次 mean vs median](fig2-mean-vs-median.svg)
+![daily mean vs median](fig2-mean-vs-median.svg)
 
-すべての点が対角線 `y = x` の**下**に来ます(中央値 < 平均)。便は数時間遅れること
-はあっても数時間早く出ることはないため、分布が右に歪み平均が引き上げられるからです。
+All points fall **below** the diagonal `y = x` (median < mean). Flights may be hours late but rarely
+hours early, so distribution skews right, pulling the mean up.
 
-R4DS の `geom_abline(slope=1, intercept=0)`(= `y=x` 参照線)は、plot の公開 API
-`refIdentity` でそのまま描けます(`<>` で重ねるだけ・[api-guide 03-decoration の参照線](../../api-guide/03-decoration.md#guides)):
+R4DS's `geom_abline(slope=1, intercept=0)` (= `y=x` reference line) renders directly with hgg's
+public API `refIdentity` (just compose with `<>`; see [api-guide 04-decoration reference
+lines](../../api-guide/04-decoration.md#guides)):
 
 ```haskell
-dayDelay |>> layer (scatter "mean" "median") <> refIdentity
+dayDelay |>> theme ThemeGrey <> layer (scatter "mean" "median") <> refIdentity
 ```
 
-> 参照線は `refIdentity`(=`y=x`)/`refHorizontal c`(=`geom_hline`)/`refVertical x`
-> (=`geom_vline`)/`refLine (RefLinear slope intercept)`(=任意の `geom_abline`)。
-> いずれもデータでなく**プロット領域全体**に線を引きます。
+> Reference lines: `refIdentity` (=`y=x`) / `refHorizontal c` (=`geom_hline`) / `refVertical x`
+> (=`geom_vline`) / `refLine (RefLinear slope intercept)` (=arbitrary `geom_abline`). All draw lines
+> across the **entire plot area**, not data-dependent.
 
-### 13.5.2 最小・最大・分位点
+### 13.5.2 Min, max, quantiles
 
-`quantile(x, 0.95)` は値の 95% 点。極端な遅延 5% を無視できます(R type-7 で R 一致)。
+`quantile(x, 0.95)` is the 95th percentile. Ignore extreme 5% delays (R type-7, matches R).
 
 ```haskell
 flights |> groupBy ["year","month","day"]
         |> summarise [ "max" =: maxOf "dep_delay", "q95" =: quantileOf 0.95 "dep_delay" ]
 ```
 
-### 13.5.3 散布 — `sd` / `IQR`
+### 13.5.3 Spread — `sd` / `IQR`
 
-`IQR(x)` = `quantile(x,.75) - quantile(x,.25)`。空港間距離は一定のはずですが、
-`group_by(origin, dest)` の距離 IQR(`D.iqrL`)を見ると **EGE**(EWR/JFK 発)だけ
-IQR > 0 というデータの奇妙な点が見つかります。出力(`iqr > 0` で絞った 2 行):
+`IQR(x)` = `quantile(x,.75) - quantile(x,.25)`. Airport-pair distances should be constant, but
+examining distance IQR by `group_by(origin, dest)` (using `D.iqrL`) reveals **EGE** (EWR/JFK origin)
+uniquely has IQR > 0—a data quirk. Output (filtered to `iqr > 0`, 2 rows):
 
 ```
 EWR EGE  distance_iqr 1.0  n 110
 JFK EGE  distance_iqr 1.0  n 103
 ```
 
-### 13.5.4 分布
+### 13.5.4 Distribution
 
-要約に頼る前に分布を見るべきです。出発遅延の分布は極端に右に歪むため拡大が必要です。
-**本流**で `flights` を直接束縛し、列名 `"dep_delay"` で `histogram` を描きます
-(`dep_delay` は `Maybe Int` で欠損を含みますが、resolver が NA を内部処理するので
-生列の取り出しは不要)。拡大側は ggplot の `filter |> ggplot` と同じく **DataFrame を
-`DF.filterJust` + `DF.filterWhere` で絞ってから**束縛します:
+Look at distribution before relying on summaries. Departure delay distribution is extremely
+right-skewed, needing magnification. **Main** binds `flights` directly, plots column `"dep_delay"`
+with `histogram` (`dep_delay` is `Maybe Int` with missing, but resolver handles NA internally—no
+need to extract raw). Magnified side uses ggplot's `filter |> ggplot` pattern: **filter DataFrame**
+with `DF.filterJust` + `DF.filterWhere` before binding:
 
 ```haskell
 let ddZoom = flights |> DF.filterJust  "dep_delay"
                      |> DF.filterWhere (F.col @Int "dep_delay" .< (120 :: DF.Expr Int))
 saveSVG "fig3-dist.svg" $ subplots
-  [ bakeSpec (toResolver flights) (layer (histogram "dep_delay" <> binWidth 15) <> title "全体 (binwidth 15)")
-  , bakeSpec (toResolver ddZoom)  (layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
+  [ bakeSpec (toResolver flights) (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 15) <> title "full (binwidth 15)")
+  , bakeSpec (toResolver ddZoom)  (theme ThemeGrey <> layer (histogram "dep_delay" <> binWidth 5)  <> title "dep_delay < 120 (binwidth 5)") ]
   <> subplotCols 2
 ```
 
-![dep_delay の分布 (全体 / <120 拡大)](fig3-dist.svg)
+![dep_delay distribution (full / <120 zoom)](fig3-dist.svg)
 
-左は極端な右歪み(0 付近に巨大なスパイク)、右(<120 拡大)はピークが 0 の少し下
-(=ほとんどの便は数分早発)で、その後急減します。
+Left: extreme right skew (massive spike near 0), right (<120 zoom): peak just below 0
+(=most flights depart minutes early), then steep drop.
 
-> **patchwork 相当**: 各 panel に別データを与えるには、各 panel を `bakeSpec
-> (toResolver df) spec` で「自分のデータを焼き込んだ完結図」にして `subplots`/`hconcat`
-> に並べる(= ggplot で各 plot を作り patchwork で合成するのと同型)。並置は
-> `hconcat`(横)/`vconcat`(縦)、または `a <-> b`(横)/ `a <:> b`(縦)。
+> **patchwork equivalent**: To give each panel different data, make each panel a `bakeSpec
+> (toResolver df) spec` ("finished figure with data baked in"), then lay out with `subplots`/`hconcat`
+> (= making separate plots in ggplot then composing with patchwork). Layout options: `hconcat`
+> (horizontal) / `vconcat` (vertical), or `a <-> b` (horizontal) / `a <:> b` (vertical).
 >
-> **欠損列**: `dep_delay` のような `Maybe` 列も `histogram "dep_delay"` で直接描けます
-> (resolver が NA を NaN で運び消費側で除外 = ggplot の `na.rm` 相当・plot 改修で対応)。
+> **Missing columns**: `Maybe` columns like `dep_delay` plot directly with `histogram "dep_delay"`
+> (resolver carries NA as NaN, consumed side excludes = `na.rm` equivalent, handled in plot fix).
 
-サブグループが全体と似た形かも確認します。365 日ぶんの頻度ポリゴンを重ねると:
+Verify subgroups match overall shape. Overlaying 365 days of frequency polygons:
 
-![365 日の頻度ポリゴン](fig4-freqpoly-365.svg)
+![365 days frequency polygon](fig4-freqpoly-365.svg)
 
-365 本がほぼ重なり**太い黒帯**を成し、共通のパターン(0 直下の鋭いピーク + 右の裾)を
-示します = どの日も同じ要約で良さそう、と分かります。
+365 lines nearly overlap, forming a **thick black band** showing shared pattern (sharp peak just below
+0 + right tail) = same summary works for every day.
 
-### 13.5.5 位置 — `first` / `last` / `nth`
+### 13.5.5 Position — `first` / `last` / `nth`
 
-特定位置の値(`Numbers.hs` で群ごとに非 NA の 1/5/最後を取る helper)。日ごとの
-最初・5 番目・最後の出発時刻。出力(1/1 の行):
+Value at specific position (tutorial helper in `Numbers.hs` fetches 1st/5th/last non-NA per group).
+Daily first, 5th, last departure time. Output (1/1 row):
 
 ```
 2013-01-01  first_dep 517  fifth_dep 554  last_dep 2356
 ```
 
-### 13.5.6 mutate との組合せ(群標準化)
+### 13.5.6 Combo with mutate (group standardization)
 
-要約関数はリサイクル規則により `mutate()` とも組めます。`(x - mean(x)) / sd(x)` で
-Z スコア(`Data.Wrangle` の `mutate` + `zscoreOf`):
+Summary functions work with `mutate()` via recycling. Z-score via `(x - mean(x)) / sd(x)`
+(`Data.Wrangle`'s `mutate` + `zscoreOf`):
 
 ```haskell
 DF.fromNamedColumns [ ("x", DF.fromList ([2,4,4,4,5,5,7,9] :: [Double])) ]
   |> mutate [ "zscore" =: zscoreOf "x" ]
 ```
 
-他に `x / sum(x)`(割合)・`(x - min(x)) / (max(x) - min(x))`(\[0,1\] 化)・
-`x / first(x)`(指数化)も書けます。
+Also writeable: `x / sum(x)` (proportion), `(x - min(x)) / (max(x) - min(x))` (scale to [0,1]),
+`x / first(x)` (indexed to first value).
 
 ---
 
-## 演習(R4DS Ch13)
+## Exercises (R4DS Ch.13)
 
-R4DS の演習も本章の道具で解けます(`Numbers.hs` の API で再現可能):
+R4DS exercises solve with this chapter's tools (`Numbers.hs` API enables reproduction):
 
-1. `near()` の仕組み・`sqrt(2)^2` は 2 に near か。
-2. `count()` を `group_by`+`summarize`+`arrange` に展開。
-3. 連続時刻への変換(`%/%` `%%` で分数時間 or 真夜中からの分)。
-4. `dep_time`/`arr_time` を 5 分単位に丸める。
-5. 最も遅延した 10 便を順位関数で。
-6. `lag()` で前の時間帯の平均遅延との相関を探る。
+1. How `near()` works; is `sqrt(2)^2` near 2?
+2. Expand `count()` to `group_by`+`summarize`+`arrange`.
+3. Continuous time from `%/%` / `%%` (decimal hours or minutes from midnight).
+4. Round `dep_time`/`arr_time` to 5-minute units.
+5. Top 10 delayed flights via rank functions.
+6. Use `lag()` to explore correlation with prior hour's average delay.
 
 ---
 
-## まとめ
+## Summary
 
-数値ベクトルの作成(`parse_number`)・カウント(`count`/`n_distinct`)・変換
-(リサイクル・`%/%`・丸め・`cut`・`cumsum`・順位・`lag`/`lead`)・要約
-(`mean`/`median`/`quantile`/`sd`/`IQR`/`first`/`last`/`nth`)を学びました。
-記述統計と dplyr 動詞は hanalyze の公開 API(`Stat.Descriptive` /
-`Data.Transform` / `Data.Wrangle`)として実装し、DataFrame 直結で
-`summarise`/`mutate`/`groupBy` を書けます。
+We covered numerical vector creation (`parse_number`), counting (`count`/`n_distinct`), transforms
+(recycling, `%/%`, rounding, `cut`, `cumsum`, rank, `lag`/`lead`), and summaries
+(`mean`/`median`/`quantile`/`sd`/`IQR`/`first`/`last`/`nth`). Descriptive statistics and dplyr verbs
+are implemented as hanalyze public APIs (`Stat.Descriptive` / `Data.Transform` / `Data.Wrangle`),
+enabling direct DataFrame composition with `summarise`/`mutate`/`groupBy`.

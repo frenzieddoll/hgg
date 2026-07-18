@@ -1,16 +1,18 @@
-# 10. 探索的データ分析 — Exploratory data analysis
+# 10. Exploratory Data Analysis
 
-> 一次情報: **R for Data Science 2e, Ch.11 "Exploratory data analysis"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.11 "Exploratory data analysis"**
 > <https://r4ds.hadley.nz/eda>
-> データ: **diamonds**(53,940 行)・**mpg**(234 行)・**nycflights13::flights**(336,776 行)
+> Data: **diamonds** (53,940 rows), **mpg** (234 rows), **nycflights13::flights** (336,776 rows)
 
-変数の **変動(variation)** と変数間の **共変動(covariation)** を、図を描きながら
-探っていく章です。histogram / freqpoly / boxplot / geom_count / geom_tile /
-geom_bin2d を題材に、外れ値の発見からモデルによるパターン抽出までを扱います。
-実行コードは [`Eda.hs`](Eda.hs)。整数値のみの列(`price` / `hwy` 等)は dataframe が
-Int 列に推論するため、`Double` で取り出す `numCol` を自前で用意しています。
+This chapter explores **variation** (within a variable) and **covariation** (between variables) through
+visualization. Using histogram / freqpoly / boxplot / geom_count / geom_tile / geom_bin2d, we cover
+outlier detection through pattern extraction via modeling. Execution code is in [`Eda.hs`](Eda.hs).
+Integer-only columns (`price`, `hwy`, etc.) are inferred by dataframe as Int, so we provide a
+`numCol` helper to extract as `Double`.
 
-## 実行
+## Running
 
 ```sh
 cd docs/tutorials/10-eda
@@ -19,60 +21,60 @@ cabal run tut-10-eda
 
 ---
 
-## §1 変動 — 1 変数の分布
+## §1 Variation — Distribution of a single variable
 
-数値変数の分布は **histogram** で見ます。`diamonds$carat` を幅 0.5 で区切ると、
-右に長く裾を引いた分布だと分かります。
+View numerical variable distribution with **histogram**. Binning `diamonds$carat` by width 0.5 reveals
+a **distribution with a long right tail**.
 
 ```haskell
-diamonds |>> layer (histogram "carat" <> binWidth 0.5)
+diamonds |>> theme ThemeGrey <> layer (histogram "carat" <> binWidth 0.5)
 ```
 
-![carat の分布](01-hist-carat-bw05.svg)
+![carat distribution](01-hist-carat-bw05.svg)
 
-### 典型値 — 細かい bin で見る
+### Typical values — fine bins
 
-`carat < 3` の小さい diamond だけを取り出し、幅 0.01 の細かい bin で描くと、
-**1 カラットや切りの良い分数のところに山**が立つことが見えてきます。
+Extract only small diamonds (`carat < 3`) and bin finely (width 0.01) to see **peaks at 1 carat and
+nice fractions**.
 
 ```haskell
 let smallerDF = ... filter (carat < 3) ...
-smallerDF |>> layer (histogram "carat" <> binWidth 0.01)
+smallerDF |>> theme ThemeGrey <> layer (histogram "carat" <> binWidth 0.01)
 ```
 
-![carat<3 を細かい bin で](02-hist-carat-bw001.svg)
+![carat<3 in fine bins](02-hist-carat-bw001.svg)
 
 ---
 
-## §2 異常値 — histogram で外れ値を探す
+## §2 Unusual values — finding outliers with histogram
 
-`y`(幅 mm)の分布を見ると、データは 5 付近に固まっているのに **x 軸が 0〜60 まで
-広がっている**のが唯一の手がかりです。
+View `y` (width in mm) distribution: data clusters near 5, yet **the x-axis spans 0–60**, the only
+clue to outliers.
 
 ```haskell
-diamonds |>> layer (histogram "y" <> binWidth 0.5)
+diamonds |>> theme ThemeGrey <> layer (histogram "y" <> binWidth 0.5)
 ```
 
-![y の分布](03-hist-y-bw05.svg)
+![y distribution](03-hist-y-bw05.svg)
 
-頻度の高い bin が高すぎて稀な bin が潰れています。`coord_cartesian` で
-**y 軸を 0〜50 にズーム**すると、0・約 30・約 60 の位置に低い bar が見えます。
+High-frequency bins tower too high, squashing rare bins. **Zoom y-axis to 0–50** with `coord_cartesian`
+to see low bars at 0, ≈30, ≈60.
 
 ```haskell
-diamonds |>> layer (histogram "y" <> binWidth 0.5)
+diamonds |>> theme ThemeGrey <> layer (histogram "y" <> binWidth 0.5)
          <> coordCartesianY 0 50
 ```
 
-![y 軸をズーム](04-hist-y-zoom.svg)
+![y-axis zoomed](04-hist-y-zoom.svg)
 
-> `coordCartesianY lo hi` は **データを捨てずに表示範囲だけ**を変えます
-> (ggplot の `coord_cartesian(ylim=)` と同じ。`ylim()` は範囲外を捨てる別物)。
+> `coordCartesianY lo hi` **changes display range only, not dropping data** (like ggplot's
+> `coord_cartesian(ylim=)`, unlike `ylim()` which discards out-of-range values).
 
-異常値を dplyr 風に抜き出します(`y < 3 | y > 20`)。`y = 0` が 7 件 —
-幅 0mm の diamond はあり得ず、**0 でコード化された欠損**だと分かります。
+Extract outliers dplyr-style (`y < 3 | y > 20`): `y = 0` appears 7 times—diamonds with 0mm width
+are impossible, so **0 encodes missing data**.
 
 ```
-── 異常値 (y<3 | y>20)、 y 昇順 ──
+── Outliers (y<3 | y>20), y ascending ──
   price      x      y      z
 5139.00   0.00   0.00   0.00
 6381.00   0.00   0.00   0.00
@@ -87,214 +89,213 @@ diamonds |>> layer (histogram "y" <> binWidth 0.5)
 
 ---
 
-## §3 欠損値 — その扱い
+## §3 Missing values — how to handle them
 
-異常な `y`(`y < 3 | y > 20`)を `NA` に置き換えてから `x` 対 `y` を散布すると、
-`NA` の行は描かれません(ここでは該当行を除外して同じ結果を得ます)。
+Replace anomalous `y` (`y < 3 | y > 20`) with `NA`, then scatter `x` vs `y`. Rows with `NA` don't
+render (here we exclude those rows to reach the same result).
 
 ```haskell
 let xyKept = [ (x,y) | (x,y) <- zip xv yv, y >= 3 && y <= 20 ]
-diamonds2DF |>> layer (scatter "x" "y" <> size 4 <> alpha 0.4)
+diamonds2DF |>> theme ThemeGrey <> layer (scatter "x" "y" <> alpha 0.4)
 ```
 
-![x vs y(異常値は NA)](05-scatter-xy.svg)
+![x vs y (outliers as NA)](05-scatter-xy.svg)
 
-欠損そのものが意味を持つこともあります。`flights` の `dep_time` 欠損は **欠航** を
-表します。`cancelled = is.na(dep_time)` で群を作り、予定出発時刻の
-**頻度多角形(`geom_freqpoly`)** を欠航別に重ねます。
+Missing values themselves can be meaningful. In `flights`, `dep_time` missing means **cancelled**.
+Create groups with `cancelled = is.na(dep_time)` and overlay **frequency polygons** of scheduled
+departure times by cancellation status.
 
 ```haskell
 let cancelled = map isNothing depTime
-    schedDec  = [ h + m/60 | ... ]   -- sched_dep_time を時刻(時)に
-flightsDF |>> layer (freqpoly "sched_dep_time" <> binWidth 0.25 <> color "cancelled")
+    schedDec  = [ h + m/60 | ... ]   -- convert sched_dep_time to time (hours)
+flightsDF |>> theme ThemeGrey <> layer (freqpoly "sched_dep_time" <> binWidth 0.25 <> colorBy "cancelled")
 ```
 
-![欠航別の予定出発時刻](06-freqpoly-flights.svg)
+![scheduled departure time by cancellation](06-freqpoly-flights.svg)
 
-> 欠航便は非欠航便に比べて圧倒的に少ないため、この素の頻度では比較しにくい —
-> 次節の density 正規化につながります。
+> Cancelled flights are far fewer than non-cancelled, so raw counts are hard to compare—leading to
+> density normalization in the next section.
 
 ---
 
-## §4 共変動 — カテゴリ変数 × 数値変数
+## §4 Covariation — categorical × numerical
 
-`cut`(品質)別に `price` の分布を **頻度多角形** で比べます。まず素の count では、
-件数そのものが `cut` で大きく違うため形の比較が難しいです。
+Compare `price` distribution by `cut` (quality) using **frequency polygon**. Raw counts first: cut
+itself varies greatly in count, making shape comparison difficult.
 
 ```haskell
-diamonds |>> layer (freqpoly "price" <> binWidth 500 <> color "cut"
+diamonds |>> theme ThemeGrey <> layer (freqpoly "price" <> binWidth 500 <> colorBy "cut"
                    <> colorCats cutOrder)
 ```
 
-![cut 別 price(count)](07-freqpoly-price-count.svg)
+![price by cut (count)](07-freqpoly-price-count.svg)
 
-`after_stat(density)`(`histogramDensity True`)で**面積を 1 に正規化**すると
-形を比較できます。**Fair だけが平坦で平均が高め**、他は price≈1500 に鋭い山 —
-R4DS の記述どおりです。
+Normalize area to 1 with `after_stat(density)` (`histogramDensity True`) to compare shapes. **Fair
+alone is flat with higher mean**; others peak sharply near price≈1500—matching R4DS's description.
 
 ```haskell
-diamonds |>> layer (freqpoly "price" <> binWidth 500 <> color "cut"
+diamonds |>> theme ThemeGrey <> layer (freqpoly "price" <> binWidth 500 <> colorBy "cut"
                    <> colorCats cutOrder <> histogramDensity True)
 ```
 
-![cut 別 price(density)](08-freqpoly-price-density.svg)
+![price by cut (density)](08-freqpoly-price-density.svg)
 
-**箱ひげ図(`boxplotBy`)** だと分布の要約を一目で並べられます。
-中央値は意外にも **Ideal が最も低く Fair が最も高い**(carat と交絡)。
-
-```haskell
-diamonds |>> layer (boxplotBy "cut" "price") <> scaleXDiscreteLimits cutOrder
-```
-
-![cut 別 price の箱ひげ図](09-box-price-cut.svg)
-
-`mpg` で `class` 別 `hwy`(高速燃費)を箱ひげ図に。`class` はアルファベット順です。
+**Box plots** (`boxplot "y" <> groupBy "g"`) summarize distributions at a glance. Medians are
+surprisingly **Ideal lowest, Fair highest** (confounded with carat).
 
 ```haskell
-mpg |>> layer (boxplotBy "class" "hwy")
+diamonds |>> theme ThemeGrey <> layer (boxplot "price" <> groupBy "cut") <> scaleXDiscreteLimits cutOrder
 ```
 
-![class 別 hwy](10-box-hwy-class.svg)
+![price by cut box plot](09-box-price-cut.svg)
 
-順序のないカテゴリは **中央値で並べ替える**(`fct_reorder`)と読みやすくなります。
-ここでは `hwy` 中央値の昇順で `scaleXDiscreteLimits` に渡します。
+Box plot of `mpg` by `class` for `hwy` (highway fuel economy). `class` is alphabetical order.
+
+```haskell
+mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class")
+```
+
+![hwy by class](10-box-hwy-class.svg)
+
+Unordered categories become more readable when **reordered by median** (`fct_reorder`). Pass class
+sorted by `hwy` median ascending to `scaleXDiscreteLimits`.
 
 ```haskell
 let classByMedian = sortOn classMedian (nub mpgClass)
-mpg |>> layer (boxplotBy "class" "hwy") <> scaleXDiscreteLimits classByMedian
+mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class") <> scaleXDiscreteLimits classByMedian
 ```
 
-![class 別 hwy(中央値順)](11-box-hwy-class-reorder.svg)
+![hwy by class (median order)](11-box-hwy-class-reorder.svg)
 
-カテゴリ名が長いときは **横向き(`coordFlip`)** にすると収まりが良いです。
+Long category names fit better when **flipped horizontal** (`coordFlip`).
 
 ```haskell
-mpg |>> layer (boxplotBy "class" "hwy") <> scaleXDiscreteLimits classByMedian
+mpg |>> theme ThemeGrey <> layer (boxplot "hwy" <> groupBy "class") <> scaleXDiscreteLimits classByMedian
     <> coordFlip <> xLabel "hwy" <> yLabel "class"
 ```
 
-> `coordFlip` はデータ軸を反転しますが軸タイトルは物理軸(底=x / 左=y)に
-> 固定されるため、反転後の表示に合わせて `xLabel`/`yLabel` を入れ替えています。
+> `coordFlip` reverses data axes, but axis titles stay fixed to physical axes (bottom=x, left=y),
+> so we swap `xLabel`/`yLabel` to match the flipped display.
 
-![class 別 hwy(横向き)](12-box-hwy-class-flip.svg)
+![hwy by class (flipped)](12-box-hwy-class-flip.svg)
 
 ---
 
-## §5 共変動 — カテゴリ変数 × カテゴリ変数
+## §5 Covariation — categorical × categorical
 
-2 つのカテゴリの共起は **`geom_count`(`countXY`)** で、各組合せの件数を
-**点の面積**(面積 ∝ 件数)で表します。最大は **Ideal × color G**。
+Co-occurrence of two categories is shown with **`geom_count`** (`countXY`): **point area** (area ∝
+count) represents each combination's count. Maximum is **Ideal × color G**.
 
 ```haskell
-diamonds |>> layer (countXY "cut" "color") <> scaleXDiscreteLimits cutOrder
+diamonds |>> theme ThemeGrey <> layer (countXY "cut" "color") <> scaleXDiscreteLimits cutOrder
 ```
 
-![cut × color の件数](13-count-cut-color.svg)
+![cut × color counts](13-count-cut-color.svg)
 
-同じ集計を `count(color, cut)` の表で持ち、**`geom_tile`(`heatmap`)** で
-`fill = n` の塗りにすると、やはり **color G × Ideal が最大**(最も明るい)と分かります。
+Same aggregation in a table via `count(color, cut)`, then render with **`geom_tile`** (`heatmap`),
+filling with `fill = n`: again, **color G × Ideal is maximum** (brightest).
 
 ```haskell
 let tileDF = ... color, cut, n = comboCount ...
-tileDF |>> layer (heatmap "color" "cut" "n") <> scaleYDiscreteLimits cutOrder
+tileDF |>> theme ThemeGrey <> layer (heatmap "color" "cut" "n") <> scaleYDiscreteLimits cutOrder
 ```
 
-![color × cut の件数(tile)](14-tile-color-cut.svg)
+![color × cut counts (tile)](14-tile-color-cut.svg)
 
 ---
 
-## §6 共変動 — 数値変数 × 数値変数
+## §6 Covariation — numerical × numerical
 
-`carat` 対 `price` の散布図。正で、強く、指数的な関係です(`carat < 3`)。
+Scatter plot of `carat` vs `price`: **positive, strong, exponential relationship** (`carat < 3`).
 
 ```haskell
-smallerDF |>> layer (scatter "carat" "price" <> size 4)
+smallerDF |>> theme ThemeGrey <> layer (scatter "carat" "price")
 ```
 
 ![carat vs price](15-scatter-carat-price.svg)
 
-点が多すぎて重なるときは **透明度(`alpha`)** を下げます。`alpha = 1/100` にすると
-1・1.5・2 カラット付近の **クラスタ** が浮かび上がります。
+When too many points overlap, lower **transparency** (`alpha`). At `alpha = 1/100`, **clusters**
+around 1, 1.5, 2 carats emerge.
 
 ```haskell
-smallerDF |>> layer (scatter "carat" "price" <> size 4 <> alpha 0.01)
+smallerDF |>> theme ThemeGrey <> layer (scatter "carat" "price" <> alpha 0.01)
 ```
 
-![carat vs price(alpha=1/100)](16-scatter-carat-price-alpha.svg)
+![carat vs price (alpha=1/100)](16-scatter-carat-price-alpha.svg)
 
-1 次元の bin を 2 次元に拡張したのが **`geom_bin2d`(`bin2dCount`)**。平面を矩形 bin に
-区切り、各セルの **件数** を連続色で塗ります(低 carat・低 price に集中)。
+Extending 1D binning to 2D: **`geom_bin2d`** (`bin2dCount`). Divide the plane into rectangular bins,
+color each cell by **count** (concentrated at low carat, low price).
 
 ```haskell
-smallerDF |>> layer (bin2dCount "carat" "price")
+smallerDF |>> theme ThemeGrey <> layer (bin2dCount "carat" "price")
 ```
 
-![carat vs price(bin2d, fill=count)](17-bin2d-carat-price.svg)
+![carat vs price (bin2d, fill=count)](17-bin2d-carat-price.svg)
 
-> **正直な制約**: R4DS は六角形 bin の `geom_hex` も並べますが、hgg は
-> **六角形 binning を未実装**です。下図は **矩形 bin2d で代替**しています
-> (分布の要点は同じ・形のみ六角でない)。
+> **Honest constraint**: R4DS also shows `geom_hex` (hexagonal bins), but hgg **lacks hexagonal
+> binning**. The figure below **substitutes rectangular bin2d** (same distribution summary, just not
+> hexagonal).
 
-![carat vs price(geom_hex 代替 = 矩形 bin2d)](18-hex-carat-price.svg)
+![carat vs price (geom_hex replacement = rectangular bin2d)](18-hex-carat-price.svg)
 
-連続変数を**区間に切って**カテゴリのように扱うこともできます。`cut_width(carat, 0.1)`
-相当で `carat` を 0.1 刻みに丸め、その bin 別に `price` を箱ひげ図に。
-carat が増すと中央値も上がり、裾の歪みも変化します。
+Continuous variables can be **cut into intervals** and treated as categories. Use `cut_width(carat,
+0.1)` equivalent to round `carat` to 0.1 steps, then box plot `price` per bin. As carat increases,
+median rises and tail skew changes.
 
 ```haskell
 let caratBin c = 0.1 * fromIntegral (round (c / 0.1) :: Int)
-cwDF |>> layer (boxplotBy "carat_bin" "price") <> scaleXDiscreteLimits cwLabels
+cwDF |>> theme ThemeGrey <> layer (boxplot "price" <> groupBy "carat_bin") <> scaleXDiscreteLimits cwLabels
 ```
 
-![cut_width(carat, 0.1) 別 price](19-box-cutwidth.svg)
+![price by cut_width(carat, 0.1)](19-box-cutwidth.svg)
 
-> **正直な制約**: hgg の箱ひげ図はひげの外側の**外れ値を個別の点として
-> 描きません**(ひげで打ち切り)。R4DS の図に見える上側の多数の外れ点は省かれます。
+> **Honest constraint**: hgg's box plots **don't render outliers beyond whiskers as individual
+> points** (whiskers cap). The many upper outlier points visible in R4DS figures are omitted.
 
 ---
 
-## §7 パターンとモデル — 強い関係を除いて見る
+## §7 Patterns and models — seeing past strong relationships
 
-`cut` と `price` の関係は、`cut`・`carat`・`price` が互いに絡むため見えにくいです。
-**モデルで carat の効果を除去**します。`log(price) ~ log(carat)` を最小二乗で当て、
-残差を `exp` で価格スケールに戻します(`carat` の効果を取り除いた価格)。
+The relationship between `cut` and `price` is obscured by mutual entanglement of `cut`, `carat`, and
+`price`. **Remove carat's effect via modeling**. Fit `log(price) ~ log(carat)` by least squares,
+then exponentiate residuals back to price scale (price with carat effect removed).
 
 ```haskell
-let b = sxy / sxx; a = my - b*mx                 -- log-log の OLS
+let b = sxy / sxx; a = my - b*mx                 -- log-log OLS
     resid = [ exp (y - (a + b*x)) | (x,y) <- zip lcarat lprice ]
-residDF |>> layer (scatter "carat" "resid" <> size 4 <> alpha 0.2)
+residDF |>> theme ThemeGrey <> layer (scatter "carat" "resid" <> alpha 0.2)
 ```
 
-残差を `carat` に対して散布すると、carat 増加に伴い残差が減る **明確な曲線パターン**が
-残ります。
+Scattering residuals against `carat` reveals a **clear curved pattern**: residuals decrease with
+increasing carat.
 
-![残差 vs carat](20-resid-carat.svg)
+![residuals vs carat](20-resid-carat.svg)
 
-carat の効果を除いたうえで `cut` 別に残差を箱ひげ図にすると、期待どおり
-**品質が良いほど(相対的に)高価** — Fair → Ideal で中央値が単調に上がります。
+After removing carat's effect, box plot residuals by `cut`: as expected, **higher quality costs
+relatively more**—median rises monotonically from Fair → Ideal.
 
 ```haskell
-residDF |>> layer (boxplotBy "cut" "resid") <> scaleXDiscreteLimits cutOrder
+residDF |>> theme ThemeGrey <> layer (boxplot "resid" <> groupBy "cut") <> scaleXDiscreteLimits cutOrder
 ```
 
-![cut 別 残差の箱ひげ図](21-resid-cut.svg)
+![residuals by cut box plot](21-resid-cut.svg)
 
 ---
 
-## まとめ
+## Summary
 
-| R4DS の geom | hgg | 備考 |
+| R4DS geom | hgg | Note |
 |---|---|---|
 | `geom_histogram` | `histogram <> binWidth` | |
-| `coord_cartesian(ylim=)` | `coordCartesianY` | データを捨てない zoom |
-| `geom_freqpoly` | `freqpoly`(`histogramDensity` で density) | 本章で新規実装 |
-| `geom_boxplot` | `boxplotBy` | 外れ点は非表示(ひげ打切り) |
-| `fct_reorder` | `scaleXDiscreteLimits`(中央値順) | 前処理で順序を計算 |
-| `coord_flip` | `coordFlip` | 軸タイトルは物理軸固定 |
-| `geom_count` | `countXY` | 本章で新規実装(面積 ∝ 件数) |
-| `geom_tile(fill=n)` | `heatmap` | 件数を事前集計 |
-| `geom_bin2d` | `bin2dCount` | 本章で count モード追加 |
-| `geom_hex` | （`bin2dCount` で代替） | 六角 binning 未実装 |
+| `coord_cartesian(ylim=)` | `coordCartesianY` | Zoom without dropping data |
+| `geom_freqpoly` | `freqpoly` (`histogramDensity` for density) | New this chapter |
+| `geom_boxplot` | `boxplot` + `groupBy` | Outliers hidden (whisker capped) |
+| `fct_reorder` | `scaleXDiscreteLimits` (median order) | Compute order in preprocessing |
+| `coord_flip` | `coordFlip` | Axis titles fixed to physical axes |
+| `geom_count` | `countXY` | New this chapter (area ∝ count) |
+| `geom_tile(fill=n)` | `heatmap` | Pre-aggregate counts |
+| `geom_bin2d` | `bin2dCount` | Count mode added this chapter |
+| `geom_hex` | (`bin2dCount` substitute) | Hexagonal binning unimplemented |
 
-変動と共変動という EDA の二本柱を、1 変数・カテゴリ×数値・カテゴリ×カテゴリ・
-数値×数値・モデル残差の順に一通り描きました。
+We've cycled through EDA's twin pillars—variation and covariation—across 1 variable, categorical ×
+numerical, categorical × categorical, numerical × numerical, and model residuals.

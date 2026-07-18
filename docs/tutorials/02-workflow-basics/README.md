@@ -1,70 +1,73 @@
-# 02. ワークフローの基礎 (R4DS 2e Ch.2 "Workflow: basics")
+# 02. Workflow: Basics (R4DS 2e Ch.2 "Workflow: basics")
 
-> 一次情報: **R for Data Science 2e, Ch.2 "Workflow: basics"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.2 "Workflow: basics"**
 > <https://r4ds.hadley.nz/workflow-basics>
 
-R4DS 第 2 章は **図を一切描かない**「R コーディングの基礎」章です(オブジェクト作成・
-コメント・命名・関数呼び出し)。 本チュートリアルは R4DS の各コード例を **Haskell の
-等価コードに忠実に対応づけて**実行し、 同じ結果を出します。 R と Haskell で考え方が
-違う箇所は明示します(省略・置換はしません)。 実行コードは [`WorkflowBasics.hs`](WorkflowBasics.hs)。
+R4DS Ch.2 is a **plot-free** chapter on "R coding fundamentals" (object creation, comments,
+naming, function calls). This tutorial **faithfully maps R4DS code examples to equivalent Haskell**,
+executing them to produce identical results. Where R and Haskell differ in approach, we make
+this explicit (no omissions or substitutions). The executable code is in [`WorkflowBasics.hs`](WorkflowBasics.hs).
 
 ```sh
 cd docs/tutorials/02-workflow-basics
 cabal run tut-02-workflow-basics
 ```
 
-## §2.1 Coding basics
+## §2.1 Coding Basics
 
-基本的な計算は R と同じ中置演算子・優先順位で書けます。
+Basic arithmetic uses the same infix operators and precedence as R.
 
-| R | hgg/Haskell | 結果 |
+| R | hgg/Haskell | Result |
 |---|---|---|
 | `1 / 200 * 30` | `1 / 200 * 30` | `0.15` |
 | `(59 + 73 + 2) / 3` | `(59 + 73 + 2) / 3` | `44.6667` |
 | `sin(pi / 2)` | `sin (pi / 2)` | `1.0` |
 
-オブジェクトの作成。 R は再代入できる `<-`、 Haskell は**不変の束縛** `let`:
+Creating objects. R uses reassignable `<-`; Haskell uses **immutable binding** `let`:
 
 | R | Haskell |
 |---|---|
 | `x <- 3 * 4` | `let x = 3 * 4` |
 
-どちらも束縛しただけでは表示されず、 名前を評価して初めて値が出ます(`x` → `12`)。
+In both, just binding doesn't display the value; evaluating the name shows it (`x` → `12`).
 
-ベクトル。 R は `c(...)`、 Haskell はリスト(または `Data.Vector`):
+Vectors. R uses `c(...)`; Haskell uses lists (or `Data.Vector`):
 
 | R | Haskell |
 |---|---|
 | `primes <- c(2, 3, 5, 7, 11, 13)` | `let primes = [2,3,5,7,11,13]` |
 
-> **★相違(broadcast)**: R はベクトルへの算術を全要素に自動適用しますが、 Haskell は
-> 自動 broadcast しないので `map` で各要素に適用します。
-> `primes * 2` → `map (* 2) primes` = `[4,6,10,14,22,26]`、
-> `primes - 1` → `map (subtract 1) primes` = `[1,2,4,6,10,12]`。
+> **★Difference (broadcasting)**: R automatically applies arithmetic to all vector elements,
+> but Haskell requires explicit `map`.
+> `primes * 2` → `map (* 2) primes` = `[4,6,10,14,22,26]`,
+> `primes - 1` → `map (subtract 1) primes` = `[1,2,4,6,10,12]`.
 
 ## §2.2 Comments
 
-コメントは R が `#`、 Haskell が `--`(`{- ... -}` でブロック)。 用途は同じく
-「**why** を書く(how/what でなく)」。 `WorkflowBasics.hs` のコメントがそのまま例です。
+Comments: R uses `#`, Haskell uses `--` (or `{- ... -}` for blocks). Purpose is the same:
+write the **why** (not how or what). Comments in `WorkflowBasics.hs` are direct examples.
 
-## §2.3 What's in a name?
+## §2.3 What's in a Name?
 
-命名規約。 R4DS は **snake_case** を推奨。 Haskell の慣例は **camelCase**(関数・束縛)/
-**PascalCase**(型・コンストラクタ)で、 本プロジェクトも camelCase(`../../CLAUDE.md`)。
+Naming conventions. R4DS recommends **snake_case**. Haskell convention is **camelCase**
+(functions/bindings) / **PascalCase** (types/constructors), which this project follows (`CLAUDE.md`).
 
 | R (snake_case) | Haskell (camelCase) |
 |---|---|
 | `this_is_a_really_long_name <- 2.5` | `let thisIsAReallyLongName = 2.5` |
 | `r_rocks <- 2^3` | `let rRocks = 2 ^ 3` |
 
-> **★大文字小文字・綴りは厳密**。 R では `r_rock` / `R_rocks` は実行時に
-> "object not found"。 Haskell では `rRock` / `RRocks` は**コンパイル時**にスコープ
-> エラー(出荷前に型検査で捕まる、 という違い)。
+> **★Case and spelling are strict**. In R, `r_rock` / `R_rocks` fail at runtime with
+> "object not found". In Haskell, `rRock` / `RRocks` fail at **compile time** with a scope error
+> (caught by type checking before shipping—a key difference).
 
-## §2.4 Calling functions
+## §2.4 Calling Functions
 
-関数呼び出し。 R には名前付き引数がありますが Haskell にはありません(位置引数、
-レコードで擬似的に表現)。 等差列 `seq()` は Haskell のレンジ記法が最も自然です。
+Function calls. R supports named arguments; Haskell doesn't (uses positional arguments,
+pseudo-names via records). Arithmetic sequences like R's `seq()` are most naturally expressed
+with Haskell's range syntax.
 
 | R | Haskell |
 |---|---|
@@ -72,19 +75,21 @@ cabal run tut-02-workflow-basics
 | `seq(1, 10)` | `[1 .. 10]` |
 | `x <- "hello world"` | `let greeting = "hello world"` |
 
-引用符・括弧は対で閉じる必要があるのは両言語共通です。
+Quote and parenthesis pairing is required in both languages.
 
-## §2.5 Exercises(要点)
+## §2.5 Exercises (Key Points)
 
-1. `my_varıable` の `ı` はトルコ語の点なし i で `my_variable` とは別字。 Haskell でも
-   識別子が 1 文字違えば別物(スコープエラー)。 「綴り・字種は厳密」。
-2. `libary(todyverse)` / `aes(x = displ y = hwy)` / `method = "lm` のタイポ修正
-   (`library(tidyverse)` / `aes(x = displ, y = hwy)` / `method = "lm"`)。 Haskell でも
-   import 名・引数の綴りと括弧/引用符の対は厳密。
-3–4. RStudio ショートカット / `ggsave` の保存対象は IDE・R 固有の話題(対応 IDE 機能や
-   `saveSVG` で代替可能だが、 図の再現対象ではないため割愛)。
+1. The `ı` in `my_varıable` is Turkish dotless-i, distinct from `my_variable`.
+   In Haskell too, one character difference in an identifier means a different name (scope error).
+   "Spelling and character type are strict."
+2. Typo fixes: `libary(todyverse)` → `library(tidyverse)`,
+   `aes(x = displ y = hwy)` → `aes(x = displ, y = hwy)`,
+   `method = "lm` → `method = "lm"`.
+   Haskell also enforces strict spelling of imports and argument names, pairing of brackets/quotes.
+3–4. RStudio shortcuts and `ggsave` targets are IDE/R-specific topics. Equivalent IDE features
+   or `saveSVG` are available, but since they don't affect plot reproduction, we omit them.
 
-## メモ
+## Note
 
-この章は図を生成しないため SVG はありません。 R4DS の全コード例を Haskell 等価で
-実行し、 出力で確認します(`cabal run tut-02-workflow-basics`)。
+This chapter generates no plots; there are no SVG files. We execute all R4DS code examples
+in Haskell equivalents and verify output (`cabal run tut-02-workflow-basics`).

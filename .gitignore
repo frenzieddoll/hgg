@@ -8,3 +8,6 @@ scripts/
 # OS / editor
 .DS_Store
 *~
+
+# cabal build 生成物
+dist-newstyle/

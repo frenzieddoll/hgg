@@ -1,36 +1,39 @@
-# 05. データの整然化 — tidy data と pivot
+# 05. Data Tidying — Tidy Data and Pivoting
 
-> 一次情報: **R for Data Science 2e, Ch.5 "Data tidying"**
+> 🌐 **English** | [日本語](README.ja.md)
+
+> Primary source: **R for Data Science 2e, Ch.5 "Data tidying"**
 > <https://r4ds.hadley.nz/data-tidy>
 >
-> データ: **tidyr** の `table1`/`table2`/`table3`(結核の罹患者数)・`billboard`(2000 年の
-> ヒットチャート)・`who2`(WHO 結核診断)・`household`(家族と子の生年)・
-> `cms_patient_experience`(米 CMS 患者調査)。
-> who2 / household / cms_patient_experience は tidyr パッケージの `.rda`(R serialization 形式)を
-> **バイト列からそのまま CSV 化**(捏造・間引きなし。R 非依存の自前パーサで展開)。
-> 出所一覧は [`../_data/_raw/SOURCE.md`](../_data/_raw/SOURCE.md)。
+> Data: **tidyr** `table1`/`table2`/`table3` (tuberculosis incidence), `billboard` (2000 hit charts),
+> `who2` (WHO TB diagnoses), `household` (family and child birth years),
+> `cms_patient_experience` (US CMS patient survey).
+> who2 / household / cms_patient_experience are tidyr package `.rda` files (R serialization format)
+> **converted directly from bytes to CSV** (no fabrication or sampling; expanded via R-independent parser).
+> Sources listed in [`../_data/_raw/SOURCE.md`](../_data/_raw/SOURCE.md).
 
-実行するコードは [`DataTidying.hs`](DataTidying.hs) です。
+The executable code is [`DataTidying.hs`](DataTidying.hs).
 
 ```sh
 cd docs/tutorials/05-data-tidying
-cabal run tut-05-data-tidying     # 各操作の結果を印字し、 tb-cases.svg / billboard-ranks.svg を生成
+cabal run tut-05-data-tidying     # prints operation results, generates tb-cases.svg / billboard-ranks.svg
 ```
 
-`dataframe` 1.3 には `pivot_longer` / `pivot_wider` がありません。**pivot が裏でやっていること**を、
-列の型差を吸収する `Cell` 中間表現の上に汎用 helper として自前定義します
-(`pivotLongerG` / `pivotLongerValueG` / `pivotWiderG`。特定の表にハードコードせず、列数・行数は
-データから取ります)。
+`dataframe` 1.3 lacks `pivot_longer` / `pivot_wider`. We define generic helpers
+**capturing what pivoting does** via `Cell` (an intermediate type absorbing column type differences):
+`pivotLongerG` / `pivotLongerValueG` / `pivotWiderG` (not hardcoded to a specific table;
+column and row counts come from data).
 
 ---
 
-## 整然データ(tidy data)の 3 規則
+## Three Rules of Tidy Data
 
-1. **各列が 1 つの変数**(each variable is a column)
-2. **各行が 1 つの観測**(each observation is a row)
-3. **各セルが 1 つの値**(each cell is a single value)
+1. **Each variable is a column**
+2. **Each observation is a row**
+3. **Each cell is a single value**
 
-同じ結核データを 3 通りに持てます。`table1` は整然(国×年が 1 行・`cases`/`population` が列)。
+The same TB data can be represented three ways. `table1` is tidy (country × year is one row,
+`cases`/`population` are columns):
 
 ```
   country   | year | cases  | population
@@ -40,7 +43,7 @@ Brazil      | 1999 | 37737  | 172006362
 ...
 ```
 
-`table2` は `cases` と `population` が `type`/`count` の **縦持ち**に分かれていて非整然:
+`table2` has `cases` and `population` split into **long format** (`type`/`count`), untidy:
 
 ```
   country   | year |    type    |   count
@@ -49,95 +52,96 @@ Afghanistan | 1999 | population | 19987071
 ...
 ```
 
-`table3` は `rate` セルに **2 値が詰まっている**(`745/19987071`)ので非整然です。
+`table3` has **two values in one cell** (`rate`: `745/19987071`), untidy.
 
-> R4DS の挿絵 `tidy-1.png` / `variables.png` 等は R コードの出力ではなく **手描きの解説図**
-> のため、本チュートリアルでは再現対象外です(コード出力の図だけを忠実に再現します)。
+> R4DS figures like `tidy-1.png` and `variables.png` are **hand-drawn explanatory diagrams**,
+> not R code output, so this tutorial doesn't reproduce them (only code-generated plots).
 
-## 整然だと計算しやすい
+## Tidy Data Enables Easy Computation
 
-`table1` は整然なので、そのまま `mutate` / `group_by` で計算できます。
+`table1` is tidy, so we can compute directly with `mutate` / `group_by`:
 
 | R | hgg / dataframe |
 |---|---|
 | `mutate(rate = cases / population * 10000)` | `DF.derive "rate" (F.toDouble (F.col @Int "cases") / F.toDouble (F.col @Int "population") * 10000)` |
 | `group_by(year) \|> summarize(total = sum(cases))` | `DF.groupBy ["year"] \|> DF.aggregate [F.sum (F.col @Int "cases") \`F.as\` "total_cases"]` |
 
-年ごとの合計は **1999 年 250,740 件 / 2000 年 296,920 件**(R4DS と一致)。
+Yearly totals: **1999: 250,740 / 2000: 296,920** (matches R4DS).
 
-### 図1 — 結核罹患者数の年次推移(`tb-cases.svg`)
+### Figure 1 — TB Cases Over Time (`tb-cases.svg`)
 
-整然な `table1` をそのまま折れ線+点で描きます。国ごとに色分けした線と、色+形で区別した点を
-重ね、`scale_x_continuous(breaks=c(1999,2000))` 相当の `xAxis (axisBreaksAt [1999,2000])` で
-目盛を 1999/2000 のみにします。
+Plot tidy `table1` as lines + points. Overlay lines (color-coded by country) with
+points (color + shape by country), and set x-axis breaks to 1999/2000 only
+(equivalent to `scale_x_continuous(breaks=c(1999,2000))`):
 
 ```haskell
-table1 |>> layer (line "year" "cases" <> color "country")
-       <> layer (scatter "year" "cases" <> color "country" <> shapeBy "country" <> size 7)
+table1 |>> theme ThemeGrey <> layer (line "year" "cases" <> colorBy "country")
+       <> layer (scatter "year" "cases" <> colorBy "country" <> shapeBy "country")
        <> palette okabeIto
        <> xAxis (axisBreaksAt [1999, 2000])
 ```
 
-![結核罹患者数](tb-cases.svg)
+![TB Cases](tb-cases.svg)
 
-中国が突出して多く(両年とも 20 万超)、ブラジルは約 4 万→8 万に増加、アフガニスタンは
-このスケールではほぼ 0、と R4DS の観察がそのまま見えます。
+China dominates (>200k both years), Brazil rises from ~40k to ~80k, Afghanistan barely visible
+at this scale—exactly matching R4DS's observation.
 
 | R | hgg |
 |---|---|
-| `geom_line(aes(group = country))` | `layer (line "year" "cases" <> color "country")` |
-| `geom_point(aes(color = country, shape = country))` | `layer (scatter "year" "cases" <> color "country" <> shapeBy "country")` |
+| `geom_line(aes(group = country))` | `layer (line "year" "cases" <> colorBy "country")` |
+| `geom_point(aes(color = country, shape = country))` | `layer (scatter "year" "cases" <> colorBy "country" <> shapeBy "country")` |
 | `scale_x_continuous(breaks = c(1999, 2000))` | `xAxis (axisBreaksAt [1999, 2000])` |
 
 ---
 
-## `pivot_longer` — 横持ちを縦に
+## `pivot_longer` — Wide to Long
 
-実データの多くは非整然です。**列名が変数の値になっている**ときは `pivot_longer` で縦に畳みます。
+Most real data is untidy. When **column names hold variable values**, use `pivot_longer`
+to reshape to long format.
 
-### 列名にデータがある — `billboard`
+### Column Names Contain Data — `billboard`
 
-`billboard` は 1 曲 1 行で、第 1〜76 週の順位が `wk1`〜`wk76` の **76 列**に横に並ぶ
-非整然データ(317 曲)。これを「1 曲×1 週 = 1 行」に縦に畳みます。
+`billboard`: one row per song, weeks 1–76 ranks in **76 columns** `wk1`–`wk76`
+(untidy, 317 songs). Reshape to one row per song × week.
 
 ```haskell
 let wkCols  = filter ("wk" `T.isPrefixOf`) (DF.columnNames billboardRaw)
-    parseWk = read . T.unpack . T.drop 2          -- "wk12" -> 12 (parse_number 相当)
+    parseWk = read . T.unpack . T.drop 2          -- "wk12" -> 12 (parse_number equivalent)
     bbLong  = pivotLongerG (\c -> [("week", CI (parseWk c))]) "rank" True
                            ["artist","track"] wkCols billboardRaw
 ```
 
-結果は **(317, 80) → (5,307, 4)**(R4DS と一致)。`values_drop_na = TRUE` 相当で `NA`
-(チャート外の週)は落とします。`dataframe` は空セルを validity bitmap で持つため、helper は
-列を **`@(Maybe Int)` で先に読んで** NA を `Nothing` として正しく拾います
-(`@Int` 直読みだと validity を無視して 0 を返してしまう。後述の罠)。
+Result: **(317, 80) → (5,307, 4)** (matches R4DS). With `values_drop_na = TRUE`,
+drop NA (out-of-chart weeks). Since `dataframe` stores empty cells in a validity bitmap,
+the helper **reads columns as `@(Maybe Int)` first** to capture NA as `Nothing`
+(reading `@Int` directly ignores validity and returns 0—the trap described later).
 
 | R | hgg |
 |---|---|
 | `pivot_longer(starts_with("wk"), names_to="week", values_to="rank", values_drop_na=TRUE)` | `pivotLongerG (\c -> [("week", CI (parseWk c))]) "rank" True ["artist","track"] wkCols` |
-| `mutate(week = parse_number(week))` | helper の `parseWk`(`"wk12" → 12`) |
+| `mutate(week = parse_number(week))` | helper's `parseWk` (`"wk12" → 12`) |
 
-### 図2 — 順位推移(`billboard-ranks.svg`)
+### Figure 2 — Rank Progression (`billboard-ranks.svg`)
 
-縦持ちにすると「週ごとの順位」を 1 本の線で描けます。曲ごとに灰色の線を重ね、
-`reverseY`(= `scale_y_reverse()`)で 1 位を上にします。
+Long format lets us draw rank over weeks as lines. Overlay gray lines per song,
+and use `reverseY` (= `scale_y_reverse()`) to place rank 1 at the top:
 
 ```haskell
-bbLong |>> layer (line "week" "rank" <> linetypeBy "track" <> colorStatic "#88888855")
+bbLong |>> theme ThemeGrey <> layer (line "week" "rank" <> linetypeBy "track" <> color (fromHex "#888888") <> alpha (85/255))
        <> reverseY
 ```
 
-![順位推移](billboard-ranks.svg)
+![Rank Progression](billboard-ranks.svg)
 
-多くの曲は **20 週以内に top100 から消える**、という R4DS の観察がそのまま見えます。
+Most songs **drop from top 100 within 20 weeks**—R4DS's observation is immediately apparent.
 
-> 317 曲を色分けすると煩雑なので、群分割には `linetypeBy "track"`(色は灰色固定)を
-> 使っています。R の `geom_line(aes(group = track))` 相当です。
+> With 317 songs, color-coding per song would be chaotic. Instead, we use `linetypeBy "track"`
+> (fixed gray) for grouping. Equivalent to R's `geom_line(aes(group = track))`.
 
-### pivoting の仕組み(toy df)
+### How Pivoting Works (Toy DataFrame)
 
-小さな例で「何が起きているか」を確認します。`id` は value 列の数だけ繰り返され、列名は
-新しい変数の値に、セル値はそのまま縦に並びます。
+Verify with a small example. `id` repeats for each value column; column names become
+new variable values; cell values stack vertically:
 
 ```haskell
 let toyL = DF.fromNamedColumns [("id", …["A","B","C"]), ("bp1", …[100,140,120]), ("bp2", …[120,115,125])]
@@ -148,10 +152,11 @@ pivotLongerG (\c -> [("measurement", CT c)]) "value" False ["id"] ["bp1","bp2"] 
 -- B   bp1         140  …
 ```
 
-### 列名に複数の変数 — `who2`(`names_sep`)
+### Multiple Variables in Column Names — `who2` (`names_sep`)
 
-`who2`(7,240 行 × 58 列)の列名 `sp_m_014` は **3 情報**(診断法 `sp`/性別 `m`/年齢層 `014`)を
-`_` で繋いだものです。`names_sep` で 3 つの変数に割ります。
+`who2` (7,240 rows × 58 columns) column names like `sp_m_014` combine **three pieces**
+(diagnosis `sp` / gender `m` / age group `014`) separated by `_`. Use `names_sep`
+to split into three variables:
 
 ```haskell
 let who2Vals = filter (`notElem` ["country","year"]) (DF.columnNames who2)
@@ -159,18 +164,20 @@ who2Long = pivotLongerG (\c -> zip ["diagnosis","gender","age"] (map CT (T.split
                         "count" False ["country","year"] who2Vals who2
 ```
 
-結果は **(7,240, 58) → (405,440, 6)**(R4DS と一致)。ここでは `values_drop_na` を **使わない**ので
-(R4DS の例どおり)、未報告の年は `count = NA` のまま残ります(先頭 Afghanistan 1980 は全 NA)。
+Result: **(7,240, 58) → (405,440, 6)** (matches R4DS). Here we **don't use `values_drop_na`**
+(matching R4DS), so unreported years remain as `count = NA` (Afghanistan 1980's first rows
+are all NA).
 
 | R | hgg |
 |---|---|
 | `names_to = c("diagnosis","gender","age"), names_sep = "_"` | `\c -> zip ["diagnosis","gender","age"] (map CT (T.splitOn "_" c))` |
 
-### 列名に変数名と変数値が混在 — `household`(`.value` sentinel)
+### Variable Names and Values Mixed in Column Names — `household` (`.value` Sentinel)
 
-`household`(5 家族)の列名 `dob_child1` は **変数名 `dob`** と **変数値 `child1`** が混ざっています。
-`names_to = c(".value", "child")` の特殊値 `".value"` を使うと、第 1 片(`dob`/`name`)は
-**出力列名**に、第 2 片(`child1`/`child2`)は `child` 列の値になります。
+`household` (5 families) column names like `dob_child1` mix **variable name `dob`** with
+**variable value `child1`**. Using the special value `names_to = c(".value", "child")`,
+the first part (`dob`/`name`) becomes the **output column name**; the second part
+(`child1`/`child2`) becomes the `child` column value:
 
 ```haskell
 pivotLongerValueG "_" "child" True ["family"]
@@ -178,12 +185,12 @@ pivotLongerValueG "_" "child" True ["family"]
 -- family child  dob        name
 -- 1      child1 1998-11-26 Susan
 -- 1      child2 2000-01-29 Jose
--- 2      child1 1996-06-22 Mark   ← family 2 は子が 1 人。child2 行は NA なので落とす
--- …                                  (5×2 − 1 = 9 行)
+-- 2      child1 1996-06-22 Mark   ← family 2 has 1 child; child2 row is all NA, dropped
+-- …                                  (5×2 − 1 = 9 rows)
 ```
 
-`values_drop_na = TRUE` で、子が 1 人の家族の `child2` 行(全 `.value` が NA)を落とし、
-**9 行**になります(R4DS と一致)。
+With `values_drop_na = TRUE`, drop `child2` rows (all `.value` NA) for 1-child families,
+yielding **9 rows** (matches R4DS).
 
 | R | hgg |
 |---|---|
@@ -191,41 +198,41 @@ pivotLongerValueG "_" "child" True ["family"]
 
 ---
 
-## `pivot_wider` — 縦持ちを横に
+## `pivot_wider` — Long to Wide
 
-1 観測が複数行に散っているときは `pivot_wider` で横に広げます。
+When one observation spans multiple rows, use `pivot_wider` to reshape wide.
 
-### 整然形へ戻す — `table2`
+### Return to Tidy Form — `table2`
 
-`table2`(`country, year, type, count`)の `type`(cases/population)を列に展開すると、
-`table1` と同じ整然形になります。
+Pivot `table2`'s `type` (cases/population) to columns to get back `table1`'s tidy shape:
 
 ```haskell
 pivotWiderG ["country","year"] "type" "count" table2
 -- → country year cases population  (= table1)
 ```
 
-### `id_cols` を指定 — `cms_patient_experience`
+### Specify `id_cols` — `cms_patient_experience`
 
-`cms_patient_experience`(500 行)は 1 組織が 6 行(調査項目ごと)に散っています。
-`distinct(measure_cd, measure_title)` で項目は 6 種(`CAHPS_GRP_1`/`_2`/`_3`/`_5`/`_8`/`_12`)。
-`id_cols = starts_with("org")` で組織を一意に決め、`measure_cd` を列に、`prf_rate` を値にします。
+`cms_patient_experience` (500 rows): one organization spans 6 rows (one per survey item).
+`distinct(measure_cd, measure_title)` yields 6 items (`CAHPS_GRP_1`, `_2`, `_3`, `_5`, `_8`, `_12`).
+Use `id_cols = starts_with("org")` to uniquely identify organizations; pivot `measure_cd`
+to columns with `prf_rate` as values:
 
 ```haskell
 pivotWiderG ["org_pac_id","org_nm"] "measure_cd" "prf_rate" cms
 ```
 
-結果は **(500, 5) → (95, 8)**(R4DS と一致。組織 95・id 2 列 + 項目 6 列)。
-`org_pac_id` は **先頭ゼロ付き ID**(`0446157747`)なので、CSV 読込時にスキーマで `Text` を
-明示して桁落ちを防いでいます(`readCsvWithSchema` + `schemaType @Text`)。
+Result: **(500, 5) → (95, 8)** (matches R4DS: 95 organizations, 2 ID columns, 6 measure columns).
+`org_pac_id` is a **zero-padded ID** (`0446157747`), so we declare `Text` in the schema
+at CSV read to prevent truncation (`readCsvWithSchema` + `schemaType @Text`).
 
 | R | hgg |
 |---|---|
 | `pivot_wider(id_cols=starts_with("org"), names_from=measure_cd, values_from=prf_rate)` | `pivotWiderG ["org_pac_id","org_nm"] "measure_cd" "prf_rate" cms` |
 
-### `pivot_wider` の仕組みと重複セル(toy df)
+### How `pivot_wider` Works and Duplicate Cells (Toy DataFrame)
 
-入力に無い `(id, name)` の組は `NA` になります(`B` の `bp3` は欠損)。
+Combinations absent from input become NA (`B`'s `bp3` is missing):
 
 ```haskell
 pivotWiderG ["id"] "measurement" "value" toyW
@@ -234,41 +241,42 @@ pivotWiderG ["id"] "measurement" "value" toyW
 -- B   140 115 NA
 ```
 
-`(id, measurement)` の組に **複数行**があると、R の `pivot_wider` は list-column 警告を出します。
-本実装は **型付き列**なので list-column を作れません。R4DS が推奨するとおり
-`group_by(id, measurement) |> summarize(n = n()) |> filter(n > 1)` で重複箇所を検出して示します
-(`A`/`bp1` が `n=2`)。
+When `(id, measurement)` combinations **appear multiple times**, R's `pivot_wider` warns of
+list-columns. Our typed-column implementation can't create list-columns. Following R4DS's
+recommendation, we detect duplicates with `group_by(id, measurement) |> summarize(n = n()) |> filter(n > 1)`
+and report them (`A`/`bp1` has `n=2`).
 
 ---
 
-## この章で出てきた対応表(まとめ)
+## Correspondence Table for This Chapter (Summary)
 
 | tidyr / dplyr | dataframe / hgg |
 |---|---|
-| 整然データの 3 規則 | (設計指針。列=変数・行=観測・セル=値) |
-| `pivot_longer(names_to=…, values_to=…)` | 自前 `pivotLongerG`(wide → long) |
-| `pivot_longer(names_sep="_")` | `pivotLongerG` の `nameExpand` で `T.splitOn "_"` |
-| `pivot_longer(names_to=c(".value", …))` | 自前 `pivotLongerValueG`(.value sentinel) |
-| `pivot_wider(names_from=…, values_from=…, id_cols=…)` | 自前 `pivotWiderG` |
-| `values_drop_na = TRUE` | helper の `dropNA` 引数 |
+| Tidy data's 3 rules | (Design principle: column=variable, row=observation, cell=value) |
+| `pivot_longer(names_to=…, values_to=…)` | Custom `pivotLongerG` (wide → long) |
+| `pivot_longer(names_sep="_")` | `pivotLongerG`'s `nameExpand` with `T.splitOn "_"` |
+| `pivot_longer(names_to=c(".value", …))` | Custom `pivotLongerValueG` (.value sentinel) |
+| `pivot_wider(names_from=…, values_from=…, id_cols=…)` | Custom `pivotWiderG` |
+| `values_drop_na = TRUE` | helper's `dropNA` parameter |
 | `parse_number("wk12")` | `read . T.unpack . T.drop 2` |
 | `scale_y_reverse()` | `reverseY` |
 | `scale_x_continuous(breaks=…)` | `xAxis (axisBreaksAt […])` |
-| `geom_line(aes(group = g))` | `line … <> color "g"`(色分け)/ `<> linetypeBy "g"`(灰色) |
+| `geom_line(aes(group = g))` | `line … <> colorBy "g"` (color) / `<> linetypeBy "g"` (gray) |
 
-## 忠実再現にあたっての相違(正直な記録)
+## Faithful Reproduction: Recorded Differences (Honest Account)
 
-- **NA の表示**: `dataframe` は欠損列を `Maybe a` として印字するため、R が `NA` と出す箇所を
-  `Nothing`、`63` を `Just 63.0` と出します(**値は同一**。型付き nullable 列の表示流儀の差)。
-- **空セルの読み取り(罠)**: `dataframe` は空セルを validity bitmap で持ち、`@Int` 直読みは
-  validity を無視して `0` を返します。NA を正しく落とす/残すには `@(Maybe Int)` を**先に**読む
-  必要があります(`readCells`)。billboard が `5,307` でなく `20,605` 行になる回帰でこれに気づきました。
-- **先頭ゼロ ID**: `org_pac_id` は数値に見えて文字列(`0446157747`)。型推論に任せると桁落ちするため、
-  `readCsvWithSchema` で `Text` を明示しています。
-- **list-column**: 重複セルの `pivot_wider` は R では list-column になりますが、型付き列の本実装では
-  作れないため、R4DS 推奨の重複検出(`group_by/summarize/filter`)で代替しています。
+- **NA display**: `dataframe` prints nullable columns as `Maybe a`, so where R shows `NA`,
+  we show `Nothing`, and `63` as `Just 63.0` (**value identical**; just a display convention difference).
+- **Empty cell reading (trap)**: `dataframe` stores empty cells via validity bitmap; reading `@Int`
+  directly ignores validity and returns `0`. To correctly drop/keep NA, **read as `@(Maybe Int)` first**
+  (`readCells`). We discovered this when billboard had 20,605 rows instead of 5,307.
+- **Zero-padded ID**: `org_pac_id` looks numeric but is text (`0446157747`). Inferring the type
+  truncates it, so we explicitly declare `Text` via `readCsvWithSchema`.
+- **List-columns**: Duplicate cells in `pivot_wider` become list-columns in R, but our typed-column
+  implementation can't create them. Following R4DS's recommendation, we detect duplicates
+  with `group_by`/`summarize`/`filter` instead.
 
 ---
 
-前章 → [`04-workflow-style`](../04-workflow-style/)(Ch4 Workflow: code style)。
-次章 → R4DS Ch6 "Workflow: scripts and projects"(図なし・コード tutorial として後続予定)。
+Previous: [`04-workflow-style`](../04-workflow-style/README.md) (Ch.4 Workflow: code style).
+Next: R4DS Ch.6 "Workflow: scripts and projects" (no plots; code tutorial coming).

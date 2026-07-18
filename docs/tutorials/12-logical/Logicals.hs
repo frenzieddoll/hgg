@@ -31,7 +31,12 @@ import qualified Data.Text                 as T
 import qualified Data.Map.Strict           as M
 import qualified Data.Vector               as V
 import qualified Data.Vector.Unboxed       as VU
-import qualified DataFrame                 as DF
+import qualified DataFrame.IO.CSV                     as DF
+import qualified DataFrame.Internal.Column            as DF
+import qualified DataFrame.Internal.DataFrame         as DF
+import qualified DataFrame.Operators                  as DF
+import qualified DataFrame.Operations.Core            as DF
+import qualified DataFrame.Operations.Subset          as DF
 import qualified DataFrame.Internal.Column as DFC
 import           DataFrame.Operations.Aggregation (selectIndices)
 
