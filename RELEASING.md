@@ -45,6 +45,28 @@ Then, respecting intra-repo dependencies:
    `hgg-rasterific`/`hgg-latex`/`hgg-3d`, so all of those must be up first.
    On every release bump, update the `== x.y.z.w` pins in `hgg/hgg.cabal`.)
 
+## Per-release: bump the pinned URLs in hgg/README.md
+
+The umbrella README (`hgg/README.md`) embeds figures and doc links as
+absolute URLs pinned to the release tag (raw.githubusercontent /
+github.com blob), because Hackage cannot resolve relative paths. On every
+release, replace the old tag with the new one before building the sdist:
+
+```bash
+sed -i 's|/hgg/v0\.1\.0\.0/|/hgg/vX.Y.Z.W/|g' hgg/README.md
+```
+
+then verify every URL still resolves (all must print nothing):
+
+```bash
+grep -o 'https://[^")<> ]*' hgg/README.md | sed 's/#.*//' | sort -u | \
+  while read u; do [ "$(curl -s -o /dev/null -w '%{http_code}' "$u")" != 200 ] && echo "FAIL $u"; done
+```
+
+(The tag must already point at a commit that contains the referenced
+`docs/` files — push the tag before uploading so Hackage renders images
+immediately.)
+
 ## Procedure (per package)
 
 ```bash
