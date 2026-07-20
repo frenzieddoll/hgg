@@ -35,15 +35,12 @@ import           Graphics.Hgg.Backend.SVG (saveSVGWith)
 import           Graphics.Hgg.Frame       (PlotData (..))
 import           Graphics.Hgg.Spec        (ColData (..), Resolver, VisualSpec)
 import           Control.Applicative      ((<|>))
-import           Control.DeepSeq          (NFData, force)
-import           Control.Exception        (SomeException, evaluate, try)
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Internal.DataFrame as DFI
 import qualified DataFrame.Operations.Core as DF
 import qualified DataFrame.Operators      as DF
-import           System.IO.Unsafe         (unsafePerformIO)
 
 -- | 'DataFrame' から hgg の 'Resolver' を作る。
 -- 列名で `Double` または `Text` の列を抽出、 数値列なら 'NumData' / 文字列列
@@ -86,14 +83,9 @@ tryTextCol n df = safeColumnAs @Text n df
 
 -- | DF.columnAsList を例外セーフに呼び出して Vector に。
 safeColumnAs
-  :: forall a. (DFC.Columnable a, NFData a)
+  :: forall a. (DFC.Columnable a)
   => Text -> DFI.DataFrame -> Maybe (V.Vector a)
-safeColumnAs name df = unsafePerformIO $ do
-  r <- try (evaluate (force (DF.columnAsList (DF.col @a name) df)))
-         :: IO (Either SomeException [a])
-  case r of
-    Left _   -> pure Nothing
-    Right xs -> pure (Just (V.fromList xs))
+safeColumnAs name df = either (const Nothing) Just (DF.columnAsVector (DF.col @a name) df)
 
 -- | DF + spec を 1 行で SVG 出力 (= matplotlib `plt.savefig` 感)。
 plotDF :: FilePath -> DFI.DataFrame -> VisualSpec -> IO ()
