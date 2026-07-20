@@ -85,9 +85,7 @@ tryTextCol n df = safeColumnAs @Text n df
 safeColumnAs
   :: forall a. (DFC.Columnable a)
   => Text -> DFI.DataFrame -> Maybe (V.Vector a)
-safeColumnAs name df = case DF.columnAsVector (DF.col @a name) df of
-    Left _   -> Nothing
-    Right xs -> Just xs
+safeColumnAs name df = either (const Nothing) Just (DF.columnAsVector (DF.col @a name) df)
 
 -- | DF + spec を 1 行で SVG 出力 (= matplotlib `plt.savefig` 感)。
 plotDF :: FilePath -> DFI.DataFrame -> VisualSpec -> IO ()
