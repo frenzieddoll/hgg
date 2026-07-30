@@ -35,22 +35,16 @@ import           Graphics.Hgg.Backend.SVG (saveSVGWith)
 import           Graphics.Hgg.Frame       (PlotData (..))
 import           Graphics.Hgg.Spec        (ColData (..), Resolver, VisualSpec)
 import           Control.Applicative      ((<|>))
-import           Control.DeepSeq          (NFData, force)
-import           Control.Exception        (SomeException, evaluate, try)
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
 import qualified DataFrame.Internal.Column as DFC
 import qualified DataFrame.Internal.DataFrame as DFI
 import qualified DataFrame.Operations.Core as DF
 import qualified DataFrame.Operators      as DF
-import           System.IO.Unsafe         (unsafePerformIO)
 
 -- | 'DataFrame' から hgg の 'Resolver' を作る。
 -- 列名で `Double` または `Text` の列を抽出、 数値列なら 'NumData' / 文字列列
--- なら 'TxtData' を返す。 失敗 (= 列不在 / 型不一致) は 'Nothing'。
---
--- 注意: DF の `columnAsList` は 例外ベースなので 'unsafePerformIO + try' で
--- 純関数化している (= hanalyze の Convert.hs と同じパターン)。
+-- なら 'TxtData' を返す。 失敗 (= 列不在 / 型不一致 / 空 DataFrame) は 'Nothing'。
 dfResolver :: DFI.DataFrame -> Resolver
 dfResolver df name =
    -- nullable (Maybe) 列対応: 欠損 (NA) は NaN で運び **長さを保つ** (行整列を壊さない・
@@ -84,16 +78,20 @@ tryMaybeIntCol n df =
 tryTextCol :: Text -> DFI.DataFrame -> Maybe (V.Vector Text)
 tryTextCol n df = safeColumnAs @Text n df
 
--- | DF.columnAsList を例外セーフに呼び出して Vector に。
+-- | 列を例外セーフに 'V.Vector' として取り出す (hgg PR #1 = mchav 氏提案の
+-- `columnAsVector` 版。 中間 list と unsafePerformIO/try/force を撤去)。
+--
+-- 先頭の `DFI.null` ガードは冗長に見えるが**消してはいけない**: `columnAsVector`
+-- は列欠落・型不一致を `Left` で返す一方、 **空 DataFrame だけは `Either` に
+-- 載せず純粋例外を投げる** (dataframe-operations-1.1.1.1
+-- `Operations/Core.hs:825` = `throw (EmptyDataSetException ...)`)。 ここで先に
+-- 'Nothing' を返して従来挙動 (空データ = 空の図、 例外なし) を保つ。
 safeColumnAs
-  :: forall a. (DFC.Columnable a, NFData a)
+  :: forall a. (DFC.Columnable a)
   => Text -> DFI.DataFrame -> Maybe (V.Vector a)
-safeColumnAs name df = unsafePerformIO $ do
-  r <- try (evaluate (force (DF.columnAsList (DF.col @a name) df)))
-         :: IO (Either SomeException [a])
-  case r of
-    Left _   -> pure Nothing
-    Right xs -> pure (Just (V.fromList xs))
+safeColumnAs name df
+  | DFI.null df = Nothing
+  | otherwise   = either (const Nothing) Just (DF.columnAsVector (DF.col @a name) df)
 
 -- | DF + spec を 1 行で SVG 出力 (= matplotlib `plt.savefig` 感)。
 plotDF :: FilePath -> DFI.DataFrame -> VisualSpec -> IO ()

@@ -2,15 +2,18 @@
 module Main where
 
 import           Graphics.Hgg.Backend.SVG (renderBound)
-import           Graphics.Hgg.DataFrame   (dfResolver)
+import           Graphics.Hgg.DataFrame   (dfResolver, plotDF)
 import           Graphics.Hgg.Frame       (PlotData (..), (|>>))
 import           Graphics.Hgg.Spec        (ColData (..), layer, scatter)
+import           Data.List                (isInfixOf)
 import           Data.Map.Strict          (Map)
 import qualified Data.Map.Strict          as M
 import           Data.Text                (Text)
 import qualified Data.Vector              as V
 import qualified DataFrame.Internal.Column    as DF
 import qualified DataFrame.Internal.DataFrame as DF
+import           System.Directory         (getTemporaryDirectory, removeFile)
+import           System.FilePath          ((</>))
 import           Test.Hspec
 
 main :: IO ()
@@ -54,6 +57,29 @@ main = hspec $ do
           V.toList v !! 0 `shouldBe` 1.5
           isNaN (V.toList v !! 1) `shouldBe` True
         _ -> expectationFailure "expected NumData for Maybe Double column"
+
+  -- Phase 61: safeColumnAs を columnAsVector 版へ置換した回帰 (§0 実測 4 ケース +
+  -- end-to-end)。 とくに空 DataFrame は columnAsVector が Left でなく純粋例外を
+  -- 投げる唯一の入力 (dataframe-operations Operations/Core.hs:825) なので、
+  -- 「Nothing が返り例外が漏れない」 ことが本 Phase の要。
+  describe "dfResolver 回帰 (Phase 61 = columnAsVector 化)" $ do
+    it "型不一致: Text 列は TxtData として resolve (数値型 4 試行が例外を投げず Nothing で通過)" $ do
+      let df = DF.fromNamedColumns
+                 [ ("s", DF.fromList (["a", "b"] :: [Text])) ]
+          r  = dfResolver df
+      case r "s" of
+        Just (TxtData v) -> V.toList v `shouldBe` ["a", "b"]
+        _                -> expectationFailure "expected TxtData"
+    it "空 DataFrame は Nothing (EmptyDataSetException を透過させない)" $ do
+      let r = dfResolver DF.empty
+      r "x" `shouldBe` Nothing
+    it "空 DataFrame を plotDF に渡して例外なく SVG が書ける (end-to-end)" $ do
+      tmp <- getTemporaryDirectory
+      let path = tmp </> "hgg-df-empty-test.svg"
+      plotDF path DF.empty (layer (scatter "x" "y"))
+      svg <- readFile path
+      ("<svg" `isInfixOf` svg) `shouldBe` True   -- 空の図が出る = 従来挙動
+      removeFile path
 
   describe "PlotData DataFrame instance (Phase 14 A4)" $ do
     let df = DF.fromNamedColumns
