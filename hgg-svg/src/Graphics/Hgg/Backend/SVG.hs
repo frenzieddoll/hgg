@@ -34,7 +34,8 @@ import           Graphics.Hgg.Spec     (MarkKind (..), Resolver, VisualSpec (..)
                                         emptyResolver, lyKind, vsDpi)
 import           Data.Monoid           (getFirst, getLast)
 import           Graphics.Hgg.Validate (PlotDiagnostic, Severity (..),
-                                        diagnosticSeverity, renderDiagnostic)
+                                        diagnosticSeverity, renderDiagnostic,
+                                        reportFacetInlineWarnings)
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.IO          as TIO
@@ -66,7 +67,9 @@ renderSVG = renderSVGWith emptyResolver
 
 -- | 'Resolver' を渡して SVG ファイルに保存。 'ColByName' を含む図用。
 saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
-saveSVGWith path r spec = TIO.writeFile path (renderSVGWith r spec)
+saveSVGWith path r spec = do
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  TIO.writeFile path (renderSVGWith r spec)
 
 -- | SVG ファイルに保存。 Resolver 不要 (= inline 列のみの図、 = 通常)。
 -- 列名参照を含む図は 'saveSVGWith'、 DataFrame は 'saveSVGBound' (@df |>> spec@)。
@@ -131,7 +134,9 @@ renderSVGInteractive r spec =
   in T.concat [pre, panZoomScript, post]
 
 saveSVGInteractive :: FilePath -> Resolver -> VisualSpec -> IO ()
-saveSVGInteractive path r spec = TIO.writeFile path (renderSVGInteractive r spec)
+saveSVGInteractive path r spec = do
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3)
+  TIO.writeFile path (renderSVGInteractive r spec)
 
 -- | Phase 3 A8: '[Primitive]' を直接 SVG にする helper。
 -- 'renderSVG' は VisualSpec 経由だが、 hgg-3d のように外部で

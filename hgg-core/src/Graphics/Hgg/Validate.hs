@@ -42,6 +42,8 @@ module Graphics.Hgg.Validate
     -- * validate / compile
   , validatePlot
   , validatePlotWith
+  , facetInlineDiagnostics        -- ★ Phase 62 A4 (§3)
+  , reportFacetInlineWarnings     -- ★ Phase 62 A4: backend save 系共用の stderr 報告
   , suggest
   , CompiledPlot
   , compiledSpec
@@ -64,6 +66,8 @@ import           Data.Maybe  (isJust, mapMaybe)
 import           Data.Monoid (First (..), Last (..))
 import           Data.Text   (Text)
 import qualified Data.Text   as T
+import qualified Data.Vector as V
+import           System.IO   (hPutStrLn, stderr)
 
 import           Graphics.Hgg.Spec
 
@@ -127,6 +131,9 @@ data PlotErrorKind
 data PlotWarningKind
   = BackendUnsupported BackendName FeatureName
   | TooFewColumns Aesthetic Int Int     -- ^ 必要数 / 実数 (parallel 等)
+  | FacetInlineLengthMismatch Aesthetic Int Int
+    -- ^ ★ Phase 62 A4 (§3): facet 列と長さの異なる inline 列 (inline 長 / facet 長)。
+    --   facet 分割がこの列に効かず全 panel に同一データが描かれる。 描画は継続する。
   deriving (Show, Eq)
 
 data PlotDiagnostic
@@ -176,6 +183,11 @@ renderDiagnostic d = case d of
         <> " 非対応です (fallback または無視されます)。"
     TooFewColumns a need got ->
       aesName a <> " は最低 " <> tshow need <> " 列必要ですが " <> tshow got <> " 列でした。"
+    FacetInlineLengthMismatch a m n ->
+      "facet 列 (" <> tshow n <> " 行) と長さの異なる inline " <> aesName a
+        <> " 列 (" <> tshow m <> " 行) があります。 facet 分割がこの列に効かず、"
+        <> "全 panel に同一データが描かれます。 列長を facet 列と揃えるか、"
+        <> "名前参照 + Resolver (saveSVGWith / savePNGWith 等) を使ってください。"
   expName ExpNumeric     = "数値列"
   expName ExpCategorical = "カテゴリ列"
   expName ExpAny         = "任意の列"
@@ -333,6 +345,51 @@ layerCols ly = mapMaybe pick
     Just (ColorByCol c)        -> [(AesColor, c)]
     Just (ColorByContinuous c) -> [(AesColor, c)]
     _                          -> []
+
+-- | ★ Phase 62 A4 (§3): facet 列と長さの異なる inline encoding の検出。
+-- inline 列は Resolver を通らないため、 facet の行分割 ('subsetInlineSpec') は
+-- **facet 列と同じ長さの inline のみ**に効く。 長さが違う inline が encoding に
+-- 残っていると、 その列は分割されず全 panel に同一データが描かれる — それを
+-- 明示検出する (検出しても描画は継続 = 非破壊、 2026-07-31 user 決定)。
+-- 判定は 'applyDiscreteLimits' 適用後の姿で行う (= 経路 2 の bake / limits に
+-- よる行 drop の後、 実際に render が見る spec と同条件。 limits の行 drop で
+-- facet 列と layer が desync するケースもこれで捕まる)。
+facetInlineDiagnostics :: Resolver -> VisualSpec -> [PlotDiagnostic]
+facetInlineDiagnostics r spec0 = go (applyDiscreteLimits r spec0) ++ subDiags
+ where
+  -- subplots は独立 spec (自分の facet を持てる) なので再帰
+  subDiags = concatMap (facetInlineDiagnostics r) (vsSubplots spec0)
+  go spec = case facetLens spec of
+    []      -> []
+    (n : _) -> concat (zipWith (layerMismatch n) [0 ..] (vsLayers spec))
+  facetLens spec = mapMaybe colLen
+    (mapMaybe getLast [vsFacet spec, vsFacetRow spec, vsFacetCol spec])
+  colLen cr = case resolveCol r cr of
+    Just (NumData v) -> Just (V.length v)
+    Just (TxtData v) -> Just (V.length v)
+    Nothing          -> Nothing
+  layerMismatch n i ly =
+    let ctx = DiagnosticContext (Just i) (getFirst (lyKind ly))
+    in [ PlotWarning (FacetInlineLengthMismatch a m n) ctx
+       | (a, cr) <- rowCols ly
+       , Just m <- [inlineLen cr]
+       , m /= n ]
+  inlineLen (ColNum v) = Just (V.length v)
+  inlineLen (ColTxt v) = Just (V.length v)
+  inlineLen _          = Nothing
+  -- layerCols (aes 付き encoding) + size/shape encoding。 chain/label/hover 等は
+  -- Aesthetic tag が無いため対象外 (要るなら Aesthetic 追加とセットで拡張)。
+  rowCols ly = layerCols ly
+    ++ [ (AesSize,  c) | Just c <- [getLast (lySizeBy ly)] ]
+    ++ [ (AesShape, c) | Just c <- [getLast (lyShapeBy ly)] ]
+
+-- | ★ Phase 62 A4: 'facetInlineDiagnostics' を stderr へ報告する backend 共用
+-- helper (SVG / PNG / PDF / TeX の save 系入口から呼ぶ)。 診断ゼロなら無音。
+-- 描画は止めない (§3 = 描画継続 + 警告)。
+reportFacetInlineWarnings :: Resolver -> VisualSpec -> IO ()
+reportFacetInlineWarnings r spec =
+  mapM_ (hPutStrLn stderr . T.unpack . renderDiagnostic)
+        (facetInlineDiagnostics r spec)
 
 -- | 列の解決可否 + 型チェック。 数値要求 aesthetic に文字列列が来たら型不一致。
 checkCol :: [Text] -> Resolver -> DiagnosticContext -> Aesthetic -> ColRef -> [PlotDiagnostic]

@@ -48,7 +48,8 @@ import           Graphics.Hgg.Render   (FillStyle (..), LineStyle (..),
                                         Transform (..), renderToPrimitives)
 import           Graphics.Hgg.Spec     (Resolver, VisualSpec, emptyResolver)
 import           Graphics.Hgg.Validate (Severity (..), diagnosticSeverity,
-                                        renderDiagnostic)
+                                        renderDiagnostic,
+                                        reportFacetInlineWarnings)
 import           Data.Char             (isHexDigit, toUpper)
 import           Data.List             (nub)
 import           Data.Text             (Text)
@@ -133,7 +134,8 @@ luaLaTeXConfig = defaultTeXConfig
 
 -- | 設定付き保存 ('savePNGConfigured' と対称)。
 saveTeXConfigured :: TeXConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
-saveTeXConfigured cfg path r spec =
+saveTeXConfigured cfg path r spec = do
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
   TIO.writeFile path (renderTeXConfigured cfg r spec)
 
 -- | 設定付き render。

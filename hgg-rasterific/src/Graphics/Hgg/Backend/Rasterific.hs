@@ -45,7 +45,8 @@ import           Graphics.Hgg.Spec         (Resolver, VisualSpec, emptyResolver,
                                             vsDpi)
 import           Data.Monoid               (getLast)
 import           Graphics.Hgg.Validate     (Severity (..), diagnosticSeverity,
-                                            renderDiagnostic)
+                                            renderDiagnostic,
+                                            reportFacetInlineWarnings)
 import           Codec.Picture             (PixelRGBA8 (..), writePng)
 import           Data.Char                 (digitToInt, isHexDigit, toLower)
 import           Data.List                 (intercalate)
@@ -106,6 +107,7 @@ savePNGBound path (BoundPlot r spec diags) = do
 -- | 'PNGConfig' 付き保存 (フォント明示 / Hi-DPI)。
 savePNGConfigured :: PNGConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
 savePNGConfigured cfg path r spec = do
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
   -- ★ Phase 33 B5: layout/prims は純 pt。PNG は raster なので k=dpi/72 を一度だけ
   --   掛けて device px へ (HS SVG backend と同一・唯一の dpi 適用点)。font size も
   --   scalePrimitives で device px になり、drawTextPrim の px→point 変換はそのまま整合。
