@@ -112,6 +112,7 @@ module Graphics.Hgg.Spec
   , scaleXDiscreteLimits
   , scaleYDiscreteLimits
   , applyDiscreteLimits
+  , reindexLayer         -- ★ Phase 62 A2: facet の inline 部分列化 (Render.Layer) で共用
   , hconcat
   , vconcat
   , (<->)

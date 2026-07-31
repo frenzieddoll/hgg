@@ -55,7 +55,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       axShowGrid,
                                       FontSpec (..), orderedCats,
                                       colRefName, resolveCol, resolveNum,
-                                      compositeLanes, inlineCat)
+                                      compositeLanes, inlineCat, reindexLayer)
 import           Data.Maybe          (mapMaybe, isJust, listToMaybe)
 import           Data.List           (sortOn, foldl')
 import qualified Data.Map.Strict     as Map
@@ -423,11 +423,11 @@ marginalHist r pal cr area scaleAlong nBins isVertical =
 renderFaceted :: Resolver -> Layout -> VisualSpec -> ColRef -> [Primitive]
 renderFaceted r layout spec facetCol =
   let pal = specThemePalette spec
+      -- Phase 62 A2: facet 行 vec は facetVecOf に一元化 (subsetInlineSpec と共有)。
+      facetVec = facetVecOf r facetCol
+      nFacet   = length facetVec
       -- Phase 28: facet panel 順も ggplot 同様アルファベット順 (= R4DS facet_wrap)。
-      facetVals = case resolveCol r facetCol of
-        Just (TxtData v) -> orderedCats (V.toList v)
-        Just (NumData v) -> orderedCats (V.toList (V.map (T.pack . show) v))
-        Nothing          -> []
+      facetVals = orderedCats facetVec
       nPanels = length facetVals
   in if nPanels == 0 then renderSingle r layout spec
      else
@@ -485,9 +485,12 @@ renderFaceted r layout spec facetCol =
                  -- 全 panel が重なって左/中央が空に見える)。
                  panelArea = Rect cellX panelTop cellW panelH
                  subResolver = filterResolver r facetCol val
+                 -- Phase 62 A2: inline encoding は Resolver を通らないため、 spec 側も
+                 -- 同じ keepIdx で部分列化する (基準の一元化 = facetVecOf/facetKeepIdx)。
+                 specSub = subsetInlineSpec nFacet (facetKeepIdx facetVec val) specPanel
                  -- free な軸の domain は panel 自身のデータで再計算 (fixed は parent layout)。
                  panelDomLayout
-                   | freeX || freeY = computeLayout subResolver specPanel
+                   | freeX || freeY = computeLayout subResolver specSub
                    | otherwise      = layout
                  xSrc = if freeX then panelDomLayout else layout
                  ySrc = if freeY then panelDomLayout else layout
@@ -532,7 +535,7 @@ renderFaceted r layout spec facetCol =
                   <> gridLines subLayout specPanel pal
                   <> tickMarks (Just specPanel) subLayout pal fmtX fmtY rotX rotY
                                (showXt && gateX) (showYt && gateY)
-                  <> concatMap (renderLayer subResolver subLayout pal) (vsLayers specPanel)
+                  <> concatMap (renderLayer subResolver subLayout pal) (vsLayers specSub)
        in background layout pal
             <> labels layout spec pal
             <> concatMap panelFor (zip [0..] facetVals)
@@ -551,12 +554,12 @@ renderFacetGrid r layout spec =
   let pal = specThemePalette spec
       mRowCol = getLast (vsFacetRow spec)
       mColCol = getLast (vsFacetCol spec)
-      distinctVals cr = case resolveCol r cr of   -- Phase 28: facet_grid もアルファベット順
-        Just (TxtData v) -> orderedCats (V.toList v)
-        Just (NumData v) -> orderedCats (V.toList (V.map (T.pack . show) v))
-        Nothing          -> []
-      rowVals = maybe [""] distinctVals mRowCol
-      colVals = maybe [""] distinctVals mColCol
+      -- Phase 62 A2: 行 vec は facetVecOf に一元化 (subsetInlineSpec と共有)。
+      rowVec  = maybe [] (facetVecOf r) mRowCol
+      colVec  = maybe [] (facetVecOf r) mColCol
+      -- Phase 28: facet_grid もアルファベット順
+      rowVals = if isJust mRowCol then orderedCats rowVec else [""]
+      colVals = if isJust mColCol then orderedCats colVec else [""]
       nRows = length rowVals
       nCols = length colVals
   in if nRows == 0 || nCols == 0 then renderSingle r layout spec
@@ -576,12 +579,20 @@ renderFacetGrid r layout spec =
            facetSp = maybe SpaceFixed id (getLast (vsFacetSpace spec))
            spX     = freeSpaceX facetSp
            spY     = freeSpaceY facetSp
+           -- Phase 62 A2: grid の facet 列長 (行/列とも同じ元データ行数。 片方のみ指定
+           -- なら在る方)。 inline 部分列化の対象判定 n に使う。
+           nFacetG = max (length rowVec) (length colVec)
+           -- 片軸のみの keepIdx (free-scale domain 用) と、 row×col 交差の keepIdx。
+           keepIdxCol cv = if null colVec then [0 .. nFacetG - 1]
+                           else facetKeepIdx colVec cv
+           keepIdxRow rv = if null rowVec then [0 .. nFacetG - 1]
+                           else facetKeepIdx rowVec rv
            colDomLayout c = let cv  = colVals !! c
                                 res = maybe r (\cc -> filterResolver r cc cv) mColCol
-                            in computeLayout res specPanel
+                            in computeLayout res (subsetInlineSpec nFacetG (keepIdxCol cv) specPanel)
            rowDomLayout rr = let rv  = rowVals !! rr
                                  res = maybe r (\rc -> filterResolver r rc rv) mRowCol
-                             in computeLayout res specPanel
+                             in computeLayout res (subsetInlineSpec nFacetG (keepIdxRow rv) specPanel)
            colXLayouts = [ colDomLayout c | c <- [0 .. nCols - 1] ]   -- memoize
            rowYLayouts = [ rowDomLayout rr | rr <- [0 .. nRows - 1] ]
            spanX lay = abs (lsDomainHi (lpXScale lay) - lsDomainLo (lpXScale lay))
@@ -658,6 +669,11 @@ renderFacetGrid r layout spec =
                  applyRow res = maybe res (\rc -> filterResolver res rc rowVal) mRowCol
                  applyCol res = maybe res (\cc -> filterResolver res cc colVal) mColCol
                  subResolver = applyCol (applyRow r)
+                 -- Phase 62 A2: inline encoding 用の spec 側部分列化 (row∩col の交差)。
+                 keepIdxRC = [ i | i <- [0 .. nFacetG - 1]
+                                 , null rowVec || rowVec !! i == rowVal
+                                 , null colVec || colVec !! i == colVal ]
+                 specSub = subsetInlineSpec nFacetG keepIdxRC specPanel
                  isLeft   = col == 0           -- y tick は左端列のみ
                  isBottom = row == nRows - 1   -- x tick は最下行のみ
                  -- Phase 10 A5 ②-fix: flip で軸転置に合わせ内側軸 drop の gating を入替 (renderFaceted と同様)。
@@ -669,27 +685,47 @@ renderFacetGrid r layout spec =
                   <> gridLines subLayout specPanel pal
                   <> tickMarks (Just specPanel) subLayout pal fmtX fmtY rotX rotY
                                (showXt && gateX) (showYt && gateY)
-                  <> concatMap (renderLayer subResolver subLayout pal) (vsLayers specPanel)
+                  <> concatMap (renderLayer subResolver subLayout pal) (vsLayers specSub)
        in background layout pal
             <> labels layout spec pal
             <> colStrips
             <> rowStrips
             <> concat [ panelFor row col | row <- [0 .. nRows - 1], col <- [0 .. nCols - 1] ]
 
+-- | Phase 62 A2: facet 列を Text 行ベクタへ (keepIdx 算出の唯一の源)。
+-- 'filterResolver' (ColByName 経路) と 'subsetInlineSpec' (inline 経路) の
+-- 分割基準がずれないよう、 両者ともここを通す。
+facetVecOf :: Resolver -> ColRef -> [Text]
+facetVecOf r cr = case resolveCol r cr of
+  Just (TxtData v) -> V.toList v
+  Just (NumData v) -> map (T.pack . show) (V.toList v)
+  Nothing          -> []
+
+-- | Phase 62 A2: facet 値 @val@ に一致する行 index。
+facetKeepIdx :: [Text] -> Text -> [Int]
+facetKeepIdx vec val = [i | (i, v) <- zip [0 ..] vec, v == val]
+
 -- | resolver wrap: facet 列が val に一致する行のみ通すフィルタ。
 -- 他列も同じ index で抽出。
 filterResolver :: Resolver -> ColRef -> Text -> Resolver
 filterResolver base facetCol val = \name ->
-  let facetVec = case resolveCol base facetCol of
-        Just (TxtData v) -> V.toList v
-        Just (NumData v) -> map (T.pack . show) (V.toList v)
-        Nothing          -> []
-      keepIdx = [i | (i, v) <- zip [0..] facetVec, v == val]
+  let keepIdx = facetKeepIdx (facetVecOf base facetCol) val
       pickFrom vs = [vs !! i | i <- keepIdx, i < length vs]
   in case base name of
        Just (NumData v) -> Just (NumData (V.fromList (pickFrom (V.toList v))))
        Just (TxtData v) -> Just (TxtData (V.fromList (pickFrom (V.toList v))))
        Nothing          -> Nothing
+
+-- | Phase 62 A2 (§1): 'filterResolver' と対になる **spec 側の部分列化**。
+-- inline (ColNum/ColTxt) の encoding は Resolver を通らないため resolver wrap では
+-- 絞れない (= facet が全 panel に同一データを描くバグの root)。 panel の keepIdx で
+-- spec 直下 layer の inline 列を部分ベクタへ差し替える。 ColByName は従来通り
+-- subResolver 側で絞られるので触らない ('reindexLayer' がその区別を持つ)。
+-- 長さが facet 列長 @n@ と一致する inline のみ対象 — 不一致は黙って切り詰めず
+-- 据え置く (§3 = 検出して警告する側の対象)。
+subsetInlineSpec :: Int -> [Int] -> VisualSpec -> VisualSpec
+subsetInlineSpec n keepIdx sp =
+  sp { vsLayers = map (reindexLayer n (V.fromList keepIdx)) (vsLayers sp) }
 
 -- ---------------------------------------------------------------------------
 -- Layer 別 render
