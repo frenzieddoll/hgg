@@ -576,7 +576,8 @@ main = do
   -- DECORATION
   -- ===========================================================================
 
-  -- facet (= Resolver 経由で column 解決が必要、 inline では不可なので別 demo)
+  -- facet (この demo は名前参照 + Resolver。 Phase 62 以降は inline encoding でも
+  -- panel 分割される — facet 列と同じ長さの inline なら名前参照と等価)
   let facetResolver facetN = case facetN of
         "x" -> Just (NumData (V.fromList [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]))
         "y" -> Just (NumData (V.fromList [1, 4, 9, 16, 2, 5, 8, 12, 3, 6, 9, 15]))

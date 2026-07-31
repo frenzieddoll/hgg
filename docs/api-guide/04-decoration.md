@@ -153,7 +153,7 @@ Partition data by one column value and arrange in multiple panels (ggplot `facet
 > `FacetSpace` = `SpaceFixed` / `SpaceFreeX` / `SpaceFreeY` / `SpaceFree`.
 > To arrange completely separate specs in panels (independent figures, not facet), use [subplot](#subplots).
 
-Example (`facetWrap "g" 2`). Facet columns are name references, so supply `"g"` via `Resolver` (or DataFrame):
+Example (`facetWrap "g" 2`). Facet and encoding columns can be inline (`inline` / `inlineCat`) or name references — inline encodings are split per panel correctly (inline columns must have the same length as the facet column; mismatched columns are left unsplit and reported with a warning). With name references, supply `"g"` via `Resolver` (or DataFrame):
 
 ```haskell
 -- r is a Resolver returning "x"/"y"/"g"
