@@ -327,7 +327,9 @@ reindexLayer n idx ly = ly
   , lyLabel      = reC <$> lyLabel ly
   , lyHover      = map reC (lyHover ly)
   , lyColor      = reColor <$> lyColor ly
-  -- ★ Phase 62 A2: sub-mark (Phase 36 D2) も bakeLayer 同様 inline 列を持つため再帰。
+  -- ★ Phase 62 A2/A6: quiver 成分 (row-aligned) + sub-mark (Phase 36 D2) 再帰。
+  , lyEncU       = reC <$> lyEncU ly
+  , lyEncV       = reC <$> lyEncV ly
   , lyOverlay    = map (reindexLayer n idx) (lyOverlay ly)
   }
   where
