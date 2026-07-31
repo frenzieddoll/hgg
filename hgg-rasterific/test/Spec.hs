@@ -8,6 +8,9 @@ import           Graphics.Hgg.Backend.Rasterific (PNGConfig (..), PNGFonts (..),
                                                   defaultPNGConfig, loadPNGFonts,
                                                   savePNG, savePNGConfigured)
 import           Graphics.Hgg.Easy
+import           Graphics.Hgg.Layout             (computeLayout)
+import           Graphics.Hgg.Render             (Primitive (..),
+                                                  renderToPrimitives)
 import           Codec.Picture                   (Image (..), PixelRGBA8,
                                                   convertRGBA8, decodePng)
 import qualified Data.ByteString                 as BS
@@ -63,10 +66,16 @@ main = hspec $ do
           <> coordCartesianX 1.5 3.5
       w `shouldSatisfy` (> 100)
 
-    it "facet (複数 panel) が例外なく書ける" $ do
-      (w, _) <- saveAndDecode "hgg-png-test-facet.png" $
-        layer (scatter (inline [1, 2, 3, 4]) (inline [2, 4, 1, 3]))
-          <> facet (inlineCat (["g1", "g1", "g2", "g2"] :: [String]))
+    -- Phase 62: 旧テストは「例外なく書ける」 + 幅だけの検証で、 inline facet が
+    -- 未分割 (全 panel に同一データ) でも通ってしまっていた。 PCircle 数で
+    -- 分割成立 (4 点。 未分割バグ時は 8) を固定した上で PNG 書き出しも確認する。
+    it "facet (複数 panel) が inline encoding を分割して書ける (PCircle=4)" $ do
+      let spec = layer (scatter (inline [1, 2, 3, 4]) (inline [2, 4, 1, 3]))
+                   <> facet (inlineCat (["g1", "g1", "g2", "g2"] :: [String]))
+          prims = renderToPrimitives emptyResolver
+                    (computeLayout emptyResolver spec) spec
+      length [() | PCircle{} <- prims] `shouldBe` 4
+      (w, _) <- saveAndDecode "hgg-png-test-facet.png" spec
       w `shouldSatisfy` (> 100)
 
     it "coordPolar が例外なく書ける" $ do

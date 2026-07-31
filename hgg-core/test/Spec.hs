@@ -811,6 +811,82 @@ main = hspec $ do
           colors = [c | PCircle _ _ (FillStyle c _) _ _ <- ps]
       in length (Data.List.nub colors) `shouldBe` 3
 
+  -- Phase 62: facet が inline encoding (ColNum/ColTxt) を分割しない不具合の回帰。
+  -- 「例外が出ない」 だけの smoke にせず **PCircle 数 + 座標** で分割を検証する
+  -- (旧テストは ColByName 経路のみで inline を素通りさせていた)。
+  describe "Phase 62: facet × inline encoding の分割" $ do
+    let xs4 = [1, 2, 3, 4] :: [Double]
+        ys4 = [10, 20, 30, 40] :: [Double]
+        gs4 = ["g1", "g1", "g2", "g2"] :: [Data.Text.Text]
+        rP n = case n of
+          "x" -> Just (NumData (V.fromList xs4))
+          "y" -> Just (NumData (V.fromList ys4))
+          "g" -> Just (TxtData (V.fromList gs4))
+          "h" -> Just (TxtData (V.fromList ["h1", "h1", "h1", "h1"]))
+          _   -> Nothing
+        circlesOf r spec =
+          [ (x, y) | PCircle (Point x y) _ _ _ _ <-
+                       renderToPrimitives r (computeLayout r spec) spec ]
+
+    it "inline encoding + inline facet 列 → 4 点 (報告者ケースの回帰)" $
+      let spec = layer (scatter (inline xs4) (inline ys4))
+                   <> facet (inlineCat gs4)
+      in length (circlesOf emptyResolver spec) `shouldBe` 4
+
+    it "inline encoding + 名前参照 facet 列 → 4 点" $
+      let spec = layer (scatter (inline xs4) (inline ys4)) <> facet "g"
+      in length (circlesOf rP spec) `shouldBe` 4
+
+    it "名前参照 + scaleXDiscreteLimits + facet → 4 点 (経路 2 = bakeSpec 強制 inline 化の回帰)" $
+      let spec = layer (scatter "x" "y") <> facet "g"
+                   <> scaleXDiscreteLimits ["dummy"]
+      in length (circlesOf rP spec) `shouldBe` 4
+
+    it "facetGrid + inline encoding → 4 点 (grid 経路の回帰)" $
+      let spec = layer (scatter (inline xs4) (inline ys4)) <> facetGrid "g" "h"
+      in length (circlesOf rP spec) `shouldBe` 4
+
+    -- 座標レベル: どの点がどの panel に入ったかを検証 (総数だけでは分割先の
+    -- 入れ替わりを検出できない)。 panel はアルファベット順で g1=左, g2=右。
+    -- fixed 共有 y scale では screen y は data y に単調減少なので、 g1 の 2 点
+    -- (y=10,20) の screen y は g2 の 2 点 (y=30,40) より必ず大きい。
+    it "座標レベル: 左 panel = g1 (y=10,20)、 右 panel = g2 (y=30,40)" $
+      let spec = layer (scatter (inline xs4) (inline ys4))
+                   <> facet (inlineCat gs4)
+          cs   = Data.List.sortOn fst (circlesOf emptyResolver spec)
+          (leftPts, rightPts) = splitAt 2 cs
+          allBelow = and [ yl > yr | (_, yl) <- leftPts, (_, yr) <- rightPts ]
+      in (length cs, allBelow) `shouldBe` (4, True)
+
+    -- §3: facet 列と長さの合わない inline は黙って切り詰めず据え置き (= 未分割の
+    -- まま全 panel に描かれる) + 警告診断。 その挙動を固定する。
+    it "長さ不一致 inline (5 行 vs facet 4 行) は据え置き = 全 panel に 5 点ずつ" $
+      let spec = layer (scatter (inline [1, 2, 3, 4, 5 :: Double])
+                                (inline [1, 2, 3, 4, 5 :: Double]))
+                   <> facet (inlineCat gs4)
+      in length (circlesOf emptyResolver spec) `shouldBe` 10
+
+    it "長さ不一致は facetInlineDiagnostics が警告 (x, y の 2 本)" $
+      let spec = layer (scatter (inline [1, 2, 3, 4, 5 :: Double])
+                                (inline [1, 2, 3, 4, 5 :: Double]))
+                   <> facet (inlineCat gs4)
+      in length (facetInlineDiagnostics emptyResolver spec) `shouldBe` 2
+
+    it "limits の行 drop で facet と desync した場合も警告 (既知の限界の検出)" $
+      let rc n = case n of
+            "xc" -> Just (TxtData (V.fromList ["a", "b", "c", "d"]))
+            "y"  -> Just (NumData (V.fromList ys4))
+            "g"  -> Just (TxtData (V.fromList gs4))
+            _    -> Nothing
+          spec = layer (bar "xc" "y") <> facet "g"
+                   <> scaleXDiscreteLimits ["a", "b", "c"]
+      in length (facetInlineDiagnostics rc spec) `shouldBe` 2
+
+    it "全長一致なら警告ゼロ" $
+      let spec = layer (scatter (inline xs4) (inline ys4))
+                   <> facet (inlineCat gs4)
+      in facetInlineDiagnostics emptyResolver spec `shouldBe` []
+
   describe "Phase 1 A2: Sugiyama rank assignment (= network simplex framework)" $ do
     it "linear chain a→b→c は rank 0,1,2" $
       let lg = Sugi.assignRanks
