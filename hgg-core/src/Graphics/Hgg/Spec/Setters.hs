@@ -23,7 +23,7 @@ module Graphics.Hgg.Spec.Setters
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
-  , themeTickLength, themeTickDir
+  , themeTickLength, themeTickDir, themePlotMargin
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -63,7 +63,8 @@ import           Graphics.Hgg.Spec.Constructors (binCount, histogram, (<+>))
 import           Graphics.Hgg.Spec.Decoration
 import           Graphics.Hgg.Spec.Layer
 import           Graphics.Hgg.Spec.Mark
-import           Graphics.Hgg.Spec.Theme (ThemeName, ThemeOverride (..), TickDir)
+import           Graphics.Hgg.Spec.Theme (Margin (..), ThemeName,
+                                          ThemeOverride (..), TickDir)
 import           Graphics.Hgg.Spec.Visual
 
 
@@ -162,6 +163,14 @@ themeTickLength d = mempty { vsThemeOverride = mempty { toTickLength = Last (Jus
 -- (ggplot の負 axis.ticks.length と同挙動)。
 themeTickDir :: TickDir -> VisualSpec
 themeTickDir d = mempty { vsThemeOverride = mempty { toTickDir = Last (Just d) } }
+
+-- | Phase 63 A5: 図の外周余白 (pt) を theme に焼き込む (ggplot @plot.margin@ 相当)。
+-- 引数順は ggplot @margin(t, r, b, l)@ と同じ。 指定時は自動算出の外周分
+-- (各辺 half_line = 5.5pt) を **置き換える** (加算ではない)。 軸ラベル・title 帯・
+-- 凡例などの内側予約は従来どおり自動算出のまま。
+themePlotMargin :: Double -> Double -> Double -> Double -> VisualSpec
+themePlotMargin t r b l =
+  mempty { vsThemeOverride = mempty { toPlotMargin = Last (Just (Margin t r b l)) } }
 
 panelFill :: Text -> VisualSpec       -- panel.background fill (= 塗り on + 色指定)
 panelFill c = mempty { vsThemeOverride = mempty { toPanelBg = Last (Just c), toShowPanel = Last (Just True) } }

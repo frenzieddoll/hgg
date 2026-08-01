@@ -21,6 +21,7 @@ module Graphics.Hgg.Spec.Theme
     -- * element 単位 override
   , ThemeOverride(..)
   , TickDir(..)
+  , Margin(..)
   ) where
 
 import           Data.Aeson      (FromJSON, ToJSON)
@@ -101,6 +102,19 @@ data TickDir = TickOut | TickIn | TickBoth
 instance ToJSON   TickDir
 instance FromJSON TickDir
 
+-- | Phase 63 A5: 図の外周余白 (pt)。 フィールド順は ggplot @margin(t, r, b, l)@
+-- と同じ。 'ThemeOverride' の @toPlotMargin@ に指定すると自動算出の外周分
+-- (各辺 half_line = 5.5pt) を **置き換える** (加算ではない)。
+data Margin = Margin
+  { marTop    :: !Double
+  , marRight  :: !Double
+  , marBottom :: !Double
+  , marLeft   :: !Double
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON   Margin
+instance FromJSON Margin
+
 -- ===========================================================================
 -- Phase 9 A-2: element 単位 theme override (ggplot theme(element_*) 相当)
 -- ===========================================================================
@@ -155,6 +169,10 @@ data ThemeOverride = ThemeOverride
     --   未指定時は ggTickLen (2.75pt) / TickOut (= 従来挙動と同一)。
   , toTickLength    :: !(Last Double)  -- axis.ticks.length (pt)
   , toTickDir       :: !(Last TickDir) -- 目盛線の向き (外/内/両)
+    -- ★ Phase 63 A5: 図の外周余白 (ggplot plot.margin 相当)。 指定時は自動算出の
+    --   外周分 (各辺 ggHalfLine) を置き換える。 軸ラベル・title 帯・凡例などの
+    --   内側予約は従来どおり自動。 Layout の 'effectivePlotMargin' が解決する。
+  , toPlotMargin    :: !(Last Margin)  -- plot.margin (t/r/b/l、 pt)
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field

@@ -279,8 +279,10 @@ module Graphics.Hgg.Spec
   , okabeIto, tolBright, brewerSet2, brewerDark2
   , ThemeOverride(..)
   , TickDir(..)                                                 -- ★ Phase 63 A4
+  , Margin(..)                                                  -- ★ Phase 63 A5
   , themeGrid, themeGridMajor, themeGridMinor, themeLegendPos   -- ★ Phase 63 A2/A3
   , themeTickLength, themeTickDir                               -- ★ Phase 63 A4
+  , themePlotMargin                                             -- ★ Phase 63 A5
   , panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont, themeAxisTextAngle
   , themeAxisTextAngleX, themeAxisTextAngleY, axisTextAngleXOf, axisTextAngleYOf

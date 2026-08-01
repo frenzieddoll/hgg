@@ -2730,6 +2730,39 @@ main = hspec $ do
                         , x1 == x2 ]
            `shouldBe` True
 
+  describe "Phase 63 A5: plot margin (themePlotMargin)" $ do
+    let base65 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                               (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+        layOf extra = computeLayout emptyResolver (base65 <> extra)
+        areaOf extra = lpPlotArea (layOf extra)
+        primsOf65 extra = renderToPrimitives emptyResolver (layOf extra) (base65 <> extra)
+    it "既定 = 各辺 ggHalfLine" $
+      effectivePlotMargin mempty
+        `shouldBe` Margin ggHalfLine ggHalfLine ggHalfLine ggHalfLine
+    it "既定値の明示指定 (5.5 ×4) は既定と同一出力 (置き換え意味論・既存挙動不変)" $
+      primsOf65 (themePlotMargin 5.5 5.5 5.5 5.5) `shouldBe` primsOf65 mempty
+    it "4 辺が個別に効く (t/r/b/l = 30/40/50/60)" $ do
+      let a0 = areaOf mempty
+          a1 = areaOf (themePlotMargin 30 40 50 60)
+      (rY a1 > rY a0) `shouldBe` True                              -- top
+      (rX a1 + rW a1 < rX a0 + rW a0) `shouldBe` True              -- right
+      (rY a1 + rH a1 < rY a0 + rH a0) `shouldBe` True              -- bottom
+      (rX a1 > rX a0) `shouldBe` True                              -- left
+    it "margin 0 で panel が外周いっぱいへ広がる" $ do
+      let a0 = areaOf mempty
+          a1 = areaOf (themePlotMargin 0 0 0 0)
+      (rW a1 > rW a0) `shouldBe` True
+      (rH a1 > rH a0) `shouldBe` True
+    it "render: title/軸タイトルが margin に追従 (予約と描画の整合)" $
+      let textYs extra = [ y | PText (Point _ y) t _
+                             <- renderToPrimitives emptyResolver
+                                  (computeLayout emptyResolver (base65 <> title "T" <> extra))
+                                  (base65 <> title "T" <> extra)
+                         , t == "T" ]
+      in case (textYs mempty, textYs (themePlotMargin 30 5.5 5.5 5.5)) of
+           ([y0], [y1]) -> (y1 - y0) `shouldBe` (30 - 5.5)
+           _            -> expectationFailure "title PText が 1 個でない"
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

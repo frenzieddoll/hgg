@@ -58,6 +58,8 @@ module Graphics.Hgg.Layout
   , effectiveTickLength
   , effectiveTickDir
   , tickOutwardLen
+    -- ★ Phase 63 A5: plot margin の実効値 (予約 computeLayout と描画 labels で共有)。
+  , effectivePlotMargin
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -85,7 +87,7 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     LegendPosition (..), LegendSpec (..),
                                     MarkKind (..), Resolver,
                                     ThemeName (..), ThemeOverride (..), TickDir (..),
-                                    Coord (..),
+                                    Margin (..), Coord (..),
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
                                     axTickValsOf, axTickLabelsOf, axisRotateOf, distGroupRef,
@@ -246,7 +248,10 @@ computeLayout r spec0 =
       -- axisLabelSize) は **等倍** (フォントは実寸描画で縮まないため)。 旧実装は全体を
       -- sc 倍し、 小 viewport (subplots/pairs/inset) で数値が軸に被っていた。 sc=1 では
       -- 新旧同値なので通常プロットは不変。
-      tM = sc * ggHalfLine + (if hasTitle then titleSize + sc * ggHalfLine else 0)
+      -- ★ Phase 63 A5: 外周余白は theme 実効値 (themePlotMargin、 既定 = 各辺 ggHalfLine
+      --   で従来と同値)。 title 下 margin 等の内側 spacing は ggHalfLine のまま。
+      pm = effectivePlotMargin spec
+      tM = sc * marTop pm + (if hasTitle then titleSize + sc * ggHalfLine else 0)
                  + labsSubExtra + labsTagExtra
       -- ★ x 目盛りラベルの回転 (axisRotate) 予約: 非回転は tickSize (従来) だが、
       --   回転時はラベル**幅**が下方向に伸びる。 左 margin の maxYTickW と対称に、
@@ -269,12 +274,12 @@ computeLayout r spec0 =
       -- ★ Phase 63 A4: tick の外向き突出量は theme 実効値 (themeTickLength/themeTickDir)。
       --   未指定は ggTickLen/TickOut で従来と同値。 描画 (tickMarks) と単一情報源。
       tickOut = tickOutwardLen spec
-      bM | isContainer = sc * ggHalfLine + legendH + labsCapExtra
-         | otherwise   = sc * (ggHalfLine + tickOut + ggAxTextMar) + xTickReserve
+      bM | isContainer = sc * marBottom pm + legendH + labsCapExtra
+         | otherwise   = sc * (marBottom pm + tickOut + ggAxTextMar) + xTickReserve
                  + (if hasXLabel then sc * ggAxTitleMar + axisLabelSize else 0)
                  + legendH + labsCapExtra
-      lM | isContainer = sc * ggHalfLine
-         | otherwise   = sc * (ggHalfLine + tickOut + ggAxTextMar) + maxYTickW
+      lM | isContainer = sc * marLeft pm
+         | otherwise   = sc * (marLeft pm + tickOut + ggAxTextMar) + maxYTickW
                  + (if hasYLabel then sc * ggAxTitleMar + axisLabelSize else 0)
       -- Phase 9 A-5 (PS Layout と同一): 凡例ぶん plotArea を縮めて図内に収める (ggplot は
       -- legend を gtable の一部として扱い panel を縮める)。 Inside/None は予約しない。
@@ -325,7 +330,7 @@ computeLayout r spec0 =
       legendW = if legendPos == LegendRight || legendPos == LegendRightCenter
                   then 2 * ggHalfLine + legendGuidesW else 0
       legendH = if legendPos == LegendBottom then 50 + fromIntegral (legNrow - 1) * 16 else 0
-      rM = sc * ggHalfLine + rightAxisW + legendW
+      rM = sc * marRight pm + rightAxisW + legendW
       -- Phase 8 A2 Step2 (design §A-4): パネル本体は可用域 (margin を除いた残り) を取る。
       -- aspect 未指定 (Nothing) = ggplot Coord$aspect=NULL と同じく可用域を埋める。
       -- aspect 指定 (Just a, a>0) = 高/幅比 a を保つ最大 panel を可用域内に取り中央寄せ
@@ -899,6 +904,14 @@ tickOutwardLen :: VisualSpec -> Double
 tickOutwardLen spec = case effectiveTickDir spec of
   TickIn -> 0
   _      -> effectiveTickLength spec
+
+-- | Phase 63 A5: 実効 plot margin (pt)。 theme (toPlotMargin) > 既定 各辺 'ggHalfLine'。
+-- 指定時は外周分を **置き換える** (ggplot plot.margin と同じ)。 軸ラベル・title 帯・
+-- 凡例などの内側予約は従来どおり自動算出のまま (computeLayout と Render.labels が共有)。
+effectivePlotMargin :: VisualSpec -> Margin
+effectivePlotMargin spec =
+  maybe (Margin ggHalfLine ggHalfLine ggHalfLine ggHalfLine) id
+        (getLast (toPlotMargin (vsThemeOverride spec)))
 
 -- | layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous) があるか。
 hasColorEncoding :: [Layer] -> Bool

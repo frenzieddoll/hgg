@@ -19,7 +19,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       Track (..), solveTracks,
                                       needsLegend, effectiveLegendPos,
                                       effectiveTickLength, effectiveTickDir,
-                                      tickOutwardLen,
+                                      tickOutwardLen, effectivePlotMargin,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -45,7 +45,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       Position (..), Coord (..),
                                       FacetScales (..), freeScaleX, freeScaleY,
                                       FacetSpace (..), freeSpaceX, freeSpaceY,
-                                      ThemeOverride (..), TickDir (..),
+                                      ThemeOverride (..), TickDir (..), Margin (..),
                                       VisualSpec (..), YAxisSide (..), axisFormatOf,
                                       axisRotateOf, resolveAxisAngle, axisShowTicksOf,
                                       axShowGrid,
@@ -676,8 +676,12 @@ labels layout spec pal =
       boxTop    = rY a - lpMarginTop layout
       boxBottom = rY a + rH a + lpMarginBottom layout
       boxLeft   = rX a - lpMarginLeft layout
+      -- ★ Phase 63 A5: 外周余白は theme 実効値 (Layout の margin 予約と単一情報源)。
+      --   既定 (各辺 ggHalfLine) では従来式と同値。 title 下 margin 等の内側
+      --   spacing は ggHalfLine のまま。
+      pm = effectivePlotMargin spec
       hasTitle = case getLast (vsTitle spec) of Just _ -> True; _ -> False
-      titleBaseY = boxTop + sc * (ggHalfLine + titleSize * 0.8)
+      titleBaseY = boxTop + sc * (marTop pm + titleSize * 0.8)
       -- Phase 32 (re-apply): plot.title の水平揃え。 hjust=0 (ggplot theme_grey) は
       --   panel 左端にアンカー開始、 それ以外 (既定 0.5) は従来通り中央。
       (titleX, tsTitle') = if tpTitleHjust pal <= 0.0
@@ -688,11 +692,11 @@ labels layout spec pal =
         Nothing -> []
       -- x 軸タイトル = 最下要素。 baseline = 下 plot.margin の上 (= boxBottom - margin - descent)。
       xLP = case getLast (vsXLabel spec) of
-        Just t  -> [ PText (Point cx (boxBottom - sc * (ggHalfLine + labelSize * 0.2))) t tsLabel ]
+        Just t  -> [ PText (Point cx (boxBottom - sc * (marBottom pm + labelSize * 0.2))) t tsLabel ]
         Nothing -> []
       -- y 軸タイトル = 最左要素 (rot -90)。 x = 左 plot.margin + ascent。
       yLP = case getLast (vsYLabel spec) of
-        Just t  -> [ PText (Point (boxLeft + sc * (ggHalfLine + labelSize * 0.7)) cy) t tsLabelV ]
+        Just t  -> [ PText (Point (boxLeft + sc * (marLeft pm + labelSize * 0.7)) cy) t tsLabelV ]
         Nothing -> []
       -- ★ Phase 11 A5-a: subtitle (title 直下、 小フォント) / caption (図右下・
       --   小フォント・右寄せ) / tag (左上隅・やや大・左寄せ太字)。 Layout の margin 予約
@@ -707,7 +711,7 @@ labels layout spec pal =
       boxRight = rX a + rW a
       -- subtitle baseline: title があればその下、 無ければ title 位置に置く。
       subBaseY = (if hasTitle then titleBaseY + sc * ggHalfLine + subSize * 0.8
-                              else boxTop + sc * (ggHalfLine + subSize * 0.8))
+                              else boxTop + sc * (marTop pm + subSize * 0.8))
       -- plot.title と同じ hjust 規則: hjust=0 (theme_grey) は panel 左端アンカー開始。
       (subX, tsSub') = if tpTitleHjust pal <= 0.0
                          then (rX a, tsSub { tsAnchor = AnchorStart })
@@ -716,10 +720,10 @@ labels layout spec pal =
         Just t  -> [ PText (Point subX subBaseY) t tsSub' ]
         Nothing -> []
       capP = case getLast (vsCaption spec) of
-        Just t  -> [ PText (Point boxRight (boxBottom - sc * ggHalfLine)) t tsCap ]
+        Just t  -> [ PText (Point boxRight (boxBottom - sc * marBottom pm)) t tsCap ]
         Nothing -> []
       tagP = case getLast (vsTag spec) of
-        Just t  -> [ PText (Point boxLeft (boxTop + sc * ggHalfLine + tagSize * 0.8)) t tsTag ]
+        Just t  -> [ PText (Point boxLeft (boxTop + sc * marTop pm + tagSize * 0.8)) t tsTag ]
         Nothing -> []
   in titleP <> subP <> xLP <> yLP <> capP <> tagP
 
