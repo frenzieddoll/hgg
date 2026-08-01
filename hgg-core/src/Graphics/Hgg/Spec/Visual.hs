@@ -64,6 +64,11 @@ data VisualSpec = VisualSpec
   , vsMarginal :: !(Last MarginalSpec)  -- ★ Phase 26 §C-2 #10
   , vsSubplots :: ![VisualSpec]         -- ★ Phase 26 S5-e-1 panel grid (= facet と独立、 任意の sub-spec 並列)
   , vsSubplotCols :: !(Last Int)         -- ★ P18 2D grid 折り返し列数
+    -- ★ Phase 63 A6: subplot 列/行の相対サイズ (cowplot plot_grid の rel_widths /
+    --   rel_heights 相当)。 統一グリッドの列/行 index 順の重み。 グリッド数に対して
+    --   不足分は 1 で埋める (エラーにしない)。 未指定 = 全列/行 1 (= 従来の等分)。
+  , vsSubplotWidths  :: !(Last [Double])
+  , vsSubplotHeights :: !(Last [Double])
   , vsLegend   :: !(Last LegendSpec)    -- ★ P8 2026-05-25 凡例設定 (= Nothing なら auto)
   , vsAnnotations :: ![Annotation]      -- ★ P6 任意 overlay (text/arrow/rect/line)
   , vsInsets      :: ![Inset]            -- ★ P13 inset axes
@@ -184,6 +189,8 @@ instance Semigroup VisualSpec where
     , vsMarginal     = vsMarginal a     <> vsMarginal b
     , vsSubplots     = vsSubplots a     <> vsSubplots b
     , vsSubplotCols  = vsSubplotCols a  <> vsSubplotCols b
+    , vsSubplotWidths  = vsSubplotWidths a  <> vsSubplotWidths b
+    , vsSubplotHeights = vsSubplotHeights a <> vsSubplotHeights b
     , vsLegend       = vsLegend a       <> vsLegend b
     , vsAnnotations  = vsAnnotations a  <> vsAnnotations b
     , vsInsets       = vsInsets a       <> vsInsets b
@@ -232,6 +239,7 @@ instance Monoid VisualSpec where
     , vsXLabel = mempty, vsYLabel = mempty, vsXAxis = mempty, vsYAxis = mempty
     , vsYAxisRight = mempty, vsRefLines = mempty, vsMarginal = mempty
     , vsSubplots = mempty, vsSubplotCols = mempty, vsLegend = mempty
+    , vsSubplotWidths = mempty, vsSubplotHeights = mempty
     , vsAnnotations = mempty, vsInsets = mempty, vsPalette = mempty
     , vsContinuousPal = mempty, vsTitleFont = mempty, vsAxisLabelFont = mempty
     , vsTickFont = mempty, vsLegendFont = mempty, vsWidth = mempty, vsHeight = mempty

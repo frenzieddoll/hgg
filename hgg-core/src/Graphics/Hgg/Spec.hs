@@ -107,6 +107,8 @@ module Graphics.Hgg.Spec
   , hexbinLayerCells     -- ★ Phase 40: Layer 解決版 (render/colorbar 共有)
   , subplots
   , subplotCols
+  , subplotWidths      -- ★ Phase 63 A6: 列の相対幅 (rel_widths)
+  , subplotHeights     -- ★ Phase 63 A6: 行の相対高 (rel_heights)
   , selectPanels
   , selectedSubplots
   , scaleXDiscreteLimits

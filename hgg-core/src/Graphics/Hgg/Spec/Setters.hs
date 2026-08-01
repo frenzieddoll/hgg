@@ -18,7 +18,8 @@ module Graphics.Hgg.Spec.Setters
     layer, purePlot, title, subtitle, caption, tag, xLabel, yLabel
   , Labs(..), labs, emptyLabs
   , theme, facet, facetWrap, facetGrid, facetCols, facetScales, facetSpace
-  , subplots, subplotCols, repeatFields, selectPanels, selectedSubplots
+  , subplots, subplotCols, subplotWidths, subplotHeights
+  , repeatFields, selectPanels, selectedSubplots
   , scaleXDiscreteLimits, scaleYDiscreteLimits, applyDiscreteLimits, reindexLayer
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
@@ -291,6 +292,16 @@ subplots ss = mempty { vsSubplots = ss }
 -- | P18: subplots の 2D grid 折り返し列数。
 subplotCols :: Int -> VisualSpec
 subplotCols n = mempty { vsSubplotCols = Last (Just n) }
+
+-- | Phase 63 A6: subplot 列の相対幅 (cowplot @plot_grid(rel_widths=)@ 相当)。
+-- 統一グリッドの列 index 順の重みで、 列数に対して不足分は 1 で埋める
+-- (エラーにしない)。 @(a <-> b) <> subplotWidths [1.3, 1]@ のように使う。
+subplotWidths :: [Double] -> VisualSpec
+subplotWidths ws = mempty { vsSubplotWidths = Last (Just ws) }
+
+-- | Phase 63 A6: subplot 行の相対高 (cowplot @plot_grid(rel_heights=)@ 相当)。
+subplotHeights :: [Double] -> VisualSpec
+subplotHeights hs = mempty { vsSubplotHeights = Last (Just hs) }
 
 -- | Phase 18 A1: subplot panel を **名前 (= 子 spec の 'vsTitle') で選択 + 並べ替え**。
 -- 'repeatFields' (名前リスト → panel 群) の逆方向。 列挙順がそのまま表示順になる

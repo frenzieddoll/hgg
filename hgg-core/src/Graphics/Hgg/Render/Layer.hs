@@ -187,12 +187,22 @@ renderSubplots r parentLayout spec =
       area   = lpPlotArea parentLayout
       -- Phase 8 A2 Step3 (design §A-5): panel 間 spacing = ggplot panel.spacing 既定 = half_line。
       pad    = ggHalfLine * lpMarginScale parentLayout
-      -- 等分の単一セル寸法 (帯算出前の margin 推定用)。
-      estColW = (rW area - pad * fromIntegral (gcols - 1)) / fromIntegral gcols
-      estRowH = (rH area - pad * fromIntegral (grows - 1)) / fromIntegral grows
-      -- span を含む panel の推定寸法 (= 本体 colSpan/rowSpan 個 + 内側 pad)。
-      estWOf c = estColW * fromIntegral (gcColSpan c) + pad * fromIntegral (gcColSpan c - 1)
-      estHOf c = estRowH * fromIntegral (gcRowSpan c) + pad * fromIntegral (gcRowSpan c - 1)
+      -- ★ Phase 63 A6: 列/行の相対サイズ (subplotWidths/Heights = cowplot rel_widths/
+      --   rel_heights)。 グリッド数に対して不足分は 1 で埋める。 未指定 = 全て 1 で
+      --   従来の等分と同値。 推定寸法 (margin 算出用) と本体分割の両方を同じ重みで割る。
+      weightsFor mws n = take n (maybe [] id (getLast mws) ++ repeat 1)
+      colWs = weightsFor (vsSubplotWidths spec) gcols
+      rowWs = weightsFor (vsSubplotHeights spec) grows
+      colWSum = sum colWs
+      rowWSum = sum rowWs
+      -- 重み付きの単一セル寸法 (帯算出前の margin 推定用)。
+      estColWOf j = (rW area - pad * fromIntegral (gcols - 1)) * (colWs !! j) / colWSum
+      estRowHOf i = (rH area - pad * fromIntegral (grows - 1)) * (rowWs !! i) / rowWSum
+      -- span を含む panel の推定寸法 (= またぐ列/行の本体 + 内側 pad)。
+      estWOf c = sum [ estColWOf k | k <- [gcCol c .. gcCol c + gcColSpan c - 1] ]
+                   + pad * fromIntegral (gcColSpan c - 1)
+      estHOf c = sum [ estRowHOf k | k <- [gcRow c .. gcRow c + gcRowSpan c - 1] ]
+                   + pad * fromIntegral (gcRowSpan c - 1)
       computed = [ (sub, c, computeLayout r (themeCtx <> sub
                        { vsWidth  = Last (Just (Length (estWOf c) Pt))
                        , vsHeight = Last (Just (Length (estHOf c) Pt)) }))
@@ -210,16 +220,19 @@ renderSubplots r parentLayout spec =
       rowBot i   = maximum (0 : [ mBotOf cl     | (_, c, cl) <- computed, gcRow c + gcRowSpan c - 1 == i ])
       sumLR = sum [ colLeft j + colRight j | j <- [0 .. gcols - 1] ]
       sumTB = sum [ rowTop i + rowBot i    | i <- [0 .. grows - 1] ]
-      bodyW = max 1 ((rW area - sumLR - pad * fromIntegral (gcols - 1)) / fromIntegral gcols)
-      bodyH = max 1 ((rH area - sumTB - pad * fromIntegral (grows - 1)) / fromIntegral grows)
-      colBodyX j = rX area + sum [ colLeft k + bodyW + colRight k + pad | k <- [0 .. j - 1] ] + colLeft j
-      rowBodyY i = rY area + sum [ rowTop k + bodyH + rowBot k + pad | k <- [0 .. i - 1] ] + rowTop i
+      -- ★ Phase 63 A6: 本体を重みで分割 (全重み 1 なら旧 等分 bodyW/bodyH と同値)。
+      bodyTotalW = rW area - sumLR - pad * fromIntegral (gcols - 1)
+      bodyTotalH = rH area - sumTB - pad * fromIntegral (grows - 1)
+      colBodyW j = max 1 (bodyTotalW * (colWs !! j) / colWSum)
+      rowBodyH i = max 1 (bodyTotalH * (rowWs !! i) / rowWSum)
+      colBodyX j = rX area + sum [ colLeft k + colBodyW k + colRight k + pad | k <- [0 .. j - 1] ] + colLeft j
+      rowBodyY i = rY area + sum [ rowTop k + rowBodyH k + rowBot k + pad | k <- [0 .. i - 1] ] + rowTop i
       -- span panel の本体矩形: 開始列の本体左 〜 終了列の本体右 (内側帯 + pad を内包)。
       panelRectOf c =
         let c0 = gcCol c; c1 = c0 + gcColSpan c - 1
             r0 = gcRow c; r1 = r0 + gcRowSpan c - 1
-            x0 = colBodyX c0;  x1 = colBodyX c1 + bodyW
-            y0 = rowBodyY r0;  y1 = rowBodyY r1 + bodyH
+            x0 = colBodyX c0;  x1 = colBodyX c1 + colBodyW c1
+            y0 = rowBodyY r0;  y1 = rowBodyY r1 + rowBodyH r1
         in Rect x0 y0 (x1 - x0) (y1 - y0)
       bg = background parentLayout pal
       -- Phase 11 A5-a: subtitle/caption/tag も labels で描く (= title 同様に root レベル)。
@@ -229,7 +242,7 @@ renderSubplots r parentLayout spec =
       --   飛び出す (subplots / hbm 図のタイトル不揃い)。 通常図の「タイトル = y 軸線に揃う」
       --   と統一。 rY/rH は親のまま (= タイトルは上端・caption は下端のまま)。
       gridLeft  = colBodyX 0
-      gridRight = colBodyX (gcols - 1) + bodyW
+      gridRight = colBodyX (gcols - 1) + colBodyW (gcols - 1)
       titleLayout = parentLayout
         { lpPlotArea = (lpPlotArea parentLayout) { rX = gridLeft, rW = gridRight - gridLeft } }
       title = case ( getLast (vsTitle spec), getLast (vsSubtitle spec)

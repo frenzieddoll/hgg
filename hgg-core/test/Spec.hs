@@ -2763,6 +2763,26 @@ main = hspec $ do
            ([y0], [y1]) -> (y1 - y0) `shouldBe` (30 - 5.5)
            _            -> expectationFailure "title PText が 1 個でない"
 
+  describe "Phase 63 A6: subplot の相対サイズ (subplotWidths/Heights)" $ do
+    let p1 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [1.0, 2.0 :: Double]))
+        p2 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [2.0, 1.0 :: Double]))
+        prims66 spec = renderToPrimitives emptyResolver (computeLayout emptyResolver spec) spec
+        -- panel 枠 = stroke 付き PRect (background/panel 塗りは stroke 無し)。
+        frames spec = [ r | PRect r _ (Just _) <- prims66 spec ]
+    it "未指定 = subplotWidths [1,1] と同一出力 (既定挙動不変)" $
+      prims66 ((p1 <-> p2) <> subplotWidths [1, 1]) `shouldBe` prims66 (p1 <-> p2)
+    it "subplotWidths [3,1] で枠幅が 3:1" $
+      case frames ((p1 <-> p2) <> subplotWidths [3, 1]) of
+        [ra, rb] -> (abs (rW ra / rW rb - 3) < 1e-6) `shouldBe` True
+        fs       -> expectationFailure ("枠が 2 個でない: " <> show (length fs))
+    it "不足分は 1 埋め ([3] = [3,1] と同一出力)" $
+      prims66 ((p1 <-> p2) <> subplotWidths [3])
+        `shouldBe` prims66 ((p1 <-> p2) <> subplotWidths [3, 1])
+    it "subplotHeights [2,1] で枠高が 2:1 (縦並び)" $
+      case frames ((p1 <:> p2) <> subplotHeights [2, 1]) of
+        [ra, rb] -> (abs (rH ra / rH rb - 2) < 1e-6) `shouldBe` True
+        fs       -> expectationFailure ("枠が 2 個でない: " <> show (length fs))
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)
