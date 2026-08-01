@@ -2689,6 +2689,47 @@ main = hspec $ do
                      in renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
       in mk (themeLegendPos LegendBottom) `shouldBe` mk (legendPos LegendBottom)
 
+  describe "Phase 63 A4: tick の長さ・向き (themeTickLength/themeTickDir)" $ do
+    let base64 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                               (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+        layOf extra = computeLayout emptyResolver (base64 <> extra)
+        areaOf extra = lpPlotArea (layOf extra)
+        primsOf64 extra = renderToPrimitives emptyResolver (layOf extra) (base64 <> extra)
+        panelBottom extra = let a = areaOf extra in rY a + rH a
+        -- 下辺 tick = 垂直 PLine (x1 == x2)。 panel 下端からの外向き突出量の最大。
+        overhang extra =
+          let yb = panelBottom extra
+          in maximum (0 : [ max y1 y2 - yb
+                          | PLine (Point x1 y1) (Point x2 y2) _ <- primsOf64 extra
+                          , x1 == x2 ])
+    it "既定 = ggTickLen / TickOut" $ do
+      effectiveTickLength mempty `shouldBe` ggTickLen
+      effectiveTickDir mempty `shouldBe` TickOut
+    it "後勝ち合成 (Last)" $
+      effectiveTickLength (themeTickLength 5 <> themeTickLength 10) `shouldBe` 10
+    it "themeTickDir TickOut は既定と同一出力 (既存挙動不変)" $
+      primsOf64 (themeTickDir TickOut) `shouldBe` primsOf64 mempty
+    it "themeTickLength が margin 予約に効く (左端が右へ・下端が上へ)" $ do
+      (rX (areaOf (themeTickLength 10)) > rX (areaOf mempty)) `shouldBe` True
+      (panelBottom (themeTickLength 10) < panelBottom mempty) `shouldBe` True
+    it "TickIn は外向き 0 = tickLength 0 と同じ margin" $
+      areaOf (themeTickDir TickIn) `shouldBe` areaOf (themeTickLength 0)
+    it "render: themeTickLength で外向き tick が長くなる" $
+      (overhang (themeTickLength 10) > overhang mempty) `shouldBe` True
+    it "render: TickIn は panel 下端より下に線が出ない" $
+      let yb = panelBottom (themeTickDir TickIn)
+          ys = concat [ [y1, y2]
+                      | PLine (Point _ y1) (Point _ y2) _
+                          <- primsOf64 (themeTickDir TickIn) ]
+      in all (<= yb + 1e-6) ys `shouldBe` True
+    it "render: TickBoth は panel 下端を跨ぐ tick が出る" $
+      let yb = panelBottom (themeTickDir TickBoth)
+      in any (\(y1, y2) -> min y1 y2 < yb - 1e-6 && max y1 y2 > yb + 1e-6)
+             [ (y1, y2) | PLine (Point x1 y1) (Point x2 y2) _
+                            <- primsOf64 (themeTickDir TickBoth)
+                        , x1 == x2 ]
+           `shouldBe` True
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

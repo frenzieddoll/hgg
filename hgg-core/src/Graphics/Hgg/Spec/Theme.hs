@@ -20,6 +20,7 @@ module Graphics.Hgg.Spec.Theme
   , okabeIto, tolBright, brewerSet2, brewerDark2
     -- * element 単位 override
   , ThemeOverride(..)
+  , TickDir(..)
   ) where
 
 import           Data.Aeson      (FromJSON, ToJSON)
@@ -91,6 +92,15 @@ brewerDark2 :: [Text]
 brewerDark2 = [ "#1B9E77", "#D95F02", "#7570B3", "#E7298A"
               , "#66A61E", "#E6AB02", "#A6761D", "#666666" ]
 
+-- | Phase 63 A4: 軸目盛線 (tick mark) の向き。 'TickOut' = panel 外向き
+-- (ggplot 既定)、 'TickIn' = panel 内向き (base R / 金融チャート系)、
+-- 'TickBoth' = 両向き。 JSON は nullary constructor 名 (canvas Codec と同形)。
+data TickDir = TickOut | TickIn | TickBoth
+  deriving (Show, Eq, Generic)
+
+instance ToJSON   TickDir
+instance FromJSON TickDir
+
 -- ===========================================================================
 -- Phase 9 A-2: element 単位 theme override (ggplot theme(element_*) 相当)
 -- ===========================================================================
@@ -138,6 +148,13 @@ data ThemeOverride = ThemeOverride
     --   優先順は 図レベル vsLegend (legendPos setter) > これ > 既定 LegendRightCenter
     --   ('effectiveLegendPos' で解決。 ggplot の theme() と個別指定の関係に同じ)。
   , toLegendPos     :: !(Last LegendPosition) -- legend.position
+    -- ★ Phase 63 A4: 軸目盛線の長さ (pt)・向き (ggplot axis.ticks.length 相当)。
+    --   tick 長は軸ラベル/マージン位置に波及するため、 palette でなく
+    --   Layout の 'effectiveTickLength'/'effectiveTickDir' が解決し
+    --   computeLayout (予約) と Render.tickMarks (描画) の単一情報源になる。
+    --   未指定時は ggTickLen (2.75pt) / TickOut (= 従来挙動と同一)。
+  , toTickLength    :: !(Last Double)  -- axis.ticks.length (pt)
+  , toTickDir       :: !(Last TickDir) -- 目盛線の向き (外/内/両)
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field

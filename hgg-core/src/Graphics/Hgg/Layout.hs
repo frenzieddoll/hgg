@@ -54,6 +54,10 @@ module Graphics.Hgg.Layout
   , needsLegend
   , effectiveLegendPos
   , hasColorEncoding
+    -- ★ Phase 63 A4: tick 長・向きの実効値 (予約 computeLayout と描画 tickMarks で共有)。
+  , effectiveTickLength
+  , effectiveTickDir
+  , tickOutwardLen
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -80,7 +84,8 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     ColRef, ColorEnc (..), FontSpec (..), Layer (..),
                                     LegendPosition (..), LegendSpec (..),
                                     MarkKind (..), Resolver,
-                                    ThemeName (..), ThemeOverride (..), Coord (..),
+                                    ThemeName (..), ThemeOverride (..), TickDir (..),
+                                    Coord (..),
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
                                     axTickValsOf, axTickLabelsOf, axisRotateOf, distGroupRef,
@@ -261,12 +266,15 @@ computeLayout r spec0 =
         | xRot == 0 = tickSize
         | otherwise = let rad = xRot * pi / 180
                       in tickSize * abs (cos rad) + maxXTickW * abs (sin rad)
+      -- ★ Phase 63 A4: tick の外向き突出量は theme 実効値 (themeTickLength/themeTickDir)。
+      --   未指定は ggTickLen/TickOut で従来と同値。 描画 (tickMarks) と単一情報源。
+      tickOut = tickOutwardLen spec
       bM | isContainer = sc * ggHalfLine + legendH + labsCapExtra
-         | otherwise   = sc * (ggHalfLine + ggTickLen + ggAxTextMar) + xTickReserve
+         | otherwise   = sc * (ggHalfLine + tickOut + ggAxTextMar) + xTickReserve
                  + (if hasXLabel then sc * ggAxTitleMar + axisLabelSize else 0)
                  + legendH + labsCapExtra
       lM | isContainer = sc * ggHalfLine
-         | otherwise   = sc * (ggHalfLine + ggTickLen + ggAxTextMar) + maxYTickW
+         | otherwise   = sc * (ggHalfLine + tickOut + ggAxTextMar) + maxYTickW
                  + (if hasYLabel then sc * ggAxTitleMar + axisLabelSize else 0)
       -- Phase 9 A-5 (PS Layout と同一): 凡例ぶん plotArea を縮めて図内に収める (ggplot は
       -- legend を gtable の一部として扱い panel を縮める)。 Inside/None は予約しない。
@@ -873,6 +881,24 @@ effectiveLegendPos spec = case getLast (vsLegend spec) of
   Just l  -> lgPosition l
   Nothing -> maybe LegendRightCenter id
                (getLast (toLegendPos (vsThemeOverride spec)))
+
+-- | Phase 63 A4: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 'ggTickLen' (2.75)。
+effectiveTickLength :: VisualSpec -> Double
+effectiveTickLength spec =
+  maybe ggTickLen id (getLast (toTickLength (vsThemeOverride spec)))
+
+-- | Phase 63 A4: 実効 tick 向き。 theme (toTickDir) > 既定 'TickOut' (ggplot 既定 = 外向き)。
+effectiveTickDir :: VisualSpec -> TickDir
+effectiveTickDir spec =
+  maybe TickOut id (getLast (toTickDir (vsThemeOverride spec)))
+
+-- | Phase 63 A4: tick の panel 外向き突出量 (pt)。 margin 予約 (computeLayout) と
+-- 軸ラベル offset (Render.tickMarks) の単一情報源。 'TickIn' は panel 外に出ない
+-- ので 0 (= ラベルが軸に寄る、 ggplot の負 axis.ticks.length と同挙動)。
+tickOutwardLen :: VisualSpec -> Double
+tickOutwardLen spec = case effectiveTickDir spec of
+  TickIn -> 0
+  _      -> effectiveTickLength spec
 
 -- | layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous) があるか。
 hasColorEncoding :: [Layer] -> Bool

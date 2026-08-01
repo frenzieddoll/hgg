@@ -18,6 +18,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       formatTicksGG,
                                       Track (..), solveTracks,
                                       needsLegend, effectiveLegendPos,
+                                      effectiveTickLength, effectiveTickDir,
+                                      tickOutwardLen,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -43,7 +45,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       Position (..), Coord (..),
                                       FacetScales (..), freeScaleX, freeScaleY,
                                       FacetSpace (..), freeSpaceX, freeSpaceY,
-                                      ThemeOverride (..),
+                                      ThemeOverride (..), TickDir (..),
                                       VisualSpec (..), YAxisSide (..), axisFormatOf,
                                       axisRotateOf, resolveAxisAngle, axisShowTicksOf,
                                       axShowGrid,
@@ -555,8 +557,15 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       --   算出 (design §D-3)。 tickSize は実フォント値、 gap は sc 倍してマージン予約に整合。
       sc       = lpMarginScale layout
       tickSize = tsSize ts
-      tkLen    = ggTickLen * sc
-      tkGap    = (ggTickLen + ggAxTextMar) * sc
+      -- ★ Phase 63 A4: tick 長・向きは theme 実効値 (Layout の margin 予約と単一情報源)。
+      --   outLen = panel 外向き分 / inLen = panel 内向き分。 ラベル offset (tkGap) は
+      --   外向き分にのみ追従 (TickIn はラベルが軸に寄る)。 既定 (TickOut・ggTickLen)
+      --   では従来式 tkLen = ggTickLen*sc / tkGap = (ggTickLen+ggAxTextMar)*sc と同値。
+      tkLen    = maybe ggTickLen effectiveTickLength mSpec * sc
+      tickDir  = maybe TickOut effectiveTickDir mSpec
+      outLen   = case tickDir of TickIn  -> 0; _ -> tkLen
+      inLen    = case tickDir of TickOut -> 0; _ -> tkLen
+      tkGap    = outLen + ggAxTextMar * sc
       -- Phase 32 (re-apply): 目盛線 (tick mark) は tpTickLineColor (ggplot=grey20)。
       --   軸線/枠 (axisFrame) は tpAxis のままで別物。
       tickStyle = solid (tpTickLineColor pal) 1.0
@@ -597,7 +606,7 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       xMark v =
         let px = scaleApply sx v
             yb = rY a + rH a
-        in [ PLine (Point px yb) (Point px (yb + tkLen)) tickStyle
+        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle
            -- Phase 8 C (small-viewport text fix): フォント由来オフセット (tickSize*k) は
            -- 等倍 (tkGap = sc*間隔 のみ scale)。 旧 *sc で小パネル時に数値が軸に被っていた。
            , if rotX == 0
@@ -607,7 +616,7 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       yMark v =
         let py = scaleApply sy v
             xl = rX a
-        in [ PLine (Point xl py) (Point (xl - tkLen) py) tickStyle
+        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle
            , PText (Point (xl - tkGap) (py + tickSize * 0.35)) (yLabel v) tsYrot ]
       -- Phase 9 C flip: データ x 軸を左辺に (= yMark 風)、 データ y 軸を下辺に (= xMark 風)。
       --   ラベルは水平のまま (anchor のみ placement に対応)。 sxF=データ x→縦 px、 syF=データ y→横 px。
@@ -617,12 +626,12 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       xMarkFlip v =
         let py = scaleApply sxF v
             xl = rX a
-        in [ PLine (Point xl py) (Point (xl - tkLen) py) tickStyle
+        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle
            , PText (Point (xl - tkGap) (py + tickSize * 0.35)) (xLabel v) tsY ]
       yMarkFlip v =
         let px = scaleApply syF v
             yb = rY a + rH a
-        in [ PLine (Point px yb) (Point px (yb + tkLen)) tickStyle
+        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle
            , PText (Point px (yb + tkGap + tickSize * 0.8)) (yLabel v) ts ]
       (xMarkF, yMarkF) = case coord of
         CoordFlip -> (xMarkFlip, yMarkFlip)

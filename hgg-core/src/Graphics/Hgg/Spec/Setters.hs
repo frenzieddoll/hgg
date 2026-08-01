@@ -23,6 +23,7 @@ module Graphics.Hgg.Spec.Setters
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
+  , themeTickLength, themeTickDir
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -62,7 +63,7 @@ import           Graphics.Hgg.Spec.Constructors (binCount, histogram, (<+>))
 import           Graphics.Hgg.Spec.Decoration
 import           Graphics.Hgg.Spec.Layer
 import           Graphics.Hgg.Spec.Mark
-import           Graphics.Hgg.Spec.Theme (ThemeName, ThemeOverride (..))
+import           Graphics.Hgg.Spec.Theme (ThemeName, ThemeOverride (..), TickDir)
 import           Graphics.Hgg.Spec.Visual
 
 
@@ -149,6 +150,18 @@ themeGridMinor b = mempty { vsThemeOverride = mempty { toShowGridMinor = Last (J
 -- 個別指定の関係に同じ)。
 themeLegendPos :: LegendPosition -> VisualSpec
 themeLegendPos p = mempty { vsThemeOverride = mempty { toLegendPos = Last (Just p) } }
+
+-- | Phase 63 A4: 軸目盛線の長さ (pt) を theme に焼き込む (ggplot
+-- @axis.ticks.length@ 相当、 既定 2.75pt)。 tick 長は軸ラベル位置・マージン予約
+-- にも波及する (computeLayout が実効値を参照)。
+themeTickLength :: Double -> VisualSpec
+themeTickLength d = mempty { vsThemeOverride = mempty { toTickLength = Last (Just d) } }
+
+-- | Phase 63 A4: 軸目盛線の向き ('TickOut' 外 / 'TickIn' 内 / 'TickBoth' 両)。
+-- 'TickIn' は panel 外に出ないため、 軸ラベルは tick 長 0 と同じ位置に寄る
+-- (ggplot の負 axis.ticks.length と同挙動)。
+themeTickDir :: TickDir -> VisualSpec
+themeTickDir d = mempty { vsThemeOverride = mempty { toTickDir = Last (Just d) } }
 
 panelFill :: Text -> VisualSpec       -- panel.background fill (= 塗り on + 色指定)
 panelFill c = mempty { vsThemeOverride = mempty { toPanelBg = Last (Just c), toShowPanel = Last (Just True) } }
