@@ -80,7 +80,7 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     ColRef, ColorEnc (..), FontSpec (..), Layer (..),
                                     LegendPosition (..), LegendSpec (..),
                                     MarkKind (..), Resolver,
-                                    ThemeName (..), Coord (..),
+                                    ThemeName (..), ThemeOverride (..), Coord (..),
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
                                     axTickValsOf, axTickLabelsOf, axisRotateOf, distGroupRef,
@@ -272,7 +272,7 @@ computeLayout r spec0 =
       -- legend を gtable の一部として扱い panel を縮める)。 Inside/None は予約しない。
       -- ★ Phase 34: facet 時も右凡例を予約する (旧実装は facet で legendW=0 にして凡例を
       --   完全に落としていた = ggplot は facet でも凡例を出す)。
-      legendPos = needsLegend spec (effectiveLegendPos (vsLegend spec))
+      legendPos = needsLegend spec (effectiveLegendPos spec)
       -- Phase 11 A5-c: nrow グリッドぶん予約を拡げる (default 1 で従来同一 = ゼロ diff)。
       --   ★ Phase 38: 右凡例は縦スタック (renderGuideBlock 単列) なので legNcol 予約は廃止。
       legNrow = max 1 (maybe 1 id (getLast (vsLegendNrow spec)))
@@ -865,11 +865,14 @@ hasShapeEncoding = any (\l -> case getLast (lyShapeBy l) of
                                 Just _  -> True
                                 Nothing -> False)
 
--- | vsLegend (Last LegendSpec) から有効 position を得る。 未指定 = LegendRight (ggplot auto)。
-effectiveLegendPos :: Last LegendSpec -> LegendPosition
-effectiveLegendPos ls = case getLast ls of
+-- | 有効 legend position を解決。 Phase 63 A3: 優先順 = 図レベル vsLegend
+--   ('legendPos' setter) > theme (toLegendPos) > 既定 LegendRightCenter
+--   (Phase 43: ggplot legend.position="right" と同じ縦中央)。
+effectiveLegendPos :: VisualSpec -> LegendPosition
+effectiveLegendPos spec = case getLast (vsLegend spec) of
   Just l  -> lgPosition l
-  Nothing -> LegendRightCenter  -- Phase 43: 既定を ggplot legend.position="right" と同じ縦中央に
+  Nothing -> maybe LegendRightCenter id
+               (getLast (toLegendPos (vsThemeOverride spec)))
 
 -- | layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous) があるか。
 hasColorEncoding :: [Layer] -> Bool

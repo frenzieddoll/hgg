@@ -27,7 +27,7 @@ import           Data.Monoid     (Last (..))
 import           Data.Text       (Text)
 import           GHC.Generics    (Generic, Generically (..))
 
-import           Graphics.Hgg.Spec.Decoration (FontSpec)
+import           Graphics.Hgg.Spec.Decoration (FontSpec, LegendPosition)
 
 -- | 描画 theme (= 名前で参照、 関数を持たない = JSON serializable)。
 -- ggplot 標準 preset (ThemeGrey) + ブランドテーマを追加。
@@ -134,6 +134,10 @@ data ThemeOverride = ThemeOverride
   , toTitleColor    :: !(Last Text)   -- plot.title / axis.title の文字色
   , toTickLineColor :: !(Last Text)   -- 軸目盛線 (tick mark) の色
   , toLegendKeyBg   :: !(Last Text)   -- legend.key 背景塗り色 ("" なら塗らない)
+    -- ★ Phase 63 A3: legend.position を theme に焼き込む口 (cowplot 自作 theme 用)。
+    --   優先順は 図レベル vsLegend (legendPos setter) > これ > 既定 LegendRightCenter
+    --   ('effectiveLegendPos' で解決。 ggplot の theme() と個別指定の関係に同じ)。
+  , toLegendPos     :: !(Last LegendPosition) -- legend.position
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field

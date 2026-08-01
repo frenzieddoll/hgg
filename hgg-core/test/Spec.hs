@@ -2673,6 +2673,22 @@ main = hspec $ do
                        (computeLayout emptyResolver s) s ]
       in (0.5 `elem` ws) `shouldBe` True
 
+  describe "Phase 63 A3: legend position の theme 化 (themeLegendPos)" $ do
+    it "theme 焼き込みが効く" $
+      effectiveLegendPos (themeLegendPos LegendBottom) `shouldBe` LegendBottom
+    it "図レベル legendPos が theme より優先" $
+      effectiveLegendPos (themeLegendPos LegendBottom <> legendPos LegendRight)
+        `shouldBe` LegendRight
+    it "未指定は既定 LegendRightCenter のまま" $
+      effectiveLegendPos mempty `shouldBe` LegendRightCenter
+    it "render 経路でも themeLegendPos = 図レベル legendPos と同一出力" $
+      let base = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                                (inline [2.0, 4.0, 1.0, 3.0 :: Double])
+                          <> colorBy (inlineCat (["a", "a", "b", "b"] :: [Data.Text.Text])))
+          mk extra = let s = base <> extra
+                     in renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
+      in mk (themeLegendPos LegendBottom) `shouldBe` mk (legendPos LegendBottom)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

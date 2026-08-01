@@ -865,7 +865,7 @@ renderCustom r layout pal ly =
 -- に収まり、 Inside は panel 内に bg box 付きで描く。 色/文字は theme 連動 (mkFontTS / pal)。
 renderLegend :: Resolver -> Layout -> ThemePalette -> VisualSpec -> [Primitive]
 renderLegend r layout pal spec =
-  let pos = needsLegend spec (effectiveLegendPos (vsLegend spec))
+  let pos = needsLegend spec (effectiveLegendPos spec)
   -- ★ Phase 35: LegendRight は collectGuides 経路 (色/形の複数 guide・色無し形のみも可)。
   --   Bottom/Inside は未 guide 化なので従来の単一 color enc 経路を維持。
   in case pos of

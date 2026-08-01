@@ -22,7 +22,7 @@ module Graphics.Hgg.Spec.Setters
   , scaleXDiscreteLimits, scaleYDiscreteLimits, applyDiscreteLimits, reindexLayer
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
-  , themeGridMajor, themeGridMinor
+  , themeGridMajor, themeGridMinor, themeLegendPos
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -143,6 +143,12 @@ themeGridMajor b = mempty { vsThemeOverride = mempty { toShowGridMajor = Last (J
 
 themeGridMinor :: Bool -> VisualSpec  -- panel.grid.minor on/off
 themeGridMinor b = mempty { vsThemeOverride = mempty { toShowGridMinor = Last (Just b) } }
+
+-- | Phase 63 A3: legend.position を theme に焼き込む (自作 theme を `<>` で配る用)。
+-- 図レベルの 'legendPos' が指定されていればそちらが優先 (ggplot の theme() と
+-- 個別指定の関係に同じ)。
+themeLegendPos :: LegendPosition -> VisualSpec
+themeLegendPos p = mempty { vsThemeOverride = mempty { toLegendPos = Last (Just p) } }
 
 panelFill :: Text -> VisualSpec       -- panel.background fill (= 塗り on + 色指定)
 panelFill c = mempty { vsThemeOverride = mempty { toPanelBg = Last (Just c), toShowPanel = Last (Just True) } }
