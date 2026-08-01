@@ -278,7 +278,8 @@ module Graphics.Hgg.Spec
   , themeSeriesPalette
   , okabeIto, tolBright, brewerSet2, brewerDark2
   , ThemeOverride(..)
-  , themeGrid, panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
+  , themeGrid, themeGridMajor, themeGridMinor   -- ★ Phase 63 A2
+  , panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont, themeAxisTextAngle
   , themeAxisTextAngleX, themeAxisTextAngleY, axisTextAngleXOf, axisTextAngleYOf
   , stripFill, themeStrip

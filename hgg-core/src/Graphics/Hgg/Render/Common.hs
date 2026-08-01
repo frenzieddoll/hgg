@@ -169,6 +169,11 @@ data ThemePalette = ThemePalette
   , tpPanelBg    :: !Text   -- panel (plotArea) 背景色
   , tpShowPanel  :: !Bool   -- panel 矩形を塗るか
   , tpShowGrid   :: !Bool   -- theme レベルの grid master
+    -- ★ Phase 63 A2: major/minor の個別 flag。 preset 定義では書かず 'themePalette' の
+    --   出口で tpShowGrid と同値に初期化 (= 既定挙動不変)。 'resolveTheme' が
+    --   個別 override > 一括 toShowGrid > preset の順で解決する。
+  , tpShowGridMajor :: !Bool -- panel.grid.major
+  , tpShowGridMinor :: !Bool -- panel.grid.minor
   , tpShowBorder :: !Bool   -- axisFrame の 4 辺枠を描くか
   , tpShowAxisLine :: !Bool -- 下辺(x軸)+左辺(y軸)の 2 本軸線を描くか (theme_classic)
   -- ★ Phase 32 (re-apply): ggplot theme_grey fidelity 用の追加 field。
@@ -186,21 +191,25 @@ themePalette t = case t of
     { tpBackground = "#ffffff", tpAxis = "#444444", tpText = "#333333", tpGrid = "#dddddd"
     , tpDefault = "#1f77b4", tpDefaultFill = "#1f77b4", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#333333", tpTitleHjust = 0.0, tpTickLineColor = "#444444", tpLegendKeyBg = "" }
   Graphics.Hgg.Spec.ThemeMinimal -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#333333", tpText = "#333333", tpGrid = "#eeeeee"
     , tpDefault = "#1f77b4", tpDefaultFill = "#1f77b4", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#333333", tpTitleHjust = 0.0, tpTickLineColor = "#333333", tpLegendKeyBg = "" }
   Graphics.Hgg.Spec.ThemeLight -> ThemePalette
     { tpBackground = "#fafafa", tpAxis = "#666666", tpText = "#444444", tpGrid = "#e0e0e0"
     , tpDefault = "#3498db", tpDefaultFill = "#3498db", tpPanelBg = "#fafafa"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#444444", tpTitleHjust = 0.0, tpTickLineColor = "#666666", tpLegendKeyBg = "" }
   Graphics.Hgg.Spec.ThemeDark -> ThemePalette
     { tpBackground = "#222222", tpAxis = "#cccccc", tpText = "#eeeeee", tpGrid = "#444444"
     , tpDefault = "#5dade2", tpDefaultFill = "#5dade2", tpPanelBg = "#222222"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#eeeeee", tpTitleHjust = 0.0, tpTickLineColor = "#cccccc", tpLegendKeyBg = "" }
   -- ggplot 既定 theme_grey: 白 plot bg・灰 panel #EBEBEB・白 grid・枠なし・軸線なし。
   -- ★ Phase 34: geom 既定色を ggplot 厳密値に (point/line = black、 bar/hist = grey35)。
@@ -208,6 +217,7 @@ themePalette t = case t of
     { tpBackground = "#ffffff", tpAxis = "#4d4d4d", tpText = "#4d4d4d", tpGrid = "#ffffff"
     , tpDefault = "#000000", tpDefaultFill = "#595959", tpPanelBg = "#ebebeb"
     , tpShowPanel = True, tpShowGrid = True, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     -- ★ Phase 32: ggplot theme_grey 厳密値。 title=black/左寄せ・tick=grey20・legend.key=grey95。
     , tpTitleColor = "#000000", tpTitleHjust = 0.0, tpTickLineColor = "#333333", tpLegendKeyBg = "#f2f2f2" }
   -- ブランド (panel 塗りあり・grid あり・枠なし、 series は themeSeriesPalette)。
@@ -215,11 +225,13 @@ themePalette t = case t of
     { tpBackground = "#16161e", tpAxis = "#5a6080", tpText = "#c8ccda", tpGrid = "#2a2e45"
     , tpDefault = "#7aa2f7", tpDefaultFill = "#7aa2f7", tpPanelBg = "#1e2030"
     , tpShowPanel = True, tpShowGrid = True, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#c8ccda", tpTitleHjust = 0.0, tpTickLineColor = "#5a6080", tpLegendKeyBg = "" }
   Graphics.Hgg.Spec.ThemeLumen -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#8a857e", tpText = "#2b2b33", tpGrid = "#e7e3db"
     , tpDefault = "#4c5bd4", tpDefaultFill = "#4c5bd4", tpPanelBg = "#f7f5f1"
     , tpShowPanel = True, tpShowGrid = True, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#2b2b33", tpTitleHjust = 0.0, tpTickLineColor = "#8a857e", tpLegendKeyBg = "" }
   -- Parchment 正式テーマ (明)。 panel=羊皮紙 cream-light #F8F5EE は据え置き、
   --   外周 plot bg は白 #FFFFFF にして軸内 panel を額装的に強調 (2026-06-02 ユーザ確定)。
@@ -227,36 +239,42 @@ themePalette t = case t of
     { tpBackground = "#ffffff", tpAxis = "#8b6f3a", tpText = "#1a1620", tpGrid = "#e0d6c0"
     , tpDefault = "#f0a5a0", tpDefaultFill = "#f0a5a0", tpPanelBg = "#f8f5ee"
     , tpShowPanel = True, tpShowGrid = True, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#1a1620", tpTitleHjust = 0.0, tpTickLineColor = "#8b6f3a", tpLegendKeyBg = "" }
   -- 暗版 = Charcoal (中性炭、 Red Queen §4.8 Charcoal #2B2B2E 由来。 焦茶から変更 2026-06-02)。
   Graphics.Hgg.Spec.ThemeParchmentDark -> ThemePalette
     { tpBackground = "#1e1e22", tpAxis = "#9aa0a8", tpText = "#d6d8dd", tpGrid = "#42424a"
     , tpDefault = "#f0a5a0", tpDefaultFill = "#f0a5a0", tpPanelBg = "#2a2a30"
     , tpShowPanel = True, tpShowGrid = True, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#d6d8dd", tpTitleHjust = 0.0, tpTickLineColor = "#9aa0a8", tpLegendKeyBg = "" }
   -- ggplot theme_bw: 白背景・薄グレー grid・黒灰の 4 辺枠 (軸線なし)。
   Graphics.Hgg.Spec.ThemeBW -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#333333", tpText = "#4d4d4d", tpGrid = "#ebebeb"
     , tpDefault = "#353535", tpDefaultFill = "#353535", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#4d4d4d", tpTitleHjust = 0.0, tpTickLineColor = "#333333", tpLegendKeyBg = "" }
   -- ggplot theme_classic: 白背景・grid なし・枠なし・下/左の 2 軸線あり。
   Graphics.Hgg.Spec.ThemeClassic -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#333333", tpText = "#4d4d4d", tpGrid = "#ffffff"
     , tpDefault = "#353535", tpDefaultFill = "#353535", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = False, tpShowBorder = False, tpShowAxisLine = True
+    , tpShowGridMajor = False, tpShowGridMinor = False
     , tpTitleColor = "#4d4d4d", tpTitleHjust = 0.0, tpTickLineColor = "#333333", tpLegendKeyBg = "" }
   -- ggplot theme_void: 背景・grid・枠・軸線すべてなし (データのみ)。
   Graphics.Hgg.Spec.ThemeVoid -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#4d4d4d", tpText = "#4d4d4d", tpGrid = "#ffffff"
     , tpDefault = "#353535", tpDefaultFill = "#353535", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = False, tpShowBorder = False, tpShowAxisLine = False
+    , tpShowGridMajor = False, tpShowGridMinor = False
     , tpTitleColor = "#4d4d4d", tpTitleHjust = 0.0, tpTickLineColor = "#4d4d4d", tpLegendKeyBg = "" }
   -- ggplot theme_linedraw: 白背景・黒寄り細 grid・黒の 4 辺枠。
   Graphics.Hgg.Spec.ThemeLinedraw -> ThemePalette
     { tpBackground = "#ffffff", tpAxis = "#000000", tpText = "#1a1a1a", tpGrid = "#b3b3b3"
     , tpDefault = "#000000", tpDefaultFill = "#000000", tpPanelBg = "#ffffff"
     , tpShowPanel = False, tpShowGrid = True, tpShowBorder = True, tpShowAxisLine = False
+    , tpShowGridMajor = True, tpShowGridMinor = True
     , tpTitleColor = "#1a1a1a", tpTitleHjust = 0.0, tpTickLineColor = "#000000", tpLegendKeyBg = "" }
 
 -- | Phase 9 A-2: preset palette に ThemeOverride を合成 (element 単位上書き)。
@@ -270,6 +288,10 @@ resolveTheme name ov =
        , tpShowPanel    = ovB toShowPanel    (tpShowPanel base)
        , tpGrid         = ovT toGridColor    (tpGrid base)
        , tpShowGrid     = ovB toShowGrid     (tpShowGrid base)
+         -- ★ Phase 63 A2: 個別 flag > 一括 toShowGrid > preset の順。 toShowGrid は
+         --   major/minor 両方を設定する糖衣なので、 一括値を既定に個別値で上書きする。
+       , tpShowGridMajor = ovB toShowGridMajor (ovB toShowGrid (tpShowGridMajor base))
+       , tpShowGridMinor = ovB toShowGridMinor (ovB toShowGrid (tpShowGridMinor base))
        , tpShowBorder   = ovB toShowBorder   (tpShowBorder base)
        , tpShowAxisLine = ovB toShowAxisLine (tpShowAxisLine base)
        , tpAxis         = ovT toAxisColor    (tpAxis base)
@@ -382,9 +404,13 @@ gridLines layout spec pal =
         -- Phase 11 A7-c: 極座標の grid は polarGrid (= 同心円 + 放射スポーク) が描く。
         _ -> ([], [], [], [])
       -- minor を先に (= major が上に乗る)。 grid 全体は layer の下 (描画順は呼出側)。
-      -- Phase 9 A-1: theme レベルの grid master (tpShowGrid) が False なら全 grid 抑制。
-      gx = if tpShowGrid pal && showXGrid then minorX ++ majorX else []
-      gy = if tpShowGrid pal && showYGrid then minorY ++ majorY else []
+      -- Phase 63 A2: major/minor を個別 flag で描き分け ('resolveTheme' が一括
+      -- toShowGrid / preset との優先を解決済)。 軸ごと axShowGrid は従来通り AND。
+      gx = pick showXGrid minorX majorX
+      gy = pick showYGrid minorY majorY
+      pick axOn minor major =
+        (if tpShowGridMinor pal && axOn then minor else [])
+          ++ (if tpShowGridMajor pal && axOn then major else [])
   in gx <> gy
   where
     axisOrDef la = case getLast la of

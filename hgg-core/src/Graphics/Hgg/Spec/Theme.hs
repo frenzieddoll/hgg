@@ -102,7 +102,11 @@ data ThemeOverride = ThemeOverride
   , toPanelBg      :: !(Last Text)   -- panel.background fill
   , toShowPanel    :: !(Last Bool)   -- panel 矩形を塗るか
   , toGridColor    :: !(Last Text)   -- panel.grid colour
-  , toShowGrid     :: !(Last Bool)   -- panel.grid on/off
+  , toShowGrid     :: !(Last Bool)   -- panel.grid on/off (= major/minor 両方の糖衣)
+    -- ★ Phase 63 A2: grid major/minor の個別 on/off (cowplot theme_minimal_grid 等)。
+    --   優先順は 個別 (これ) > 一括 toShowGrid > preset ('resolveTheme' で解決)。
+  , toShowGridMajor :: !(Last Bool)  -- panel.grid.major on/off
+  , toShowGridMinor :: !(Last Bool)  -- panel.grid.minor on/off
   , toShowBorder   :: !(Last Bool)   -- panel.border on/off
   , toShowAxisLine :: !(Last Bool)   -- axis.line on/off
   , toAxisColor    :: !(Last Text)   -- axis 線/目盛り色

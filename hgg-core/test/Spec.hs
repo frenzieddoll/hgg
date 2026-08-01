@@ -2641,6 +2641,38 @@ main = hspec $ do
           fills = Data.List.nub [ c | PPath _ (FillStyle c _) _ <- primsOf spec ]
       in length fills `shouldBe` 5
 
+  describe "Phase 63 A2: grid major/minor の個別 on/off" $ do
+    -- 連続 x/y scatter + ThemeMinimal (grid on) を基準に、 PLine 本数の差分で
+    -- major/minor の描き分けを検証 (tick/軸枠も PLine のため絶対数でなく差分計数)。
+    let spec63 extra = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                                      (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+                    <> theme ThemeMinimal <> extra
+        nLines extra = let s = spec63 extra
+                       in length [ () | PLine{} <- renderToPrimitives emptyResolver
+                                          (computeLayout emptyResolver s) s ]
+        nAll      = nLines mempty
+        nMajorOff = nLines (themeGridMajor False)
+        nMinorOff = nLines (themeGridMinor False)
+    it "themeGridMajor False で major 分だけ減る" $
+      (nAll - nMajorOff > 0) `shouldBe` True
+    it "themeGridMinor False で minor 分だけ減る" $
+      (nAll - nMinorOff > 0) `shouldBe` True
+    it "個別 off ×2 = 一括 themeGrid False (糖衣と一致)" $
+      nLines (themeGridMajor False <> themeGridMinor False)
+        `shouldBe` nLines (themeGrid False)
+    it "個別 > 一括: themeGrid False <> themeGridMinor True は minor のみ" $
+      nLines (themeGrid False <> themeGridMinor True) `shouldBe` nMajorOff
+    it "指定順に依らず個別が勝つ (themeGridMinor True <> themeGrid False)" $
+      nLines (themeGridMinor True <> themeGrid False) `shouldBe` nMajorOff
+    it "preset off (ThemeClassic) にも個別 on が勝つ" $
+      (nLines (theme ThemeClassic <> themeGridMajor True)
+         > nLines (theme ThemeClassic)) `shouldBe` True
+    it "未指定は現行既定のまま (minor = 太さ 0.5 の線が存在)" $
+      let s = spec63 mempty
+          ws = [ w | PLine _ _ (LineStyle _ w _) <- renderToPrimitives emptyResolver
+                       (computeLayout emptyResolver s) s ]
+      in (0.5 `elem` ws) `shouldBe` True
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

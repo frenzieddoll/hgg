@@ -22,6 +22,7 @@ module Graphics.Hgg.Spec.Setters
   , scaleXDiscreteLimits, scaleYDiscreteLimits, applyDiscreteLimits, reindexLayer
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
+  , themeGridMajor, themeGridMinor
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -131,8 +132,17 @@ theme t = mempty { vsTheme = Last (Just t) }
 
 -- | Phase 9 A-2: element 単位 theme override の setter 群 (ggplot theme(element_*) 相当)。
 -- `theme ThemeGrey <> themeGrid False <> panelFill "#fafafa"` のように `<>` で重ねる。
-themeGrid :: Bool -> VisualSpec       -- panel.grid on/off
+themeGrid :: Bool -> VisualSpec       -- panel.grid on/off (= major/minor 両方の糖衣)
 themeGrid b = mempty { vsThemeOverride = mempty { toShowGrid = Last (Just b) } }
+
+-- | Phase 63 A2: grid major/minor の個別 on/off (cowplot @theme_minimal_grid()@ 等)。
+-- 優先順は 個別 > 一括 'themeGrid' > preset。 `theme ThemeMinimal <> themeGridMinor False`
+-- のように重ねる。
+themeGridMajor :: Bool -> VisualSpec  -- panel.grid.major on/off
+themeGridMajor b = mempty { vsThemeOverride = mempty { toShowGridMajor = Last (Just b) } }
+
+themeGridMinor :: Bool -> VisualSpec  -- panel.grid.minor on/off
+themeGridMinor b = mempty { vsThemeOverride = mempty { toShowGridMinor = Last (Just b) } }
 
 panelFill :: Text -> VisualSpec       -- panel.background fill (= 塗り on + 色指定)
 panelFill c = mempty { vsThemeOverride = mempty { toPanelBg = Last (Just c), toShowPanel = Last (Just True) } }
