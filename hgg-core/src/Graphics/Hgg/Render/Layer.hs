@@ -47,7 +47,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       Position (..), Coord (..),
                                       FacetScales (..), freeScaleX, freeScaleY,
                                       FacetSpace (..), freeSpaceX, freeSpaceY,
-                                      ThemeOverride (..),
+                                      ThemeOverride (..), TagStyle (..),
                                       VisualSpec (..), YAxisSide (..), axisFormatOf,
                                       applyDiscreteLimits, ridgeAutoFlip, selectedSubplots,
                                       axisRotateOf, resolveAxisAngle, axisShowTicksOf,
@@ -56,6 +56,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       FontSpec (..), orderedCats,
                                       colRefName, resolveCol, resolveNum,
                                       compositeLanes, inlineCat, reindexLayer)
+import           Data.Char           (chr, ord)
 import           Data.Maybe          (mapMaybe, isJust, listToMaybe)
 import           Data.List           (sortOn, foldl')
 import qualified Data.Map.Strict     as Map
@@ -183,7 +184,16 @@ renderSubplots r parentLayout spec =
       gp     = flattenSubplots spec
       gcols  = gpCols gp
       grows  = gpRows gp
-      panels = gpPanels gp                -- [(leaf spec, GridCell)]
+      panels0 = gpPanels gp               -- [(leaf spec, GridCell)]
+      -- ★ Phase 63 A7: panel 自動タグ (subplotTags = cowplot plot_grid labels="AUTO")。
+      --   panel 列挙順に vsTag を注入する。 panel 自身の vsTag 明示指定が優先
+      --   (Last の右勝ち = 個別 > 一括)。 注入位置を panels にすることで、
+      --   computeLayout の margin 予約 (labsTagExtra) と labels の tag 描画が
+      --   同じ tagged spec を見る (= 予約と描画の単一情報源)。
+      panels = case getLast (vsSubplotTags spec) of
+        Nothing  -> panels0
+        Just sty -> [ (sub { vsTag = Last (Just (tagTextFor sty i)) <> vsTag sub }, c)
+                    | (i, (sub, c)) <- zip [0 ..] panels0 ]
       area   = lpPlotArea parentLayout
       -- Phase 8 A2 Step3 (design §A-5): panel 間 spacing = ggplot panel.spacing 既定 = half_line。
       pad    = ggHalfLine * lpMarginScale parentLayout
@@ -269,6 +279,20 @@ renderSubplots r parentLayout spec =
         | (sub, c, subLayoutComputed) <- computed
         ]
   in bg <> title <> subPrims
+
+-- | Phase 63 A7: 'TagStyle' と panel index (0 始まり) から自動タグ文字列を作る。
+-- 26 panel 超は spreadsheet 流 bijective 26 進 (\"Z\" の次は \"AA\") で総関数にする
+-- (cowplot は LETTERS 超過で NA だが、 A6 の「エラーにしない」 方針に合わせる)。
+tagTextFor :: TagStyle -> Int -> Text
+tagTextFor TagNumeric i = T.pack (show (i + 1))
+tagTextFor TagUpper   i = alphaTagFor 'A' i
+tagTextFor TagLower   i = alphaTagFor 'a' i
+
+alphaTagFor :: Char -> Int -> Text
+alphaTagFor base = T.pack . reverse . go
+  where
+    go n = let (q, rest) = n `divMod` 26
+           in chr (ord base + rest) : if q == 0 then [] else go (q - 1)
 
 -- | DAG 専用 spec か判定 (= 全 layer が MDAG)。
 isDAGOnly :: VisualSpec -> Bool

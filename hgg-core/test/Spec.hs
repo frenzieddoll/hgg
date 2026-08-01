@@ -2783,6 +2783,36 @@ main = hspec $ do
         [ra, rb] -> (abs (rH ra / rH rb - 2) < 1e-6) `shouldBe` True
         fs       -> expectationFailure ("枠が 2 個でない: " <> show (length fs))
 
+  describe "Phase 63 A7: subplot panel タグ (subplotTags)" $ do
+    let p1 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [1.0, 2.0 :: Double]))
+        p2 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [2.0, 1.0 :: Double]))
+        prims67 spec = renderToPrimitives emptyResolver (computeLayout emptyResolver spec) spec
+        texts spec = [ t | PText _ t _ <- prims67 spec ]
+        frames spec = [ r | PRect r _ (Just _) <- prims67 spec ]
+    it "未指定 = タグ無し (既定挙動不変)" $
+      ("A" `elem` texts (p1 <-> p2)) `shouldBe` False
+    it "TagUpper で panel 列挙順に A/B" $ do
+      ("A" `elem` texts ((p1 <-> p2) <> subplotTags TagUpper)) `shouldBe` True
+      ("B" `elem` texts ((p1 <-> p2) <> subplotTags TagUpper)) `shouldBe` True
+    it "TagLower で a/b" $ do
+      ("a" `elem` texts ((p1 <-> p2) <> subplotTags TagLower)) `shouldBe` True
+      ("b" `elem` texts ((p1 <-> p2) <> subplotTags TagLower)) `shouldBe` True
+    it "TagNumeric の増分 = 1/2 (tick ラベルと区別して差分で見る)" $
+      (texts ((p1 <-> p2) <> subplotTags TagNumeric) Data.List.\\ texts (p1 <-> p2))
+        `shouldBe` ["1", "2"]
+    it "panel 個別の tag が優先 (個別 > 一括)" $ do
+      let tagged = ((p1 <> tag "X") <-> p2) <> subplotTags TagUpper
+      ("X" `elem` texts tagged) `shouldBe` True
+      ("B" `elem` texts tagged) `shouldBe` True
+      ("A" `elem` texts tagged) `shouldBe` False
+    it "tag の margin 予約が panel 枠に効く (枠上端が下がる)" $
+      case (frames (p1 <-> p2), frames ((p1 <-> p2) <> subplotTags TagUpper)) of
+        ([ra, _], [rb, _]) -> (rY rb > rY ra) `shouldBe` True
+        _                  -> expectationFailure "枠が 2 個でない"
+    it "JSON roundtrip (TagStyle = nullary 名)" $
+      eitherDecode (encode ((p1 <-> p2) <> subplotTags TagLower))
+        `shouldBe` Right ((p1 <-> p2) <> subplotTags TagLower)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

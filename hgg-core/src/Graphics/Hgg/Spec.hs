@@ -109,6 +109,8 @@ module Graphics.Hgg.Spec
   , subplotCols
   , subplotWidths      -- ★ Phase 63 A6: 列の相対幅 (rel_widths)
   , subplotHeights     -- ★ Phase 63 A6: 行の相対高 (rel_heights)
+  , subplotTags        -- ★ Phase 63 A7: panel 自動タグ (labels="AUTO")
+  , TagStyle(..)       -- ★ Phase 63 A7
   , selectPanels
   , selectedSubplots
   , scaleXDiscreteLimits

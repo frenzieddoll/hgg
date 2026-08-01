@@ -18,7 +18,7 @@ module Graphics.Hgg.Spec.Setters
     layer, purePlot, title, subtitle, caption, tag, xLabel, yLabel
   , Labs(..), labs, emptyLabs
   , theme, facet, facetWrap, facetGrid, facetCols, facetScales, facetSpace
-  , subplots, subplotCols, subplotWidths, subplotHeights
+  , subplots, subplotCols, subplotWidths, subplotHeights, subplotTags
   , repeatFields, selectPanels, selectedSubplots
   , scaleXDiscreteLimits, scaleYDiscreteLimits, applyDiscreteLimits, reindexLayer
     -- * theme override setter
@@ -302,6 +302,13 @@ subplotWidths ws = mempty { vsSubplotWidths = Last (Just ws) }
 -- | Phase 63 A6: subplot 行の相対高 (cowplot @plot_grid(rel_heights=)@ 相当)。
 subplotHeights :: [Double] -> VisualSpec
 subplotHeights hs = mempty { vsSubplotHeights = Last (Just hs) }
+
+-- | Phase 63 A7: subplot panel の自動タグ (cowplot @plot_grid(labels="AUTO")@ 相当)。
+-- 統一グリッドの panel 列挙順に \"A\",\"B\",… ('TagUpper') \/ \"a\",\"b\",… ('TagLower') \/
+-- \"1\",\"2\",… ('TagNumeric') を各 panel の 'tag' として注入する。 panel 自身の
+-- 'tag' 明示指定が優先 (個別 > 一括)。 @(a <-> b) <> subplotTags TagUpper@ のように使う。
+subplotTags :: TagStyle -> VisualSpec
+subplotTags s = mempty { vsSubplotTags = Last (Just s) }
 
 -- | Phase 18 A1: subplot panel を **名前 (= 子 spec の 'vsTitle') で選択 + 並べ替え**。
 -- 'repeatFields' (名前リスト → panel 群) の逆方向。 列挙順がそのまま表示順になる

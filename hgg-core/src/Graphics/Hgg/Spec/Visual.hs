@@ -15,6 +15,7 @@
 module Graphics.Hgg.Spec.Visual
   ( VisualSpec(..)
   , Inset(..)
+  , TagStyle(..)
   ) where
 
 import           Data.Aeson      (FromJSON, ToJSON)
@@ -46,6 +47,21 @@ instance ToJSON   Inset
 instance FromJSON Inset
 
 -- ===========================================================================
+-- TagStyle (= Phase 63 A7、 subplot panel の自動タグ様式)
+-- ===========================================================================
+
+-- | Phase 63 A7: subplot panel の自動タグ様式 (cowplot @plot_grid(labels=)@ の
+-- @"AUTO"@ / @"auto"@ / 連番 相当)。 統一グリッドの panel 列挙順に
+-- \"A\",\"B\",… \/ \"a\",\"b\",… \/ \"1\",\"2\",… を各 panel の 'vsTag' として注入する
+-- (panel 自身の 'vsTag' 明示指定が優先 = 個別 > 一括)。
+-- JSON は nullary constructor 名 ('TickDir' と同パターン、 canvas Codec と parity)。
+data TagStyle = TagUpper | TagLower | TagNumeric
+  deriving (Generic, Show, Eq)
+
+instance ToJSON   TagStyle
+instance FromJSON TagStyle
+
+-- ===========================================================================
 -- VisualSpec (= 外側 Monoid)
 -- ===========================================================================
 
@@ -69,6 +85,10 @@ data VisualSpec = VisualSpec
     --   不足分は 1 で埋める (エラーにしない)。 未指定 = 全列/行 1 (= 従来の等分)。
   , vsSubplotWidths  :: !(Last [Double])
   , vsSubplotHeights :: !(Last [Double])
+    -- ★ Phase 63 A7: subplot panel の自動タグ (cowplot plot_grid の labels="AUTO" 相当)。
+    --   panel 列挙順に TagStyle の連番タグを各 panel の vsTag へ注入 (個別 vsTag 優先)。
+    --   未指定 = タグ無し (= 従来同一)。
+  , vsSubplotTags    :: !(Last TagStyle)
   , vsLegend   :: !(Last LegendSpec)    -- ★ P8 2026-05-25 凡例設定 (= Nothing なら auto)
   , vsAnnotations :: ![Annotation]      -- ★ P6 任意 overlay (text/arrow/rect/line)
   , vsInsets      :: ![Inset]            -- ★ P13 inset axes
@@ -191,6 +211,7 @@ instance Semigroup VisualSpec where
     , vsSubplotCols  = vsSubplotCols a  <> vsSubplotCols b
     , vsSubplotWidths  = vsSubplotWidths a  <> vsSubplotWidths b
     , vsSubplotHeights = vsSubplotHeights a <> vsSubplotHeights b
+    , vsSubplotTags    = vsSubplotTags a    <> vsSubplotTags b
     , vsLegend       = vsLegend a       <> vsLegend b
     , vsAnnotations  = vsAnnotations a  <> vsAnnotations b
     , vsInsets       = vsInsets a       <> vsInsets b
@@ -239,7 +260,7 @@ instance Monoid VisualSpec where
     , vsXLabel = mempty, vsYLabel = mempty, vsXAxis = mempty, vsYAxis = mempty
     , vsYAxisRight = mempty, vsRefLines = mempty, vsMarginal = mempty
     , vsSubplots = mempty, vsSubplotCols = mempty, vsLegend = mempty
-    , vsSubplotWidths = mempty, vsSubplotHeights = mempty
+    , vsSubplotWidths = mempty, vsSubplotHeights = mempty, vsSubplotTags = mempty
     , vsAnnotations = mempty, vsInsets = mempty, vsPalette = mempty
     , vsContinuousPal = mempty, vsTitleFont = mempty, vsAxisLabelFont = mempty
     , vsTickFont = mempty, vsLegendFont = mempty, vsWidth = mempty, vsHeight = mempty
