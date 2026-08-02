@@ -76,11 +76,17 @@ After `theme` preset, override individual elements with `<>` (ggplot `theme(...)
 
 | Setting | Type (what to pass) | Meaning |
 |---|---|---|
-| `themeGrid` | `Bool -> VisualSpec` | Grid lines on/off |
+| `themeGrid` | `Bool -> VisualSpec` | Grid lines on/off (major/minor together) |
+| `themeGridMajor` / `themeGridMinor` | `Bool -> VisualSpec` | **Individual** on/off for major / minor grid lines (individual > combined `themeGrid` > preset) |
 | `gridColor` / `panelFill` / `plotBg` | `Text -> VisualSpec` | Grid color / panel background / overall background (color hex) |
 | `axisColor` / `textColor` / `stripFill` | `Text -> VisualSpec` | Axis line color / text color / strip background (color hex) |
 | `themeAxisLine` / `panelBorder` / `themeStrip` | `Bool -> VisualSpec` | Axis lines (bottom/left) / plot frame / facet strip on/off |
-| `themeAxisTextAngle` | `Double -> VisualSpec` | Tick label rotation (degrees) |
+| `themeAxisTextAngle` | `Double -> VisualSpec` | Tick label rotation (degrees, both axes) |
+| `themeAxisTextAngleX` / `themeAxisTextAngleY` | `Double -> VisualSpec` | Rotation for x / y axis only (wins over the shared version; per-axis `axisRotate` wins over both) |
+| `themeTickLength` | `Double -> VisualSpec` | Axis tick mark length in pt (default 2.75 = ggplot `axis.ticks.length`) |
+| `themeTickDir` | `TickDir -> VisualSpec` | Tick direction ([enum](#enum-tables); `TickIn` pulls labels closer to the axis) |
+| `themePlotMargin` | `Double -> Double -> Double -> Double -> VisualSpec` | Outer plot margin t r b l (pt, same order as ggplot `margin(t,r,b,l)`). When set, **replaces** the automatic outer margin (5.5pt per side) |
+| `themeLegendPos` | `LegendPosition -> VisualSpec` | Bake legend position into a theme (figure-level `legendPos` wins if specified) |
 | `titleHjust` | `Double -> VisualSpec` | Plot title horizontal alignment (`0`=left [default] · `0.5`=center · `1`=right) |
 | `titleColor` / `tickColor` / `legendKeyBg` | `Text -> VisualSpec` | Title text color / axis tick mark color / legend key background (color hex; `""` for no fill) |
 | `titleFont` / `axisLabelFont` / `tickFont` / `legendFont` | `FontSpec -> VisualSpec` | Font for each text (compose with combinator below) |
@@ -112,6 +118,36 @@ purePlot <> layer (scatter "x" "y" <> colorBy "g") <> facet "g"
 → Working example: `cabal run tutorial-05-theme`
 
 > Each font setter has a `ThemeOverride` equivalent via `theme*Font` (`themeTitleFont`/`themeAxisLabelFont`/`themeTickFont`/`themeLegendFont`). In rendering, override (`theme*Font`) takes priority, but **layout character height is only affected by `titleFont` series**, so prefer `titleFont` for standalone use.
+
+### Custom themes and cowplot-style presets {#theme-presets}
+
+Every override setter above returns a `VisualSpec`, so **bundling them with `<>` under a
+name gives you a "custom theme"** (no need to grow the ThemeName enum):
+
+```haskell
+myTheme :: VisualSpec
+myTheme = theme ThemeMinimal <> themeGridMinor False <> titleHjust 0.5
+-- usage: purePlot <> layer ... <> myTheme  (append more setters to override individually)
+```
+
+As worked examples of this pattern, presets equivalent to three themes from the R
+**cowplot** package ship out of the box:
+
+| preset | Type | Equivalent (cowplot) | Contents |
+|---|---|---|---|
+| `themeCowplot` | `VisualSpec` | `theme_cowplot()` | no grid, black bottom/left axis lines, outward 3.5pt ticks, 7pt outer margin, black text, 16pt bold title |
+| `themeMinimalGrid` | `VisualSpec` | `theme_minimal_grid()` | major grid (grey85) only; no axis lines / frame / ticks |
+| `themeMap` | `VisualSpec` | `theme_map()` | removes axis lines, grid, frame and tick marks (maps, diagrams) |
+
+```haskell
+purePlot <> layer (scatter xs ys) <> themeCowplot
+-- override individually by appending: themeCowplot <> themeTickLength 5 <> themeLegendPos LegendBottom
+```
+
+![cowplot-style presets](images/s3e-theme-cowplot.svg)
+
+> For cowplot's `plot_grid()` (relative panel widths + "A"/"B" tags) use
+> `subplotWidths` / `subplotTags` in [subplot](#subplots).
 
 ### theme and subplot relationship
 
@@ -176,6 +212,8 @@ Where `facet` **partitions data by one column**, `subplots` **composes completel
 |---|---|---|
 | `subplots` | `[VisualSpec] -> VisualSpec` | Arrange each `VisualSpec` as independent panel |
 | `subplotCols` | `Int -> VisualSpec` | Wrap column count |
+| `subplotWidths` / `subplotHeights` | `[Double] -> VisualSpec` | Relative column / row sizes (cowplot `rel_widths` / `rel_heights`; missing entries filled with 1, all 1 = equal split) |
+| `subplotTags` | `TagStyle -> VisualSpec` | Auto-label each panel "A"/"B"… at the top left (a panel's own `tag` wins; [enum](#enum-tables)) |
 | `selectPanels` | `[Text] -> VisualSpec` | Select + reorder panels by title name |
 | `repeatFields` | `[Text] -> (Text -> VisualSpec) -> VisualSpec` | Iterate field names and generate views (Vega-Lite `repeat`) |
 | `hconcat` / `vconcat` | `[VisualSpec] -> VisualSpec` | Horizontal / vertical composition (operators `<->` / `<:>` too) |
@@ -240,6 +278,19 @@ saveSVG "concat.svg" $
 ![3f-2 concat: (a <-> b <-> c) <:> d](images/concat.svg)
 
 > **Alignment (unified grid)**: Compositions with nesting or spans internally flatten to **single unified grid**, assigning each panel `(row, rowspan, col, colspan)`. This means **panel edges align across rows** — in the example above, row 2 full-width `d` left edge aligns with row 1 left `a` (col0), and `d` spans 3 columns for full width. Nested subplots also expand to fill outer grid cell.
+
+**Relative sizes + panel tags (cowplot `plot_grid()` equivalent)**: specify column/row
+width ratios with `subplotWidths` / `subplotHeights`, and auto-number panels "A"/"B"…
+with `subplotTags`. Tags draw at the same spot as `tag` ([Title & Labels](#labels)) and a
+panel's own `tag` wins. Past 26 panels the labels grow digits ("Z" → "AA"):
+
+```haskell
+subplots [ layer (scatter "x" "y") <> title "scatter"
+         , layer (bar "g" "y")     <> title "bar" ]
+<> subplotCols 2 <> subplotWidths [1.3, 1] <> subplotTags TagUpper
+```
+
+![3f-2 subplotWidths + subplotTags (cowplot plot_grid equivalent)](images/s3f2-subplot-tags.svg)
 
 > **Advanced helpers (normally not needed)**: `selectedSubplots :: VisualSpec -> [VisualSpec]` extracts panels after `selectPanels`. `bakeSpec :: Resolver -> VisualSpec -> VisualSpec` bakes Resolver into spec (internal for subplot / HBM extractors). `applyDiscreteLimits` resolves discrete limits. `freeScaleX`/`freeScaleY` (`FacetScales -> Bool`) and `freeSpaceX`/`freeSpaceY` (`FacetSpace -> Bool`) predicates for facet are for testing `facetScales` ([facet](#facet)).
 
@@ -333,7 +384,9 @@ Settings with fixed values (`position` etc.) are listed **completely** here. Def
 | `linetype` / `linetypeBy` | `LineType` | `LtSolid` / `LtDashed` / `LtDotted` / `LtDotDash` / `LtLongDash` / `LtTwoDash` |
 | `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeCanvas` / `ThemeCanvasDark` (13 types) |
 | `facetScales` | `FacetScales` | `FacetFixed` / `FacetFreeX` / `FacetFreeY` / `FacetFree` |
-| `legendPos` | `LegendPosition` | `LegendRight` / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
+| `legendPos` / `themeLegendPos` | `LegendPosition` | `LegendRight` / `LegendRightCenter` (default) / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
+| `themeTickDir` | `TickDir` | `TickOut` (default, outward) / `TickIn` (inward) / `TickBoth` (both sides) |
+| `subplotTags` | `TagStyle` | `TagUpper` ("A"/"B"…) / `TagLower` ("a"/"b"…) / `TagNumeric` ("1"/"2"…) |
 | Coordinates (`coordFlip` / `coordPolar` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` |
 | `refLine` | `ReferenceLine` | `RefIdentity` / `RefHorizontalAt c` / `RefVerticalAt c` / `RefLinear slope intercept` |
 

@@ -127,6 +127,21 @@ figures =
       <> panelBorder True <> themeGrid False <> themeAxisTextAngle 45
       <> title "theme 要素の部分上書き"
 
+    -- 03 theme: cowplot 風 preset 3 種 (Phase 63 A8。 panel 別 theme として並置)
+  , figW "s3e-theme-cowplot.svg" 1280 420 $
+         subplots [ layer (scatter xs ys <> size 5) <> themeCowplot     <> title "themeCowplot"
+                  , layer (scatter xs ys <> size 5) <> themeMinimalGrid <> title "themeMinimalGrid"
+                  , layer (scatter xs ys <> size 5) <> themeMap         <> title "themeMap" ]
+      <> subplotCols 3
+      <> title "cowplot 風 preset (themeCowplot / themeMinimalGrid / themeMap)"
+
+    -- 3f-2 subplot: 相対幅 + panel 自動タグ (Phase 63 A6/A7。 cowplot plot_grid 相当)
+  , figW "s3f2-subplot-tags.svg" 960 400 $
+         subplots [ layer (scatter xs ys <> size 5) <> title "散布"
+                  , layer (bar cats vals)           <> title "棒" ]
+      <> subplotCols 2 <> subplotWidths [1.3, 1] <> subplotTags TagUpper
+      <> title "subplotWidths [1.3, 1] <> subplotTags TagUpper"
+
     -- 03 theme × facet strip
   , figR "s3e-theme-strip.svg" rFacet $
          purePlot <> layer (scatter "x" "y" <> colorBy "g") <> facet "g"
