@@ -5,7 +5,8 @@ import           Graphics.Hgg.Easy
 import           Graphics.Hgg.Validate
 import           Graphics.Hgg.Layout
 import           Graphics.Hgg.Render
-import           Graphics.Hgg.Render.Common  (pointShapeAt, alphaVector)
+import           Graphics.Hgg.Render.Common  (pointShapeAt, alphaVector,
+                                              resolveTheme, ThemePalette (..))
 import           Graphics.Hgg.Primitive      (Point (..))
 import           Graphics.Hgg.Render.Special (renderDAGStandalone, primsBBoxDAG, dagToScreen)
 import           Graphics.Hgg.Layout.RangeOf (invNormCdf, qqPoints, ecdfPoints)
@@ -2812,6 +2813,39 @@ main = hspec $ do
     it "JSON roundtrip (TagStyle = nullary 名)" $
       eitherDecode (encode ((p1 <-> p2) <> subplotTags TagLower))
         `shouldBe` Right ((p1 <-> p2) <> subplotTags TagLower)
+
+  describe "Phase 63 A8: cowplot 風 preset (themeCowplot/themeMinimalGrid/themeMap)" $ do
+    let p1 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [1.0, 2.0 :: Double]))
+        palOf spec = resolveTheme
+          (maybe ThemeDefault id (getLast (vsTheme spec))) (vsThemeOverride spec)
+    it "themeCowplot = ThemeClassic 基調 + 黒軸線 + tick 3.5 + margin 7" $ do
+      getLast (vsTheme themeCowplot) `shouldBe` Just ThemeClassic
+      tpShowGridMajor (palOf themeCowplot) `shouldBe` False
+      tpShowAxisLine (palOf themeCowplot) `shouldBe` True
+      tpAxis (palOf themeCowplot) `shouldBe` "#000000"
+      tpTitleColor (palOf themeCowplot) `shouldBe` "#000000"
+      effectiveTickLength themeCowplot `shouldBe` 3.5
+      effectivePlotMargin themeCowplot `shouldBe` Margin 7 7 7 7
+    it "themeMinimalGrid = major grid (grey85) のみ・軸線/枠/tick なし" $ do
+      tpShowGridMajor (palOf themeMinimalGrid) `shouldBe` True
+      tpShowGridMinor (palOf themeMinimalGrid) `shouldBe` False
+      tpGrid (palOf themeMinimalGrid) `shouldBe` "#d9d9d9"
+      tpShowBorder (palOf themeMinimalGrid) `shouldBe` False
+      tpShowAxisLine (palOf themeMinimalGrid) `shouldBe` False
+      effectiveTickLength themeMinimalGrid `shouldBe` 0
+    it "themeMap = ThemeVoid 基調 (軸/grid/枠なし) + margin 7" $ do
+      getLast (vsTheme themeMap) `shouldBe` Just ThemeVoid
+      tpShowGridMajor (palOf themeMap) `shouldBe` False
+      tpShowAxisLine (palOf themeMap) `shouldBe` False
+      tpShowBorder (palOf themeMap) `shouldBe` False
+      effectiveTickLength themeMap `shouldBe` 0
+      effectivePlotMargin themeMap `shouldBe` Margin 7 7 7 7
+    it "後置 setter が preset を上書き (preset は普通の VisualSpec 値)" $ do
+      effectiveTickLength (themeCowplot <> themeTickLength 5) `shouldBe` 5
+      effectiveTickLength (themeTickLength 5 <> themeCowplot) `shouldBe` 3.5
+    it "JSON roundtrip (既存 field のみ = 新規 field 追加なし)" $
+      eitherDecode (encode (p1 <> themeCowplot))
+        `shouldBe` Right (p1 <> themeCowplot)
 
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外

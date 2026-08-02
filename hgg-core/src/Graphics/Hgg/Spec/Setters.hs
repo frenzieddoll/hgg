@@ -30,6 +30,8 @@ module Graphics.Hgg.Spec.Setters
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
   , themeAxisTextAngle, themeAxisTextAngleX, themeAxisTextAngleY
   , axisTextAngleXOf, axisTextAngleYOf
+    -- * 合成 preset (cowplot 風、 Phase 63 A8)
+  , themeCowplot, themeMinimalGrid, themeMap
     -- * VisualSpec 依存の mark 構築子 (Phase 55: Constructors に置けない 3 種)
   , histogramWide, distCols, ridgeAutoFlip
     -- * 軸 / 凡例 / 装飾 / 座標系 / サイズ
@@ -64,7 +66,7 @@ import           Graphics.Hgg.Spec.Constructors (binCount, histogram, (<+>))
 import           Graphics.Hgg.Spec.Decoration
 import           Graphics.Hgg.Spec.Layer
 import           Graphics.Hgg.Spec.Mark
-import           Graphics.Hgg.Spec.Theme (Margin (..), ThemeName,
+import           Graphics.Hgg.Spec.Theme (Margin (..), ThemeName (..),
                                           ThemeOverride (..), TickDir)
 import           Graphics.Hgg.Spec.Visual
 
@@ -172,6 +174,59 @@ themeTickDir d = mempty { vsThemeOverride = mempty { toTickDir = Last (Just d) }
 themePlotMargin :: Double -> Double -> Double -> Double -> VisualSpec
 themePlotMargin t r b l =
   mempty { vsThemeOverride = mempty { toPlotMargin = Last (Just (Margin t r b l)) } }
+
+-- ===========================================================================
+-- 合成 preset (cowplot 風、 Phase 63 A8)
+-- ===========================================================================
+-- 'ThemeName' の enum には足さず (JSON parity 維持)、 既存 setter を `<>` で
+-- 束ねた 'VisualSpec' 値として提供する = 「自作 theme は setter 合成で表現する」
+-- 方針の自己適用。 後ろに setter を重ねれば個別上書きできる
+-- (例 @themeCowplot <> themeTickLength 5@)。 数値は R cowplot 1.2.0 の既定
+-- (font_size=14 基準: half_line=7 → margin 7pt / tick 3.5pt、 文字は
+-- title 16 bold / axis.title 14 / axis.text 12 の相対倍率、 黒基調)。
+
+-- | cowplot @theme_cowplot()@ 相当 = grid なし・下/左の黒軸線・外向き tick
+-- 3.5pt・外周余白 7pt・黒基調の文字。
+themeCowplot :: VisualSpec
+themeCowplot =
+     theme ThemeClassic
+  <> cowplotFonts
+  <> axisColor "#000000" <> tickColor "#000000"
+  <> textColor "#000000" <> titleColor "#000000"
+  <> themeTickLength 3.5
+  <> themePlotMargin 7 7 7 7
+
+-- | cowplot @theme_minimal_grid()@ 相当 = major grid (grey85) のみ・
+-- 軸線/枠/tick なし・黒基調の文字。
+themeMinimalGrid :: VisualSpec
+themeMinimalGrid =
+     theme ThemeMinimal
+  <> cowplotFonts
+  <> textColor "#000000" <> titleColor "#000000"
+  <> themeGridMinor False
+  <> gridColor "#d9d9d9"
+  <> panelBorder False
+  <> themeTickLength 0
+  <> themePlotMargin 7 7 7 7
+
+-- | cowplot @theme_map()@ 相当 = 軸線・grid・枠・tick 線を全て消す。
+-- 軸ラベル文字と軸タイトルは現状の theme 系に blank 化の口が無く残る (残差は
+-- phase-63 md 参照)。
+themeMap :: VisualSpec
+themeMap =
+     theme ThemeVoid
+  <> cowplotFonts
+  <> textColor "#000000" <> titleColor "#000000"
+  <> themeTickLength 0
+  <> themePlotMargin 7 7 7 7
+
+-- | preset 3 種で共有する cowplot(14) の文字設定 (title は bold)。
+cowplotFonts :: VisualSpec
+cowplotFonts =
+     themeTitleFont     (fontSize 16 <> fontWeight "bold")
+  <> themeAxisLabelFont (fontSize 14)
+  <> themeTickFont      (fontSize 12)
+  <> themeLegendFont    (fontSize 12)
 
 panelFill :: Text -> VisualSpec       -- panel.background fill (= 塗り on + 色指定)
 panelFill c = mempty { vsThemeOverride = mempty { toPanelBg = Last (Just c), toShowPanel = Last (Just True) } }
