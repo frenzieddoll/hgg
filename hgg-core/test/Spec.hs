@@ -2641,6 +2641,18 @@ main = hspec $ do
           fills = Data.List.nub [ c | PPath _ (FillStyle c _) _ <- primsOf spec ]
       in length fills `shouldBe` 5
 
+  describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
+    let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
+        sp65 = layer (boxplot (inline vals65)
+                        <> groupBy (inlineCat (replicate 8 ("g" :: Data.Text.Text))))
+        lay65 = computeLayout emptyResolver sp65
+        a65 = lpPlotArea lay65
+        circleYs = [ y | PCircle (Point _ y) _ _ _ _
+                       <- renderToPrimitives emptyResolver lay65 sp65 ]
+    it "outlier ドット (PCircle) が panel y 範囲内に収まる" $ do
+      length circleYs `shouldBe` 1
+      all (\y -> y >= rY a65 && y <= rY a65 + rH a65) circleYs `shouldBe` True
+
   describe "Math.Special: logGamma" $ do
     it "logGamma 1 = 0 (Γ1=1)"      $ abs (logGamma 1)               < 1e-10 `shouldBe` True
     it "logGamma 2 = 0 (Γ2=1)"      $ abs (logGamma 2)               < 1e-10 `shouldBe` True

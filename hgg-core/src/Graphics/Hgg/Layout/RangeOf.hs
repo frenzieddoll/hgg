@@ -9,7 +9,7 @@
 --   * scatter / line / errorbar / regression : encY = 値、 そのまま domain
 --   * bar / waterfall                         : encY = 値、 domain は 0-base + max
 --   * histogram / density                     : encY 無し、 domain は count / KDE peak
---   * box                                     : domain は Tukey whisker 範囲 (outlier 除外)
+--   * box                                     : encY = 値、 min-max (outlier 込み、 Phase 65)
 --   * violin / strip / swarm / raincloud / ridge : encY = 値、 min-max
 --   * autocorr                                : x = [0, maxLag]、 y = [-1, 1]
 --   * ess                                     : x = [0, nChain]、 y = [0, N/nChain]
@@ -222,28 +222,20 @@ histogramYRange r l = case getFirst (lyKind l) of
           in V.fromList [lo, mx]
       _ -> V.empty
     Nothing -> V.empty
-  -- Box: encY = 値、 y domain = Tukey whisker 範囲 (outlier 除外、 matplotlib 流)。
-  -- Phase 8 C (box-grouped fix): encX で群分けされる場合は **群ごと**に Tukey 髭を出し
-  -- その和集合を domain にする。 全群プールの髭だと高値群の髭が domain を超え枠外に
-  -- 出ていた (= ユーザ報告)。 renderBox も群ごとに髭を描くので両者整合。
+  -- Box: encY = 値、 y domain = 全値 min-max (outlier 込み、 ggplot 流)。
+  -- ★ Phase 65: 旧実装は群ごと Tukey whisker 範囲のみ (outlier 除外、 matplotlib 流) を
+  --   返していたが、 Phase 34 で outlier ドット描画が追加されて以降は domain 外の実値に
+  --   打点され panel 外に出ていた (probe: design/phase65-box-outlier-domain/、
+  --   outlier PCircle y=-897 vs panel [24.2, 280.75])。 ggplot (と matplotlib の
+  --   flier 込み autoscale) に合わせ outlier も domain に含める。 whisker 端 (loV/hiV)
+  --   はフェンス内の実データ点なので min-max に包含され、 Phase 8 C の群ごと whisker
+  --   和集合は不要になった。 NaN (= nullable 列の NA) は従来どおり除いてから min/max。
   Just MBox -> case getLast (lyEncY l) of
     Just cr -> case resolveNum r cr of
-      Just v | not (V.null v) ->
-        -- ★ NaN (= Maybe の Nothing) を群ラベルと整列したまま落とす (tukeyWhisker が
-        --   NaN を含むと whisker が NaN 化し値軸レンジが壊れる)。 renderBox と整合。
-        let vals   = V.toList v
-            groups = case getLast (lyEncX l) of
-              Just crX -> case resolveCol r crX of
-                Just (TxtData labels) ->
-                  let paired = [ (lb, x) | (lb, x) <- zip (V.toList labels) vals, not (isNaN x) ]
-                  in groupValsBy (map fst paired) (map snd paired)
-                Just (NumData labels) ->
-                  let paired = [ (lb, x) | (lb, x) <- zip (map (show . (round :: Double -> Int)) (V.toList labels)) vals, not (isNaN x) ]
-                  in groupValsBy (map fst paired) (map snd paired)
-                _ -> [filter (not . isNaN) vals]
-              Nothing -> [filter (not . isNaN) vals]
-            whiskersOf g = let (lo, hi) = tukeyWhisker g in [lo, hi]
-        in V.fromList (concatMap whiskersOf groups)
+      Just v ->
+        let vals = V.filter (not . isNaN) v
+        in if V.null vals then V.empty
+                          else V.fromList [V.minimum vals, V.maximum vals]
       _ -> V.empty
     Nothing -> V.empty
   -- Violin / Strip / Swarm / Raincloud / Ridge も同じく encY = 値
@@ -566,33 +558,6 @@ extentsOrDefault v
   | V.null v  = (0, 1)
   | otherwise = (V.minimum v, V.maximum v)
 
--- | Phase 8 C (box-grouped fix): ラベル列で値を群分け (出現順、 extent 用)。
-groupValsBy :: Eq a => [a] -> [Double] -> [[Double]]
-groupValsBy labels vals =
-  let pairs = zip labels vals
-      uniq  = foldr (\(k, _) acc -> if k `elem` acc then acc else k : acc) [] pairs
-  in [ [ x | (k, x) <- pairs, k == lab ] | lab <- uniq ]
-
--- | Tukey 髭 (loV, hiV) = fence [Q1-1.5IQR, Q3+1.5IQR] 内の最小/最大データ点。
--- renderBox の髭計算と同一式 (= 群ごとの箱と domain が整合)。
-tukeyWhisker :: [Double] -> (Double, Double)
-tukeyWhisker xs0 =
-  let sorted = sort xs0
-      n      = length sorted
-      q p =
-        let pos  = p * fromIntegral (n - 1)
-            lo'  = floor pos :: Int
-            frac = pos - fromIntegral lo'
-        in case (atIdx sorted lo', atIdx sorted (lo' + 1)) of
-             (Just a, Just b) -> a + (b - a) * frac
-             (Just a, Nothing) -> a
-             _                 -> 0
-      atIdx xs i_ = if i_ < 0 || i_ >= length xs then Nothing else Just (xs !! i_)
-      q1  = q 0.25
-      q3  = q 0.75
-      iqr = q3 - q1
-      loW = q1 - 1.5 * iqr
-      hiW = q3 + 1.5 * iqr
-      loV = case dropWhile (< loW) sorted of (x:_) -> x; [] -> q1
-      hiV = case reverse (takeWhile (<= hiW) sorted) of (x:_) -> x; [] -> q3
-  in (loV, hiV)
+-- ★ Phase 65: 旧 groupValsBy / tukeyWhisker (Phase 8 C の群ごと whisker domain 用) は
+--   MBox domain の outlier 込み化で不要になり削除 (whisker 描画側の同一式は
+--   Render/Distribution.hs renderBox にインラインで残っている)。
