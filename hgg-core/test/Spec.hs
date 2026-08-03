@@ -2993,6 +2993,22 @@ main = hspec $ do
                          , t == "xt" ]
       abs (xyC - (rY aC + rH aC) - (lpXTitleOff layC + 0.8 * 11)) `shouldSatisfy` (< 1e-9)
 
+  describe "Phase 63 A16: theme 回転角の layout 反映 (resolveAxisAngle 単一情報源)" $ do
+    let p72 = layer (bar (inlineCat ["alpha", "bravo", "charlie" :: Data.Text.Text])
+                        (inline [1, 2, 3 :: Double]))
+                <> xLabel "xt"
+        areaOf72 extra = lpPlotArea (computeLayout emptyResolver (p72 <> extra))
+        pb72 extra = let a = areaOf72 extra in rY a + rH a   -- panel 下端
+    it "themeAxisTextAngleX で回転マージンが予約される (旧 axisRotateOf は theme 無視 = J4)" $
+      (pb72 (themeAxisTextAngleX 45) < pb72 mempty) `shouldBe` True
+    it "共通 themeAxisTextAngle も x 側予約に効く" $
+      (pb72 (themeAxisTextAngle 45) < pb72 mempty) `shouldBe` True
+    it "theme 回転と per-axis 回転で予約が同値 (描画 resolveAxisAngle と同じ解決順)" $
+      areaOf72 (themeAxisTextAngleX 45) `shouldBe` areaOf72 (xAxis (axisRotate 45))
+    it "per-axis 明示が theme より優先 (解決順の単一情報源)" $
+      areaOf72 (xAxis (axisRotate 90) <> themeAxisTextAngleX 30)
+        `shouldBe` areaOf72 (xAxis (axisRotate 90))
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

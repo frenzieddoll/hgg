@@ -103,7 +103,8 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     Margin (..), Coord (..),
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
-                                    axTickValsOf, axTickLabelsOf, axisRotateOf, distGroupRef,
+                                    axTickValsOf, axTickLabelsOf, distGroupRef,
+                                    resolveAxisAngle, axisTextAngleXOf,
                                     compositeLanes, colRefName,
                                     lgPosition, lyColor, lyColorCats, lyShapeBy,
                                     lyEncX, lyEncY, lyKind, lyBinCount,
@@ -289,7 +290,10 @@ computeLayout r spec0 =
       -- ★ x 目盛りラベルの回転 (axisRotate) 予約: 非回転は tickSize (従来) だが、
       --   回転時はラベル**幅**が下方向に伸びる。 左 margin の maxYTickW と対称に、
       --   x 目盛りラベルの最大文字幅を回転角で投影して予約する (rotX=0 で従来同値)。
-      xRot = axisRotateOf (vsXAxis spec)
+      -- ★ Phase 63 A16: 解決順を描画 (Render/Layer resolveAxisAngle) と単一情報源化。
+      --   per-axis 明示 > theme (axisTextAngleXOf = 共通 <> X 別) > 0。 旧 axisRotateOf は
+      --   theme 経由の回転 (themeAxisTextAngleX 等) を無視し回転マージン未予約だった (J4)。
+      xRot = resolveAxisAngle (vsXAxis spec) (axisTextAngleXOf ovT)
       xTickLabelStrs
         | not (null xCatLabels)    = xCatLabels
         | not (null explicitXLabs) = explicitXLabs
