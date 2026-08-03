@@ -24,7 +24,7 @@ module Graphics.Hgg.Spec.Setters
     -- * theme override setter
   , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
-  , themeTickLength, themeTickDir, themePlotMargin
+  , themeTickLength, themeTickDir, themePlotMargin, themeBaseFontSize
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -174,6 +174,14 @@ themeTickDir d = mempty { vsThemeOverride = mempty { toTickDir = Last (Just d) }
 themePlotMargin :: Double -> Double -> Double -> Double -> VisualSpec
 themePlotMargin t r b l =
   mempty { vsThemeOverride = mempty { toPlotMargin = Last (Just (Margin t r b l)) } }
+
+-- | Phase 63 A12: base font size (pt) を theme に焼き込む (ggplot @base_size@ 相当、
+-- 既定 11)。 各 slot の既定 font size はこれからの相対倍率で派生する
+-- (title ×1.2 / axis.title ×1 / axis.text ×0.8 / legend.title ×1 / legend.text ×0.8)。
+-- 'themeTitleFont' 等の個別指定 (fsSize) があればそちらが優先。
+themeBaseFontSize :: Double -> VisualSpec
+themeBaseFontSize s =
+  mempty { vsThemeOverride = mempty { toBaseFontSize = Last (Just s) } }
 
 -- ===========================================================================
 -- 合成 preset (cowplot 風、 Phase 63 A8)

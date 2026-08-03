@@ -60,6 +60,9 @@ module Graphics.Hgg.Layout
   , tickOutwardLen
     -- ★ Phase 63 A5: plot margin の実効値 (予約 computeLayout と描画 labels で共有)。
   , effectivePlotMargin
+    -- ★ Phase 63 A12: base font size の実効値 (予約 computeLayout と描画 mkFontTS で共有)。
+  , effectiveBaseFontSize
+  , effectiveFontSize
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -213,9 +216,14 @@ computeLayout r spec0 =
       -- (numeric は fmtNum で近似、 軸 format は width 推定では無視 = Step1 許容)。
       -- ★ Phase 34: 既定フォント実寸を ggplot theme_grey 較正値に合わせる
       --   (Render.mkFontTS と同値。 旧 16/12/11 は margin 過大予約 → 軸タイトルが遠かった)。
-      titleSize     = fontSizeOf (vsTitleFont     spec) 13.2  -- plot.title  base×1.2
-      axisLabelSize = fontSizeOf (vsAxisLabelFont spec) 11    -- axis.title  base
-      tickSize      = fontSizeOf (vsTickFont      spec) 8.8   -- axis.text   base×0.8
+      -- ★ Phase 63 A12: 解決を mkFontTS と同一情報源へ (theme override の fsSize +
+      --   toBaseFontSize 派生既定)。 旧 fontSizeOf (setter のみ・13.2/11/8.8 固定) は
+      --   theme*Font 指定 (cowplot preset 等) を予約に反映できていなかった。
+      base          = effectiveBaseFontSize spec
+      ovT           = vsThemeOverride spec
+      titleSize     = effectiveFontSize (vsTitleFont     spec) (toTitleFont     ovT) (base * 1.2)  -- plot.title
+      axisLabelSize = effectiveFontSize (vsAxisLabelFont spec) (toAxisLabelFont ovT) base          -- axis.title
+      tickSize      = effectiveFontSize (vsTickFont      spec) (toTickFont      ovT) (base * 0.8)  -- axis.text
       -- 左 margin 用の y 目盛りラベル: 離散 limits (yCatLabels) > 明示ラベル
       -- (axisBreaksLabeled = explicitYLabs) > numeric tick の順で採用する。
       -- (明示ラベルを測らないと長い category ラベルが軸外へ溢れる)。
@@ -847,12 +855,6 @@ hexbinCountDomain r spec =
       cs -> Just (fromIntegral (minimum cs), fromIntegral (maximum cs))
     _ -> Nothing
 
--- | spec の font slot から size を取り出す (未指定なら default)。
-fontSizeOf :: Last FontSpec -> Double -> Double
-fontSizeOf lf def = case getLast lf of
-  Just fs -> maybe def id (getLast (fsSize fs))
-  Nothing -> def
-
 -- | Phase 9 A-5 (PS Layout と同一): 凡例を実際に描画する位置 (= None なら凡例なし)。
 -- color encoding が無ければ位置指定があっても None。 予約 (computeLayout) / 描画 (Render) の
 -- 両方がこれを使い、 「予約したのに描かれない / 描いたのに予約してない」 ズレを防ぐ。
@@ -912,6 +914,22 @@ effectivePlotMargin :: VisualSpec -> Margin
 effectivePlotMargin spec =
   maybe (Margin ggHalfLine ggHalfLine ggHalfLine ggHalfLine) id
         (getLast (toPlotMargin (vsThemeOverride spec)))
+
+-- | Phase 63 A12: 実効 base font size (pt)。 theme (toBaseFontSize) > 既定 11
+-- (ggplot theme_grey base_size)。 各 slot の既定 font size はこれからの相対倍率で
+-- 派生する。 computeLayout (予約) と Render.mkFontTS (描画) の単一情報源。
+effectiveBaseFontSize :: VisualSpec -> Double
+effectiveBaseFontSize spec =
+  maybe 11 id (getLast (toBaseFontSize (vsThemeOverride spec)))
+
+-- | Phase 63 A12: slot の実効 font size (pt)。 解決順は Render.mkFontTS と同一 =
+-- theme override (fsSize) > font setter (fsSize) > 既定 (base 派生)。
+-- setter と override は Maybe FontSpec の field-wise merge (override の Just が優先)。
+effectiveFontSize :: Last FontSpec -> Last FontSpec -> Double -> Double
+effectiveFontSize setterL overrideL def =
+  case getLast setterL <> getLast overrideL of
+    Just fs -> maybe def id (getLast (fsSize fs))
+    Nothing -> def
 
 -- | layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous) があるか。
 hasColorEncoding :: [Layer] -> Bool

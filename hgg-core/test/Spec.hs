@@ -2847,6 +2847,37 @@ main = hspec $ do
       eitherDecode (encode (p1 <> themeCowplot))
         `shouldBe` Right (p1 <> themeCowplot)
 
+  describe "Phase 63 A12: base font size (themeBaseFontSize)" $ do
+    let base68 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                               (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+                   <> title "T" <> xLabel "x" <> yLabel "y"
+        layOf extra = computeLayout emptyResolver (base68 <> extra)
+        areaOf extra = lpPlotArea (layOf extra)
+        primsOf68 extra = renderToPrimitives emptyResolver (layOf extra) (base68 <> extra)
+        -- 描画テキストの font size (本文 t で slot を特定)
+        sizeOf extra t = [ tsSize ts | PText _ t' ts <- primsOf68 extra, t' == t ]
+    it "既定 = 11" $
+      effectiveBaseFontSize mempty `shouldBe` 11
+    it "後勝ち合成 (Last)" $
+      effectiveBaseFontSize (themeBaseFontSize 14 <> themeBaseFontSize 12) `shouldBe` 12
+    it "既定値の明示指定 (11) は既定と同一出力 (golden 不変 gate の単体版)" $
+      primsOf68 (themeBaseFontSize 11) `shouldBe` primsOf68 mempty
+    it "render: base 14 で相対倍率どおり派生 (title ×1.2 / axis.title ×1 / axis.text ×0.8)" $ do
+      sizeOf (themeBaseFontSize 14) "T" `shouldBe` [14 * 1.2]
+      sizeOf (themeBaseFontSize 14) "x" `shouldBe` [14.0]
+      sizeOf (themeBaseFontSize 14) "1" `shouldBe` [14 * 0.8, 14 * 0.8]  -- x/y 両軸の tick "1"
+    it "個別 theme*Font (fsSize) > base 派生" $
+      sizeOf (themeBaseFontSize 14 <> themeTickFont (fontSize 9)) "1" `shouldBe` [9, 9]
+    it "layout: base 拡大が margin 予約に効く (左端が右へ・下端が上へ)" $ do
+      (rX (areaOf (themeBaseFontSize 22)) > rX (areaOf mempty)) `shouldBe` True
+      let pb extra = let a = areaOf extra in rY a + rH a
+      (pb (themeBaseFontSize 22) < pb mempty) `shouldBe` True
+    it "layout: theme*Font の fsSize も予約に効く (旧 setter-only 解決の fix)" $
+      (rY (areaOf (themeTitleFont (fontSize 30))) > rY (areaOf mempty)) `shouldBe` True
+    it "JSON roundtrip (toBaseFontSize field)" $
+      eitherDecode (encode (base68 <> themeBaseFontSize 14))
+        `shouldBe` Right (base68 <> themeBaseFontSize 14)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

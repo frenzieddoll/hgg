@@ -20,6 +20,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       needsLegend, effectiveLegendPos,
                                       effectiveTickLength, effectiveTickDir,
                                       tickOutwardLen, effectivePlotMargin,
+                                      effectiveBaseFontSize,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -80,7 +81,9 @@ mkFontTS mSpec pal fk anchor rot =
   let -- Phase 34: ggplot theme_grey の base_size + 相対比に較正 (R theme_grey() 実測)。
       -- 旧値 (Title16/Axis12/Tick11/LegTitle11/LegItem10) は ggplot より系統的に大きく、
       -- 特に目盛が base 11pt のままだった (ggplot は axis.text = base×0.8 = 8.8pt)。
-      baseSize = 11        -- theme_grey base_size
+      -- ★ Phase 63 A12: 固定 11 を theme (toBaseFontSize) の実効値へ。 spec を取れない
+      --   場所 (mSpec = Nothing) は従来どおり 11。 予約 (Layout) と同一情報源。
+      baseSize = maybe 11 effectiveBaseFontSize mSpec
       defSize = case fk of
         TitleF       -> baseSize * 1.2   -- plot.title  rel(1.2) = 13.2pt
         AxisLabelF   -> baseSize         -- axis.title  = base    = 11pt

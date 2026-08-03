@@ -173,6 +173,14 @@ data ThemeOverride = ThemeOverride
     --   外周分 (各辺 ggHalfLine) を置き換える。 軸ラベル・title 帯・凡例などの
     --   内側予約は従来どおり自動。 Layout の 'effectivePlotMargin' が解決する。
   , toPlotMargin    :: !(Last Margin)  -- plot.margin (t/r/b/l、 pt)
+    -- ★ Phase 63 A12: base font size (pt、 ggplot base_size 相当)。 各 slot の既定
+    --   font size はこれからの相対倍率 (title ×1.2 / axis.title ×1 / axis.text ×0.8 /
+    --   legend.title ×1 / legend.text ×0.8) で派生する。 優先順 = 個別 theme*Font
+    --   (fsSize) > これによる base 派生 > 既定 11 (theme_grey base_size)。
+    --   font size は layout 予約 (titleSize 等) に波及するため Layout の
+    --   'effectiveBaseFontSize' が解決し、 computeLayout (予約) と
+    --   Render.mkFontTS (描画) の単一情報源になる。
+  , toBaseFontSize  :: !(Last Double)  -- base font size (pt)
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field
