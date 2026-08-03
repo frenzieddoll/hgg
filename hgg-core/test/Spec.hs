@@ -6,7 +6,8 @@ import           Graphics.Hgg.Validate
 import           Graphics.Hgg.Layout
 import           Graphics.Hgg.Render
 import           Graphics.Hgg.Render.Common  (pointShapeAt, alphaVector,
-                                              resolveTheme, ThemePalette (..))
+                                              resolveTheme, specThemePalette,
+                                              ThemePalette (..))
 import           Graphics.Hgg.Primitive      (Point (..))
 import           Graphics.Hgg.Render.Special (renderDAGStandalone, primsBBoxDAG, dagToScreen)
 import           Graphics.Hgg.Layout.RangeOf (invNormCdf, qqPoints, ecdfPoints)
@@ -3049,6 +3050,31 @@ main = hspec $ do
       lpLegendNCol (computeLayout emptyResolver (p73 <> legendNrow 3)) `shouldBe` 1
     it "legendH 予約が行数連動 (nrow=2 は nrow=1 より panel 下端が上がる)" $
       (pb73 (legendNrow 2) < pb73 (legendNrow 1)) `shouldBe` True
+
+  describe "Phase 63 A18: plot 背景透過の口 (themePlotBg)" $ do
+    -- 全面背景 = viewport ぴったりの PRect (fill 不透過・枠なし)。 これの有無で
+    -- 「塗る/塗らない」 を検証 (panel 塗りは plotArea サイズなので誤検出しない)。
+    let base18 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                (inline [2.0, 4.0, 1.0 :: Double]))
+        nBg extra = let s = base18 <> extra
+                        l = computeLayout emptyResolver s
+                        vp = lpViewport l
+                    in length [ () | PRect (Rect 0 0 w h) (FillStyle _ 1.0) Nothing
+                                       <- renderToPrimitives emptyResolver l s
+                                   , w == fromIntegral (vsW vp)
+                                   , h == fromIntegral (vsH vp) ]
+    it "既定は全面背景 rect が 1 枚 (従来挙動不変)" $
+      nBg mempty `shouldBe` 1
+    it "themePlotBg False で全面背景 rect が消える (= 透過)" $
+      nBg (themePlotBg False) `shouldBe` 0
+    it "cowplot 3 preset は背景透過 (cowplot rect fill NA 相当)" $
+      (nBg themeCowplot, nBg themeMinimalGrid, nBg themeMap) `shouldBe` (0, 0, 0)
+    it "preset 後の themePlotBg True で再点灯 (Last 合成)" $
+      nBg (themeCowplot <> themePlotBg True) `shouldBe` 1
+    it "specThemePalette: 未指定は tpShowBackground = True / override が勝つ" $
+      ( tpShowBackground (specThemePalette mempty)
+      , tpShowBackground (specThemePalette (themePlotBg False)) )
+        `shouldBe` (True, False)
 
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外

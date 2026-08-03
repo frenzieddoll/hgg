@@ -123,6 +123,9 @@ instance FromJSON Margin
 -- 全 field Monoid なので setter を `<>` で重ねられる (ggplot の theme() 加算と同様)。
 data ThemeOverride = ThemeOverride
   { toPlotBg       :: !(Last Text)   -- plot.background fill
+    -- ★ Phase 63 A18: plot.background を塗るか (False = 塗らない = 透過。
+    --   cowplot は rect fill NA = 透過なので合成 preset が False を焼き込む)。
+  , toShowBackground :: !(Last Bool)
   , toPanelBg      :: !(Last Text)   -- panel.background fill
   , toShowPanel    :: !(Last Bool)   -- panel 矩形を塗るか
   , toGridColor    :: !(Last Text)   -- panel.grid colour

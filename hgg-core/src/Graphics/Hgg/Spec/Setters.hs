@@ -22,7 +22,7 @@ module Graphics.Hgg.Spec.Setters
   , repeatFields, selectPanels, selectedSubplots
   , scaleXDiscreteLimits, scaleYDiscreteLimits, applyDiscreteLimits, reindexLayer
     -- * theme override setter
-  , plotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
+  , plotBg, themePlotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
   , themeTickLength, themeTickDir, themePlotMargin, themeBaseFontSize
   , axisColor, textColor, tickColor, titleColor, titleHjust
@@ -198,7 +198,7 @@ themeBaseFontSize s =
 -- 'themeBaseFontSize' 上書きにも spacing が連動する)。
 
 -- | cowplot @theme_cowplot(font_size = N)@ 相当 = grid なし・下/左の黒軸線・
--- 外向き tick N/4 pt・外周余白 N/2 pt・黒基調の文字。
+-- 外向き tick N/4 pt・外周余白 N/2 pt・黒基調の文字・背景透過。
 themeCowplotSized :: Double -> VisualSpec
 themeCowplotSized n =
      theme ThemeClassic
@@ -206,6 +206,7 @@ themeCowplotSized n =
   <> cowplotFontsSized n
   <> axisColor "#000000" <> tickColor "#000000"
   <> textColor "#000000" <> titleColor "#000000"
+  <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
 
 -- | cowplot @theme_cowplot()@ 相当 (= 既定 font_size 14)。
 themeCowplot :: VisualSpec
@@ -223,6 +224,7 @@ themeMinimalGridSized n =
   <> gridColor "#d9d9d9"
   <> panelBorder False
   <> themeTickLength 0
+  <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
 
 -- | cowplot @theme_minimal_grid()@ 相当 (= 既定 font_size 14)。
 themeMinimalGrid :: VisualSpec
@@ -238,6 +240,7 @@ themeMapSized n =
   <> cowplotFontsSized n
   <> textColor "#000000" <> titleColor "#000000"
   <> themeTickLength 0
+  <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
 
 -- | cowplot @theme_map()@ 相当 (= 既定 font_size 14)。
 themeMap :: VisualSpec
@@ -267,6 +270,11 @@ gridColor c = mempty { vsThemeOverride = mempty { toGridColor = Last (Just c) } 
 
 plotBg :: Text -> VisualSpec          -- plot.background fill
 plotBg c = mempty { vsThemeOverride = mempty { toPlotBg = Last (Just c) } }
+
+-- | plot.background を塗るか (★ Phase 63 A18)。 @themePlotBg False@ = 塗らない
+-- (= 透過、 ggplot @plot.background = element_blank()@ / cowplot fill NA 相当)。
+themePlotBg :: Bool -> VisualSpec     -- plot.background 塗り on/off
+themePlotBg b = mempty { vsThemeOverride = mempty { toShowBackground = Last (Just b) } }
 
 axisColor :: Text -> VisualSpec       -- axis 線/目盛り色
 axisColor c = mempty { vsThemeOverride = mempty { toAxisColor = Last (Just c) } }

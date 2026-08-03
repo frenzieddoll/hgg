@@ -40,7 +40,8 @@ import           Graphics.Hgg.Render       (FillStyle (..), LineStyle (..),
                                             Primitive (..), StrokeStyle (..),
                                             TextAnchor (..), TextStyle (..),
                                             Transform (..), renderToPrimitives,
-                                            scalePrimitives)
+                                            scalePrimitives, specThemePalette,
+                                            tpShowBackground)
 import           Graphics.Hgg.Spec         (Resolver, VisualSpec, emptyResolver,
                                             vsDpi)
 import           Data.Monoid               (getLast)
@@ -118,21 +119,32 @@ savePNGConfigured cfg path r spec = do
       ViewportSize wpt hpt = lpViewport layout
       w = round (fromIntegral wpt * k) :: Int
       h = round (fromIntegral hpt * k) :: Int
-  savePrimitivesPNG cfg path w h prims
+      -- ★ Phase 63 A18: 背景を塗らない theme (themePlotBg False) は init を透過に
+      --   (背景 rect が無いので init 色がそのまま残るため)。 塗る theme は従来どおり
+      --   白 init (= 既存図の bit 単位不変を保証。 透過 init だと全面 rect の縁 AA で
+      --   端 pixel の alpha が変わり得る)。
+      bgPx = if tpShowBackground (specThemePalette spec)
+               then PixelRGBA8 255 255 255 255
+               else PixelRGBA8 0 0 0 0
+  savePrimitivesPNGBg bgPx cfg path w h prims
 
 -- | Phase 24 A8: [Primitive] 列を所与のキャンバスサイズで PNG に直接描画する
 -- 低レベル経路 ('savePrimitivesSVG' の PNG 版)。 2D の 'savePNGConfigured' と
 -- 3D の 'savePNG3D' が共有。 'pngScale' で Hi-DPI 拡大。
 savePrimitivesPNG :: PNGConfig -> FilePath -> Int -> Int -> [Primitive] -> IO ()
-savePrimitivesPNG cfg path w h prims = do
+savePrimitivesPNG = savePrimitivesPNGBg (PixelRGBA8 255 255 255 255)
+
+-- | init 色指定版 (内部)。 通常は init 白 + [Primitive] 先頭の背景 rect が全面を
+-- 塗る (Render/Layer.hs の background) ので実質 theme 色になる。 ★ Phase 63 A18:
+-- 背景を塗らない theme では 'savePNGConfigured' が透過 init を渡す。
+savePrimitivesPNGBg :: PixelRGBA8 -> PNGConfig -> FilePath -> Int -> Int
+                    -> [Primitive] -> IO ()
+savePrimitivesPNGBg bg cfg path w h prims = do
   let s  = max 1e-3 (pngScale cfg)
       wI = max 1 (ceiling (fromIntegral w * s)) :: Int
       hI = max 1 (ceiling (fromIntegral h * s)) :: Int
   fonts <- loadPNGFonts cfg
-  -- 画像初期化は白。 theme 背景は [Primitive] 先頭の背景 rect が全面を塗る
-  -- (Render/Layer.hs の background) ので実質 theme 色になる。
-  let bg  = PixelRGBA8 255 255 255 255
-      img = R.renderDrawing wI hI bg $
+  let img = R.renderDrawing wI hI bg $
               R.withTransformation (RTr.scale (f s) (f s)) $
                 drawPrims fonts prims
   writePng path img

@@ -33,6 +33,7 @@ module Graphics.Hgg.Render
     -- * Theme palette
   , ThemePalette(..)
   , themePalette
+  , specThemePalette   -- ★ Phase 63 A18: raster backend の init 色分岐用
     -- * Primitive
   , Primitive(..)
     -- * Phase 33 B5: pt→device scale (backend の唯一の dpi 適用点)
