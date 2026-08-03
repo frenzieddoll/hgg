@@ -1067,8 +1067,12 @@ effectiveLegendBaseSize spec = 2 * effectiveHalfLine spec
 
 -- | Phase 63 A13: 実効凡例キー 1 辺 (pt) = 1.2 lines (行高 1.3133 倍率は
 -- 'legendKeyW' と同一)。 既定 11 で bit 同値。 pitch = keyW (キーセル隣接)。
+-- ★ A19.5: theme (toLegendKeySize、 ggplot legend.key.size 相当) が最優先。
+--   cowplot preset は 1.1 × font_size を焼き込む (gold 実測: base14 = 15.4pt = 32px)。
 effectiveLegendKeyW :: VisualSpec -> Double
-effectiveLegendKeyW spec = 1.2 * effectiveLegendBaseSize spec * 1.3133
+effectiveLegendKeyW spec =
+  maybe (1.2 * effectiveLegendBaseSize spec * 1.3133) id
+        (getLast (toLegendKeySize (vsThemeOverride spec)))
 
 effectiveLegendKeyPitch :: VisualSpec -> Double
 effectiveLegendKeyPitch = effectiveLegendKeyW

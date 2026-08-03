@@ -192,6 +192,11 @@ data ThemeOverride = ThemeOverride
     --   (ggplot theme_void = axis.text/axis.title とも element_blank)、 他 preset True。
   , toShowAxisText  :: !(Last Bool)  -- axis.text on/off
   , toShowAxisTitle :: !(Last Bool)  -- axis.title on/off
+    -- ★ Phase 63 A19.5: 凡例キー 1 辺 (pt、 ggplot legend.key.size 相当)。 キーの
+    --   行 pitch = キー辺なので凡例の行間もこれで決まる。 cowplot は全 preset で
+    --   1.1 × font_size を明示上書きする (既定 = 1.2 lines = 1.2 × base × 1.3133)。
+    --   凡例幅/高さの margin 予約に波及するため Layout の 'effectiveLegendKeyW' が解決。
+  , toLegendKeySize :: !(Last Double)  -- legend.key.size (pt)
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field

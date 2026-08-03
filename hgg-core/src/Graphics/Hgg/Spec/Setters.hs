@@ -25,7 +25,7 @@ module Graphics.Hgg.Spec.Setters
   , plotBg, themePlotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
   , themeTickLength, themeTickDir, themePlotMargin, themeBaseFontSize
-  , themeAxisText, themeAxisTitle
+  , themeAxisText, themeAxisTitle, themeLegendKeySize
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -197,6 +197,12 @@ themeAxisText b = mempty { vsThemeOverride = mempty { toShowAxisText = Last (Jus
 themeAxisTitle :: Bool -> VisualSpec  -- axis.title on/off
 themeAxisTitle b = mempty { vsThemeOverride = mempty { toShowAxisTitle = Last (Just b) } }
 
+-- | Phase 63 A19.5: 凡例キー 1 辺 (pt、 ggplot @legend.key.size@ 相当)。 キーの行
+-- pitch = キー辺なので凡例の行間もこれで決まる (既定 = 1.2 lines = 1.2 × base ×
+-- 1.3133、 base 11 で 17.34pt)。 凡例の margin 予約にも波及する。
+themeLegendKeySize :: Double -> VisualSpec  -- legend.key.size (pt)
+themeLegendKeySize d = mempty { vsThemeOverride = mempty { toLegendKeySize = Last (Just d) } }
+
 -- ===========================================================================
 -- 合成 preset (cowplot 風、 Phase 63 A8)
 -- ===========================================================================
@@ -220,6 +226,7 @@ themeCowplotSized n =
   <> axisColor "#000000" <> tickColor "#000000"
   <> textColor "#000000" <> titleColor "#000000"
   <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
+  <> themeLegendKeySize (1.1 * n)  -- ★ A19.5: cowplot は legend.key.size = 1.1×font_size
 
 -- | cowplot @theme_cowplot()@ 相当 (= 既定 font_size 14)。
 themeCowplot :: VisualSpec
@@ -238,6 +245,7 @@ themeMinimalGridSized n =
   <> panelBorder False
   <> themeTickLength 0
   <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
+  <> themeLegendKeySize (1.1 * n)  -- ★ A19.5: cowplot は legend.key.size = 1.1×font_size
 
 -- | cowplot @theme_minimal_grid()@ 相当 (= 既定 font_size 14)。
 themeMinimalGrid :: VisualSpec
@@ -256,6 +264,7 @@ themeMapSized n =
   <> themeTickLength 0
   <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
   <> stripFill "#cccccc" -- ★ A19: theme_map は strip.background grey80 を残す
+  <> themeLegendKeySize (1.1 * n)  -- ★ A19.5: cowplot は legend.key.size = 1.1×font_size
 
 -- | cowplot @theme_map()@ 相当 (= 既定 font_size 14)。
 themeMap :: VisualSpec

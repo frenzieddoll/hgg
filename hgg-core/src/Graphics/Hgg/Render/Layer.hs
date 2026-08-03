@@ -1116,12 +1116,11 @@ renderGuideBlock spec r layout pal ox oy title guide =
       firstCy = oy + titleH + kp / 2                             -- 最初のキー中心
       labelX  = ox + kw + hl / 2                                 -- key → label gap = half_line/2
       cyAt k  = firstCy + fromIntegral k * kp
-      -- ★ Phase 35: 点凡例は theme panel 色 (tpPanelBg) の連続背景ブロック (= ggplot
-      --   legend.key が縦に連結した灰色帯)。
-      bgRect n = if n > 0
-                   then [ PRect (Rect ox (firstCy - kp / 2) kw (fromIntegral n * kp))
-                                (FillStyle (tpPanelBg pal) 1.0) Nothing ]
-                   else []
+      -- ★ Phase 63 A19.5: 旧 Phase 35 の「tpPanelBg 連続帯 (bgRect)」 を撤去。 ggplot に
+      --   キー列の連続帯という要素は無く、 凡例キー背景は legend.key = 'legendKeyPrim' の
+      --   keyBg (tpLegendKeyBg、 "" = 塗らない) が唯一の口。 旧帯は白背景 theme では
+      --   不可視だったが、 A18 の背景透過で不透過白帯として顕在化した (root:
+      --   after-map 実測 RGBA(255,255,255,255))。 ThemeGrey も grey95 キーとの二重塗りを解消。
   in case guide of
        ColorGuide (ColorByCol _cr) ->
          let vals     = allColorCategories r (vsLayers spec)  -- Phase 52.A10: 全レイヤ union
@@ -1149,7 +1148,7 @@ renderGuideBlock spec r layout pal ox oy title guide =
                    col = legendColorFor layout pal origI label
                in legendKeyPrim kw colorLayer (styleFor origI) (legendMarkerDiam spec) pal (ox + kw / 2) cy col
                   <> [ PText (Point labelX (cy + itemDy)) label tsItem ]
-         in ( header <> bgRect n <> concat (zipWith chipFor [0 :: Int ..] items)
+         in ( header <> concat (zipWith chipFor [0 :: Int ..] items)
             , titleH + fromIntegral n * kp )
        ColorGuide (ColorByContinuous cr) -> case resolveNum r cr of
          Nothing   -> ([], 0)
@@ -1218,7 +1217,7 @@ renderGuideBlock spec r layout pal ox oy title guide =
                    sh = shapePalette !! (k `mod` length shapePalette)
                in legendKeyPrim kw (legendPointLayer spec) (KeyPoint (Just sh)) (legendMarkerDiam spec) pal (ox + kw / 2) cy inkCol
                   <> [ PText (Point labelX (cy + itemDy)) label tsItem ]
-         in ( header <> bgRect n <> concat (zipWith chipFor [0..] vals)
+         in ( header <> concat (zipWith chipFor [0..] vals)
             , titleH + fromIntegral n * kp )
 
 -- | Phase 35: レイヤが色マップ (ColorByCol/ColorByContinuous) を持つか (= 凡例を駆動)。

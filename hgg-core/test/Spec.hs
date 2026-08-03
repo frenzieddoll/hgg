@@ -3121,6 +3121,46 @@ main = hspec $ do
       eitherDecode (encode (base19 <> themeAxisText False <> themeAxisTitle False))
         `shouldBe` Right (base19 <> themeAxisText False <> themeAxisTitle False)
 
+  describe "Phase 63 A19.5: 凡例キー帯 (bgRect) 撤去 + legend.key.size の theme 口" $ do
+    let base195 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                 (inline [2.0, 4.0, 1.0 :: Double])
+                         <> colorBy (inlineCat (["a", "b", "a"] :: [Data.Text.Text])))
+        primsOf extra = renderToPrimitives emptyResolver
+                          (computeLayout emptyResolver (base195 <> extra))
+                          (base195 <> extra)
+    it "凡例キー列の連続帯が出ない (ThemeVoid: 塗り PRect = 全面背景 1 枚のみ)" $
+      -- 旧 bgRect は tpPanelBg 不透過帯を無条件に塗っていた (A18 の透過化で顕在化)
+      length [ () | PRect _ (FillStyle _ o) _ <- primsOf (theme ThemeVoid), o > 0 ]
+        `shouldBe` 1
+    it "ThemeGrey は legend.key (grey95) がキー数ぶんのみ = 連続帯との二重塗り解消" $
+      length [ () | PRect _ (FillStyle c o) _ <- primsOf (theme ThemeGrey)
+                  , c == "#f2f2f2", o == 1.0 ]
+        `shouldBe` 2
+    it "effectiveLegendKeyW: 既定は従来値 / cowplot preset = 1.1×font_size / 上書き優先" $ do
+      effectiveLegendKeyW mempty `shouldBe` legendKeyW
+      effectiveLegendKeyW themeCowplot `shouldBe` 1.1 * 14
+      effectiveLegendKeyW (themeCowplotSized 12) `shouldBe` 1.1 * 12
+      effectiveLegendKeyW themeMap `shouldBe` 1.1 * 14
+      effectiveLegendKeyW (themeCowplot <> themeLegendKeySize 20) `shouldBe` 20
+    it "凡例行 pitch = キー辺 (cowplot は 22.06pt → 15.4pt に詰まる = gold 32px@150dpi)" $ do
+      effectiveLegendKeyPitch themeCowplot `shouldBe` 1.1 * 14
+      -- 描画実測: 凡例キー点 (panel 右端より外) の縦間隔が pitch と一致
+      let pitchOf extra =
+            let l = computeLayout emptyResolver (base195 <> extra)
+                a = lpPlotArea l
+                ys = Data.List.sort
+                       [ y | PCircle (Point x y) _ _ _ _ <- primsOf extra
+                           , x > rX a + rW a ]
+            in case ys of
+                 (y1 : y2 : _) -> y2 - y1
+                 _             -> 0
+      -- 描画座標は offset 加算の丸めが乗るため ULP 許容で比較
+      abs (pitchOf themeCowplot - 1.1 * 14) < 1e-9 `shouldBe` True
+      abs (pitchOf mempty - legendKeyPitch) < 1e-9 `shouldBe` True
+    it "JSON roundtrip (toLegendKeySize field)" $
+      eitherDecode (encode (base195 <> themeLegendKeySize 15.4))
+        `shouldBe` Right (base195 <> themeLegendKeySize 15.4)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)
