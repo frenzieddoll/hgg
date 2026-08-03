@@ -20,7 +20,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       needsLegend, effectiveLegendPos,
                                       effectiveTickLength, effectiveTickDir,
                                       tickOutwardLen, effectivePlotMargin,
-                                      effectiveBaseFontSize,
+                                      effectiveBaseFontSize, effectiveHalfLine,
+                                      effectiveAxTextMar,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -568,7 +569,8 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       tickDir  = maybe TickOut effectiveTickDir mSpec
       outLen   = case tickDir of TickIn  -> 0; _ -> tkLen
       inLen    = case tickDir of TickOut -> 0; _ -> tkLen
-      tkGap    = outLen + ggAxTextMar * sc
+      -- ★ Phase 63 A13: axis.text margin も base 派生の実効値 (spec 不在時は従来定数)。
+      tkGap    = outLen + maybe ggAxTextMar effectiveAxTextMar mSpec * sc
       -- Phase 32 (re-apply): 目盛線 (tick mark) は tpTickLineColor (ggplot=grey20)。
       --   軸線/枠 (axisFrame) は tpAxis のままで別物。
       tickStyle = solid (tpTickLineColor pal) 1.0
@@ -680,8 +682,8 @@ labels layout spec pal =
       boxBottom = rY a + rH a + lpMarginBottom layout
       boxLeft   = rX a - lpMarginLeft layout
       -- ★ Phase 63 A5: 外周余白は theme 実効値 (Layout の margin 予約と単一情報源)。
-      --   既定 (各辺 ggHalfLine) では従来式と同値。 title 下 margin 等の内側
-      --   spacing は ggHalfLine のまま。
+      --   既定 (各辺 half_line) では従来式と同値。
+      -- ★ Phase 63 A13: title→subtitle gap も half_line = base/2 派生へ。
       pm = effectivePlotMargin spec
       hasTitle = case getLast (vsTitle spec) of Just _ -> True; _ -> False
       titleBaseY = boxTop + sc * (marTop pm + titleSize * 0.8)
@@ -713,7 +715,7 @@ labels layout spec pal =
       tsTag = (mkFontTS (Just spec) pal TitleF     AnchorStart  0) { tsSize = tagSize, tsWeight = "bold" }
       boxRight = rX a + rW a
       -- subtitle baseline: title があればその下、 無ければ title 位置に置く。
-      subBaseY = (if hasTitle then titleBaseY + sc * ggHalfLine + subSize * 0.8
+      subBaseY = (if hasTitle then titleBaseY + sc * effectiveHalfLine spec + subSize * 0.8
                               else boxTop + sc * (marTop pm + subSize * 0.8))
       -- plot.title と同じ hjust 規則: hjust=0 (theme_grey) は panel 左端アンカー開始。
       (subX, tsSub') = if tpTitleHjust pal <= 0.0

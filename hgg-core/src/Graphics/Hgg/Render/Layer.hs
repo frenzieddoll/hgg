@@ -22,7 +22,8 @@ import           Graphics.Hgg.Layout (Layout (..), Rect (..), Scale (..),
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical,
-                                      legendBaseSize, legendKeyW, legendKeyPitch,
+                                      effectiveHalfLine, effectiveLegendBaseSize,
+                                      effectiveLegendKeyW, effectiveLegendKeyPitch,
                                       textWidthEm, legendGuideWidth,
                                       numToText, nubKeep, findColorEnc,
                                       effectiveLegendTitle, allColorCategories,
@@ -196,7 +197,8 @@ renderSubplots r parentLayout spec =
                     | (i, (sub, c)) <- zip [0 ..] panels0 ]
       area   = lpPlotArea parentLayout
       -- Phase 8 A2 Step3 (design §A-5): panel 間 spacing = ggplot panel.spacing 既定 = half_line。
-      pad    = ggHalfLine * lpMarginScale parentLayout
+      -- ★ Phase 63 A13: half_line = base/2 派生へ (既定 11 で従来と bit 同値)。
+      pad    = effectiveHalfLine spec * lpMarginScale parentLayout
       -- ★ Phase 63 A6: 列/行の相対サイズ (subplotWidths/Heights = cowplot rel_widths/
       --   rel_heights)。 グリッド数に対して不足分は 1 で埋める。 未指定 = 全て 1 で
       --   従来の等分と同値。 推定寸法 (margin 算出用) と本体分割の両方を同じ重みで割る。
@@ -470,7 +472,7 @@ renderFaceted r layout spec facetCol =
      else
        let baseArea = lpPlotArea layout
            -- Phase 8 A2 Step3 (design §A-5): panel.spacing = half_line (sc 縮小)。
-           gutter   = ggHalfLine * lpMarginScale layout
+           gutter   = effectiveHalfLine spec * lpMarginScale layout   -- ★ A13: base 派生
            headerH  = 18    -- panel 上の strip label (群名) 用
            -- Phase 8 C G7: facet_wrap 複数行。 vsFacetNcol 未指定 = 1 行 N 列 (非破壊)、
            -- 指定 = n 列で nRows = ceil(nPanels/n) 行に折り返す。 軸 drop は ggplot 流に
@@ -602,7 +604,7 @@ renderFacetGrid r layout spec =
   in if nRows == 0 || nCols == 0 then renderSingle r layout spec
      else
        let baseArea = lpPlotArea layout
-           gutter   = ggHalfLine * lpMarginScale layout
+           gutter   = effectiveHalfLine spec * lpMarginScale layout   -- ★ A13: base 派生
            hasRowStrip = isJust mRowCol
            hasColStrip = isJust mColCol
            stripTopH   = if hasColStrip then 18 else 0
@@ -1027,8 +1029,9 @@ legendKeyBgColor = "#f2f2f2"
 
 -- | Phase 35: top-align 凡例ブロックの上余白 (pt)。 ggplot は右凡例を縦中央寄せするため
 --   直接の対応 metric は無い。 ユーザ好み (上揃え) ゆえ half_line の倍数で定義 (= 11pt ≈ 10)。
-legendTopInset :: Double
-legendTopInset = 2 * ggHalfLine
+--   ★ Phase 63 A13: half_line = base/2 派生へ (既定 11 で従来 2×5.5 と bit 同値)。
+legendTopInset :: VisualSpec -> Double
+legendTopInset spec = 2 * effectiveHalfLine spec
 
 -- | Phase 35: 凡例キーの描画スタイル (= ggplot draw_key 同型・geom 種で変わる)。
 data LegendKeyStyle
@@ -1040,20 +1043,22 @@ data LegendKeyStyle
 -- | ★ 凡例キーの装飾は plot 点と揃える ('mLayer' = 当該 point レイヤ)。 KeyPoint の塗り・
 --   縁は 'markerFillFor'/'markerStrokeFor' に一本化 (既定縁なし)。 旧実装は塗り同色の
 --   1pt 縁をハードコードしており、 精緻なスーツ形の凹みを潰していた (= plot と不一致)。
-legendKeyPrim :: Maybe Layer -> LegendKeyStyle -> Double -> ThemePalette -> Double -> Double -> Text -> [Primitive]
-legendKeyPrim mLayer style markerDiam pal cx cy col =
+-- ★ Phase 63 A13: キー 1 辺 kw は呼び手が実効値 ('effectiveLegendKeyW') で渡す
+--   (pitch = keyW ゆえ引数 1 つ。 本関数は spec を持たないため)。
+legendKeyPrim :: Double -> Maybe Layer -> LegendKeyStyle -> Double -> ThemePalette -> Double -> Double -> Text -> [Primitive]
+legendKeyPrim kw mLayer style markerDiam pal cx cy col =
   -- ★ 矩形キー (bar/density) はセルより線幅 (lwd mm) 分**内側**に縮める
   --   (= ggplot draw_key_polygon: rectGrob width = unit(1,"npc") - unit(lwd,"mm"))。
   --   隣接セルとの間に lwd mm の隙間ができ、 ggplot 同様「隣接するが接しない」。
   let lwInset = mmPt 0.5                              -- ggplot 既定 linewidth = 0.5mm
-      keyRect = Rect (cx - (legendKeyW - lwInset) / 2) (cy - (legendKeyPitch - lwInset) / 2)
-                     (legendKeyW - lwInset) (legendKeyPitch - lwInset)
+      keyRect = Rect (cx - (kw - lwInset) / 2) (cy - (kw - lwInset) / 2)
+                     (kw - lwInset) (kw - lwInset)
       -- ★ Phase 32 (re-apply): legend.key 背景 (ggplot theme_grey = grey95 #F2F2F2)。
-      --   symbol の背後にキーセル全体 (legendKeyW × legendKeyPitch) を塗る。 tpLegendKeyBg が
+      --   symbol の背後にキーセル全体 (keyW × keyW) を塗る。 tpLegendKeyBg が
       --   空文字なら描かない (= 従来挙動)。 全 guide variant が legendKeyPrim 経由ゆえ 1 箇所で網羅。
       keyBg
         | tpLegendKeyBg pal == "" = []
-        | otherwise = [ PRect (Rect (cx - legendKeyW / 2) (cy - legendKeyPitch / 2) legendKeyW legendKeyPitch)
+        | otherwise = [ PRect (Rect (cx - kw / 2) (cy - kw / 2) kw kw)
                               (FillStyle (tpLegendKeyBg pal) 1.0) Nothing ]
   in (keyBg ++) $ case style of
        KeyPoint mShape ->
@@ -1108,17 +1113,22 @@ renderGuideBlock :: VisualSpec -> Resolver -> Layout -> ThemePalette
 renderGuideBlock spec r layout pal ox oy title guide =
   let tsTitle = mkFontTS (Just spec) pal LegendTitleF AnchorStart 0
       tsItem  = mkFontTS (Just spec) pal LegendItemF  AnchorStart 0
-      -- pt メトリクス (ggplot 同型・マジック数を排す)。 半行 = ggHalfLine。
-      itemDy  = legendBaseSize * 0.8 * 0.32                      -- item 文字をキー中心に縦揃え
-      titleH  = if title == "" then 0 else legendBaseSize + ggHalfLine  -- title 行高 (文字 + 下マージン)
-      header  = if title == "" then [] else [ PText (Point ox (oy + legendBaseSize)) title tsTitle ]
-      firstCy = oy + titleH + legendKeyPitch / 2                 -- 最初のキー中心
-      labelX  = ox + legendKeyW + ggHalfLine / 2                 -- key → label gap = half_line/2
-      cyAt k  = firstCy + fromIntegral k * legendKeyPitch
+      -- pt メトリクス (ggplot 同型・マジック数を排す)。 半行 = half_line。
+      -- ★ Phase 63 A13: 凡例メトリクスを base 派生の実効値へ (既定 11 で従来と bit 同値)。
+      hl  = effectiveHalfLine spec
+      lbs = effectiveLegendBaseSize spec
+      kw  = effectiveLegendKeyW spec
+      kp  = effectiveLegendKeyPitch spec
+      itemDy  = lbs * 0.8 * 0.32                                 -- item 文字をキー中心に縦揃え
+      titleH  = if title == "" then 0 else lbs + hl              -- title 行高 (文字 + 下マージン)
+      header  = if title == "" then [] else [ PText (Point ox (oy + lbs)) title tsTitle ]
+      firstCy = oy + titleH + kp / 2                             -- 最初のキー中心
+      labelX  = ox + kw + hl / 2                                 -- key → label gap = half_line/2
+      cyAt k  = firstCy + fromIntegral k * kp
       -- ★ Phase 35: 点凡例は theme panel 色 (tpPanelBg) の連続背景ブロック (= ggplot
       --   legend.key が縦に連結した灰色帯)。
       bgRect n = if n > 0
-                   then [ PRect (Rect ox (firstCy - legendKeyPitch / 2) legendKeyW (fromIntegral n * legendKeyPitch))
+                   then [ PRect (Rect ox (firstCy - kp / 2) kw (fromIntegral n * kp))
                                 (FillStyle (tpPanelBg pal) 1.0) Nothing ]
                    else []
   in case guide of
@@ -1146,17 +1156,17 @@ renderGuideBlock spec r layout pal ox oy title guide =
              chipFor k (origI, label) =
                let cy = cyAt k
                    col = legendColorFor layout pal origI label
-               in legendKeyPrim colorLayer (styleFor origI) (legendMarkerDiam spec) pal (ox + legendKeyW / 2) cy col
+               in legendKeyPrim kw colorLayer (styleFor origI) (legendMarkerDiam spec) pal (ox + kw / 2) cy col
                   <> [ PText (Point labelX (cy + itemDy)) label tsItem ]
          in ( header <> bgRect n <> concat (zipWith chipFor [0 :: Int ..] items)
-            , titleH + fromIntegral n * legendKeyPitch )
+            , titleH + fromIntegral n * kp )
        ColorGuide (ColorByContinuous cr) -> case resolveNum r cr of
          Nothing   -> ([], 0)
          Just nums | V.null nums -> ([], 0)
                    | otherwise ->
            let vMin = V.minimum nums
                vMax = V.maximum nums
-               barW = legendKeyW; barH = 11 * legendBaseSize; barX = ox; barY = oy + titleH
+               barW = kw; barH = 11 * lbs; barX = ox; barY = oy + titleH
                nStop = 40 :: Int
                step = barH / fromIntegral nStop
                -- ★ A4-e: gradient2 指定時は発散 3-stop を bar に反映 (= 凡例も diverging palette)。
@@ -1168,7 +1178,7 @@ renderGuideBlock spec r layout pal ox oy title guide =
                          in PRect (Rect barX (sy - step) barW (step + 0.5))
                                   (FillStyle (continuousColor legendPal t) 1.0) Nothing
                        | i <- [0 .. nStop - 1] ]
-               tickX = barX + barW + ggHalfLine / 2
+               tickX = barX + barW + hl / 2
                -- ggplot 同型: 連続凡例の目盛りは生 min/mid/max でなく Wilkinson extended
                -- breaks (= 軸と同じ nice 値) を範囲内に置く。 生値の長大桁を避けラベルが短くなる。
                legBreaks = case filter (\b -> b >= vMin && b <= vMax) (extendedBreaks 5 vMin vMax) of
@@ -1182,10 +1192,10 @@ renderGuideBlock spec r layout pal ox oy title guide =
        --   ColorByContinuous と同型の gradient bar + extended breaks 目盛り、 タイトルは "count"。
        CountBarGuide lo hi ->
          let barTitle = "count"
-             titleH'  = legendBaseSize + ggHalfLine
-             header'  = [ PText (Point ox (oy + legendBaseSize)) barTitle tsTitle ]
+             titleH'  = lbs + hl
+             header'  = [ PText (Point ox (oy + lbs)) barTitle tsTitle ]
              vMin = lo; vMax = hi
-             barW = legendKeyW; barH = 11 * legendBaseSize; barX = ox; barY = oy + titleH'
+             barW = kw; barH = 11 * lbs; barX = ox; barY = oy + titleH'
              nStop = 40 :: Int
              step = barH / fromIntegral nStop
              legendPal = lpContinuousPalette layout
@@ -1194,7 +1204,7 @@ renderGuideBlock spec r layout pal ox oy title guide =
                        in PRect (Rect barX (sy - step) barW (step + 0.5))
                                 (FillStyle (continuousColor legendPal t) 1.0) Nothing
                      | i <- [0 .. nStop - 1] ]
-             tickX = barX + barW + ggHalfLine / 2
+             tickX = barX + barW + hl / 2
              legBreaks = case filter (\b -> b >= vMin && b <= vMax) (extendedBreaks 5 vMin vMax) of
                [] -> [vMin, vMax]
                bs -> bs
@@ -1215,10 +1225,10 @@ renderGuideBlock spec r layout pal ox oy title guide =
              chipFor k label =
                let cy = cyAt k
                    sh = shapePalette !! (k `mod` length shapePalette)
-               in legendKeyPrim (legendPointLayer spec) (KeyPoint (Just sh)) (legendMarkerDiam spec) pal (ox + legendKeyW / 2) cy inkCol
+               in legendKeyPrim kw (legendPointLayer spec) (KeyPoint (Just sh)) (legendMarkerDiam spec) pal (ox + kw / 2) cy inkCol
                   <> [ PText (Point labelX (cy + itemDy)) label tsItem ]
          in ( header <> bgRect n <> concat (zipWith chipFor [0..] vals)
-            , titleH + fromIntegral n * legendKeyPitch )
+            , titleH + fromIntegral n * kp )
 
 -- | Phase 35: レイヤが色マップ (ColorByCol/ColorByContinuous) を持つか (= 凡例を駆動)。
 isColorMapLayer :: Layer -> Bool
@@ -1241,8 +1251,9 @@ legendPointLayer spec = listToMaybe
 renderLegendRight :: VisualSpec -> Resolver -> Layout -> ThemePalette -> Bool -> ColorEnc -> [Primitive]
 renderLegendRight spec r layout pal centered _enc =
   let area = lpPlotArea layout
-      x0 = rX area + rW area + 2 * ggHalfLine  -- panel→凡例 gap = ggplot legend.box.spacing = 1 line
-      guideGap = 2 * ggHalfLine              -- guide 間スペース = 1 line
+      hl = effectiveHalfLine spec            -- ★ A13: base 派生 (既定 11 で従来と同値)
+      x0 = rX area + rW area + 2 * hl        -- panel→凡例 gap = ggplot legend.box.spacing = 1 line
+      guideGap = 2 * hl                      -- guide 間スペース = 1 line
       guides = collectGuides r spec
       -- shape 凡例の見出しは列名。 inline data に resolve され名前が失われた場合は
       -- sentinel ("<inline-txt>" / "<inline-num>") を出さず空に潰す (= color 凡例と同じ規律)。
@@ -1257,8 +1268,8 @@ renderLegendRight spec r layout pal centered _enc =
       totalH = sum (map blockH guides) + guideGap * fromIntegral (max 0 (length guides - 1))
       -- ★ Phase 35 #1: 上揃え時はブロック上端を panel 上端 + legendTopInset に下げ、 凡例
       --   タイトルが panel/キャンバス上端に詰まるのを防ぐ (グラフタイトルの有無に依らない)。
-      y0 | centered  = rY area + max legendTopInset ((rH area - totalH) / 2)
-         | otherwise = rY area + legendTopInset
+      y0 | centered  = rY area + max (legendTopInset spec) ((rH area - totalH) / 2)
+         | otherwise = rY area + legendTopInset spec
       go _  []       = []
       go oy (g : gs) =
         let (prims, h) = renderGuideBlock spec r layout pal x0 oy (titleOf g) g
@@ -1290,7 +1301,7 @@ renderLegendBottom spec r layout pal enc =
              -- ★ Phase 38: 各アイテムの横送りをラベル内容で算出 (旧 chipW=80 固定 → content-based)。
              --   item 横幅 = swatch→label gap(14) + ラベル幅 + 列間 gap(ggHalfLine)。
              --   列 (legendGridH の col) ごとに、 その列に入る全行アイテムの最大幅を採る。
-             itemAdv lbl = 14 + tsSize tsItem * textWidthEm lbl + ggHalfLine
+             itemAdv lbl = 14 + tsSize tsItem * textWidthEm lbl + effectiveHalfLine spec
              labelAt k   = snd (items !! k)
              colWidth c  = maximum (0 : [ itemAdv (labelAt k) | k <- [0 .. n - 1], k `mod` nc == c ])
              -- colXs !! c = 第 c 列の左端 x (title 後を起点に列幅を累積)。

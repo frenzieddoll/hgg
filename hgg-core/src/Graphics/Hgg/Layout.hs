@@ -63,6 +63,13 @@ module Graphics.Hgg.Layout
     -- ★ Phase 63 A12: base font size の実効値 (予約 computeLayout と描画 mkFontTS で共有)。
   , effectiveBaseFontSize
   , effectiveFontSize
+    -- ★ Phase 63 A13: half_line 派生 spacing の実効値 (既定 11 で従来定数と bit 同値)。
+  , effectiveHalfLine
+  , effectiveAxTextMar
+  , effectiveAxTitleMar
+  , effectiveLegendBaseSize
+  , effectiveLegendKeyW
+  , effectiveLegendKeyPitch
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -248,18 +255,23 @@ computeLayout r spec0 =
       hasSubtitle = case getLast (vsSubtitle spec) of Just _ -> True; _ -> False
       hasCaption  = case getLast (vsCaption  spec) of Just _ -> True; _ -> False
       hasTag      = case getLast (vsTag      spec) of Just _ -> True; _ -> False
-      labsSubExtra = if hasSubtitle then 11 + sc * ggHalfLine else 0
-      labsTagExtra = if hasTag && not (hasTitle || hasSubtitle) then 13 + sc * ggHalfLine else 0
-      labsCapExtra = if hasCaption then 9 + sc * ggHalfLine else 0
+      labsSubExtra = if hasSubtitle then 11 + sc * hl else 0
+      labsTagExtra = if hasTag && not (hasTitle || hasSubtitle) then 13 + sc * hl else 0
+      labsCapExtra = if hasCaption then 9 + sc * hl else 0
       -- Phase 8 C (small-viewport text fix): 間隔定数 (halfLine/tickLen/axTextMar/
       -- axTitleMar) は sc 倍するが、 文字サイズ由来の項 (titleSize/tickSize/maxYTickW/
       -- axisLabelSize) は **等倍** (フォントは実寸描画で縮まないため)。 旧実装は全体を
       -- sc 倍し、 小 viewport (subplots/pairs/inset) で数値が軸に被っていた。 sc=1 では
       -- 新旧同値なので通常プロットは不変。
-      -- ★ Phase 63 A5: 外周余白は theme 実効値 (themePlotMargin、 既定 = 各辺 ggHalfLine
-      --   で従来と同値)。 title 下 margin 等の内側 spacing は ggHalfLine のまま。
+      -- ★ Phase 63 A5: 外周余白は theme 実効値 (themePlotMargin、 既定 = 各辺 half_line
+      --   で従来と同値)。
+      -- ★ Phase 63 A13: 内側 spacing (title 下 margin・axis.text/axis.title margin・
+      --   凡例 gap) も half_line = base/2 派生の実効値へ (既定 11 で従来定数と bit 同値)。
       pm = effectivePlotMargin spec
-      tM = sc * marTop pm + (if hasTitle then titleSize + sc * ggHalfLine else 0)
+      hl = effectiveHalfLine spec
+      axTextMar  = effectiveAxTextMar spec
+      axTitleMar = effectiveAxTitleMar spec
+      tM = sc * marTop pm + (if hasTitle then titleSize + sc * hl else 0)
                  + labsSubExtra + labsTagExtra
       -- ★ x 目盛りラベルの回転 (axisRotate) 予約: 非回転は tickSize (従来) だが、
       --   回転時はラベル**幅**が下方向に伸びる。 左 margin の maxYTickW と対称に、
@@ -283,12 +295,12 @@ computeLayout r spec0 =
       --   未指定は ggTickLen/TickOut で従来と同値。 描画 (tickMarks) と単一情報源。
       tickOut = tickOutwardLen spec
       bM | isContainer = sc * marBottom pm + legendH + labsCapExtra
-         | otherwise   = sc * (marBottom pm + tickOut + ggAxTextMar) + xTickReserve
-                 + (if hasXLabel then sc * ggAxTitleMar + axisLabelSize else 0)
+         | otherwise   = sc * (marBottom pm + tickOut + axTextMar) + xTickReserve
+                 + (if hasXLabel then sc * axTitleMar + axisLabelSize else 0)
                  + legendH + labsCapExtra
       lM | isContainer = sc * marLeft pm
-         | otherwise   = sc * (marLeft pm + tickOut + ggAxTextMar) + maxYTickW
-                 + (if hasYLabel then sc * ggAxTitleMar + axisLabelSize else 0)
+         | otherwise   = sc * (marLeft pm + tickOut + axTextMar) + maxYTickW
+                 + (if hasYLabel then sc * axTitleMar + axisLabelSize else 0)
       -- Phase 9 A-5 (PS Layout と同一): 凡例ぶん plotArea を縮めて図内に収める (ggplot は
       -- legend を gtable の一部として扱い panel を縮める)。 Inside/None は予約しない。
       -- ★ Phase 34: facet 時も右凡例を予約する (旧実装は facet で legendW=0 にして凡例を
@@ -299,11 +311,12 @@ computeLayout r spec0 =
       legNrow = max 1 (maybe 1 id (getLast (vsLegendNrow spec)))
       -- ★ Phase 38: 右凡例幅を「最長ラベル」で算出 (固定 80/+70列 を撤去)。 renderGuideBlock の
       --   描画式に一致する 'legendGuideWidth' を全 guide に適用し、 縦スタックゆえ最大幅を予約。
-      --   gap (panel→凡例 = 2*ggHalfLine) は renderLegendRight の x0 オフセットと一致。
+      --   gap (panel→凡例 = 2*half_line) は renderLegendRight の x0 オフセットと一致。
       --   フォントは既定 (item=base×0.8 / title=base)。 override 無し時 render と一致 (旧固定80は
       --   フォント完全無視だったので後退なし)。
-      legItemF  = legendBaseSize * 0.8
-      legTitleF = legendBaseSize
+      --   ★ Phase 63 A13: 凡例基準も base 派生 (effectiveLegendBaseSize = 2×half_line)。
+      legItemF  = effectiveLegendBaseSize spec * 0.8
+      legTitleF = effectiveLegendBaseSize spec
       shapeCats scr = case resolveCol r scr of
         Just (TxtData v) -> orderedCats (V.toList v)
         Just (NumData v) -> orderedCats (map numToText (V.toList v))
@@ -321,22 +334,22 @@ computeLayout r spec0 =
         _ -> []
       guideWidth g = case g of
         ColorGuide (ColorByCol _)         ->
-          legendGuideWidth legItemF legTitleF (effectiveLegendTitle spec) (allColorCategories r (vsLayers spec))
+          legendGuideWidth spec legItemF legTitleF (effectiveLegendTitle spec) (allColorCategories r (vsLayers spec))
         ColorGuide (ColorByContinuous cr) ->
-          legendGuideWidth legItemF legTitleF (effectiveLegendTitle spec) (contColorLabels cr)
+          legendGuideWidth spec legItemF legTitleF (effectiveLegendTitle spec) (contColorLabels cr)
         ColorGuide (ColorStatic _)        -> 0
         CountBarGuide lo hi               ->
-          legendGuideWidth legItemF legTitleF "count"
+          legendGuideWidth spec legItemF legTitleF "count"
             (map numToText (filter (\b -> b >= lo && b <= hi) (extendedBreaks 5 lo hi)))
         ShapeGuide scr                    ->
           -- 見出しは render と同じく sentinel を空に潰してから幅を見積る。
           let nm = colRefName scr
               t  = if nm == "<inline-num>" || nm == "<inline-txt>" then "" else nm
-          in legendGuideWidth legItemF legTitleF t (shapeCats scr)
+          in legendGuideWidth spec legItemF legTitleF t (shapeCats scr)
       legendGuidesW = maximum (0 : map guideWidth (collectGuides r spec))
       -- Phase 32 (re-apply): LegendRightCenter も右域に同じ幅を予約 (縦位置のみ違う)。
       legendW = if legendPos == LegendRight || legendPos == LegendRightCenter
-                  then 2 * ggHalfLine + legendGuidesW else 0
+                  then 2 * hl + legendGuidesW else 0
       legendH = if legendPos == LegendBottom then 50 + fromIntegral (legNrow - 1) * 16 else 0
       rM = sc * marRight pm + rightAxisW + legendW
       -- Phase 8 A2 Step2 (design §A-4): パネル本体は可用域 (margin を除いた残り) を取る。
@@ -754,14 +767,15 @@ dagNodeBaseHalfWidth n =
 
 -- | 単一 guide (右凡例・縦1列) の必要幅 (pt)。 renderGuideBlock の描画式に厳密一致:
 --   列幅 = (key 1辺) + (key→label gap = half_line/2) + (最長ラベル幅) + (右パディング = half_line)。
---   タイトルがそれより広ければタイトル幅。 引数: item フォント pt / title フォント pt /
---   タイトル文字列 / ラベル群。
+--   タイトルがそれより広ければタイトル幅。 引数: spec (★A13: key 幅/gap を base 派生の
+--   実効値で引くため) / item フォント pt / title フォント pt / タイトル文字列 / ラベル群。
 --   ★「最長」は文字数でなく 'textWidthEm' 最大 (全角混在で逆転し得るため幅で選ぶ)。
-legendGuideWidth :: Double -> Double -> Text -> [Text] -> Double
-legendGuideWidth fItem fTitle title labels = max titleW colW
+legendGuideWidth :: VisualSpec -> Double -> Double -> Text -> [Text] -> Double
+legendGuideWidth spec fItem fTitle title labels = max titleW colW
   where
+    hl         = effectiveHalfLine spec
     maxLabelEm = maximum (0 : map textWidthEm labels)
-    colW       = legendKeyW + ggHalfLine / 2 + fItem * maxLabelEm + ggHalfLine
+    colW       = effectiveLegendKeyW spec + hl / 2 + fItem * maxLabelEm + hl
     titleW     = fTitle * textWidthEm title
 
 -- ===========================================================================
@@ -889,10 +903,12 @@ effectiveLegendPos spec = case getLast (vsLegend spec) of
   Nothing -> maybe LegendRightCenter id
                (getLast (toLegendPos (vsThemeOverride spec)))
 
--- | Phase 63 A4: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 'ggTickLen' (2.75)。
+-- | Phase 63 A4: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 half_line/2
+-- (ggplot axis.ticks.length。 ★A13: 固定 'ggTickLen' 2.75 から base 派生へ、
+-- 既定 11 で bit 同値)。
 effectiveTickLength :: VisualSpec -> Double
 effectiveTickLength spec =
-  maybe ggTickLen id (getLast (toTickLength (vsThemeOverride spec)))
+  maybe (effectiveHalfLine spec / 2) id (getLast (toTickLength (vsThemeOverride spec)))
 
 -- | Phase 63 A4: 実効 tick 向き。 theme (toTickDir) > 既定 'TickOut' (ggplot 既定 = 外向き)。
 effectiveTickDir :: VisualSpec -> TickDir
@@ -907,13 +923,15 @@ tickOutwardLen spec = case effectiveTickDir spec of
   TickIn -> 0
   _      -> effectiveTickLength spec
 
--- | Phase 63 A5: 実効 plot margin (pt)。 theme (toPlotMargin) > 既定 各辺 'ggHalfLine'。
+-- | Phase 63 A5: 実効 plot margin (pt)。 theme (toPlotMargin) > 既定 各辺 half_line
+-- (★A13: 固定 'ggHalfLine' 5.5 から base 派生へ、 既定 11 で bit 同値)。
 -- 指定時は外周分を **置き換える** (ggplot plot.margin と同じ)。 軸ラベル・title 帯・
 -- 凡例などの内側予約は従来どおり自動算出のまま (computeLayout と Render.labels が共有)。
 effectivePlotMargin :: VisualSpec -> Margin
 effectivePlotMargin spec =
-  maybe (Margin ggHalfLine ggHalfLine ggHalfLine ggHalfLine) id
-        (getLast (toPlotMargin (vsThemeOverride spec)))
+  let hl = effectiveHalfLine spec
+  in maybe (Margin hl hl hl hl) id
+           (getLast (toPlotMargin (vsThemeOverride spec)))
 
 -- | Phase 63 A12: 実効 base font size (pt)。 theme (toBaseFontSize) > 既定 11
 -- (ggplot theme_grey base_size)。 各 slot の既定 font size はこれからの相対倍率で
@@ -921,6 +939,35 @@ effectivePlotMargin spec =
 effectiveBaseFontSize :: VisualSpec -> Double
 effectiveBaseFontSize spec =
   maybe 11 id (getLast (toBaseFontSize (vsThemeOverride spec)))
+
+-- | Phase 63 A13: 実効 half_line (pt) = base/2 (ggplot @half_line@)。 spacing 系
+-- (外周 margin・title 下 margin・panel.spacing・凡例 gap) の共通派生元。
+-- 既定 base 11 で 5.5 = 従来 'ggHalfLine' と bit 同値 (golden 不変 gate、 ULP 検証済)。
+effectiveHalfLine :: VisualSpec -> Double
+effectiveHalfLine spec = effectiveBaseFontSize spec / 2
+
+-- | Phase 63 A13: 実効 axis.text margin (pt) = 0.8 × half_line/2 (ggplot 忠実)。
+-- 既定 11 で 2.2 = 従来 'ggAxTextMar' と bit 同値。
+effectiveAxTextMar :: VisualSpec -> Double
+effectiveAxTextMar spec = 0.8 * (effectiveHalfLine spec / 2)
+
+-- | Phase 63 A13: 実効 axis.title margin (pt) = half_line/2 (ggplot 忠実)。
+-- 既定 11 で 2.75 = 従来 'ggAxTitleMar' と bit 同値。
+effectiveAxTitleMar :: VisualSpec -> Double
+effectiveAxTitleMar spec = effectiveHalfLine spec / 2
+
+-- | Phase 63 A13: 実効凡例ベースフォント (pt) = 2 × half_line = base
+-- (ggplot @base_size@ と一致)。 既定 11 で従来 'legendBaseSize' と bit 同値。
+effectiveLegendBaseSize :: VisualSpec -> Double
+effectiveLegendBaseSize spec = 2 * effectiveHalfLine spec
+
+-- | Phase 63 A13: 実効凡例キー 1 辺 (pt) = 1.2 lines (行高 1.3133 倍率は
+-- 'legendKeyW' と同一)。 既定 11 で bit 同値。 pitch = keyW (キーセル隣接)。
+effectiveLegendKeyW :: VisualSpec -> Double
+effectiveLegendKeyW spec = 1.2 * effectiveLegendBaseSize spec * 1.3133
+
+effectiveLegendKeyPitch :: VisualSpec -> Double
+effectiveLegendKeyPitch = effectiveLegendKeyW
 
 -- | Phase 63 A12: slot の実効 font size (pt)。 解決順は Render.mkFontTS と同一 =
 -- theme override (fsSize) > font setter (fsSize) > 既定 (base 派生)。

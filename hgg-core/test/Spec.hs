@@ -129,19 +129,19 @@ main = hspec $ do
       textWidthEm "WM"   `shouldBe` 1.84         -- 0.92 + 0.92 (幅広 > 小文字)
       textWidthEm ""     `shouldBe` 0.0
     it "legendGuideWidth: 最長ラベル(幅基準)で colW を駆動" $ do
-      -- colW = legendKeyW + ggHalfLine/2 + fItem*maxEm + ggHalfLine
+      -- colW = legendKeyW + ggHalfLine/2 + fItem*maxEm + ggHalfLine (★A13: spec 引数追加)
       let fItem = 8.8; fTitle = 11.0
-          w = legendGuideWidth fItem fTitle "" ["aa", "bbbb"]   -- 最長 = "bbbb" (em 4*0.58=2.32)
+          w = legendGuideWidth mempty fItem fTitle "" ["aa", "bbbb"]   -- 最長 = "bbbb" (em 4*0.58=2.32)
       w `shouldBe` legendKeyW + ggHalfLine/2 + fItem * 2.32 + ggHalfLine
     it "legendGuideWidth: 全角ラベルは半角同字数より広い" $ do
-      let f t = legendGuideWidth 8.8 11.0 "" [t]
+      let f t = legendGuideWidth mempty 8.8 11.0 "" [t]
       f "東京"  `shouldSatisfy` (> f "ab")        -- 全角2 (2.0em) > 半角2 (1.2em)
     it "legendGuideWidth: タイトルが最長アイテムより広ければタイトル幅" $ do
       -- 短いラベル + 長いタイトル → titleW が勝つ
-      let w = legendGuideWidth 8.8 11.0 "verylongtitlexxxx" ["a"]
+      let w = legendGuideWidth mempty 8.8 11.0 "verylongtitlexxxx" ["a"]
       w `shouldBe` 11.0 * textWidthEm "verylongtitlexxxx"
     it "legendGuideWidth: ラベル空集合でも key+pad 分の最小幅は確保" $ do
-      legendGuideWidth 8.8 11.0 "" [] `shouldBe` legendKeyW + ggHalfLine/2 + ggHalfLine
+      legendGuideWidth mempty 8.8 11.0 "" [] `shouldBe` legendKeyW + ggHalfLine/2 + ggHalfLine
 
   describe "Graphics.Hgg.Unit (Phase 33 単位系)" $ do
     it "(*~) はスカラ倍で単位保存" $
@@ -2877,6 +2877,34 @@ main = hspec $ do
     it "JSON roundtrip (toBaseFontSize field)" $
       eitherDecode (encode (base68 <> themeBaseFontSize 14))
         `shouldBe` Right (base68 <> themeBaseFontSize 14)
+
+  describe "Phase 63 A13: spacing の half_line = base/2 派生" $ do
+    let base69 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                               (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+        areaOf extra = lpPlotArea (computeLayout emptyResolver (base69 <> extra))
+    it "既定 11: 全派生値 = 従来定数と bit 同値 (golden 不変 gate の単体版)" $ do
+      effectiveHalfLine mempty `shouldBe` ggHalfLine
+      effectiveTickLength mempty `shouldBe` ggTickLen
+      effectiveAxTextMar mempty `shouldBe` ggAxTextMar
+      effectiveAxTitleMar mempty `shouldBe` ggAxTitleMar
+      effectiveLegendBaseSize mempty `shouldBe` legendBaseSize
+      effectiveLegendKeyW mempty `shouldBe` legendKeyW
+      effectiveLegendKeyPitch mempty `shouldBe` legendKeyPitch
+    it "base 22 で half_line 系が倍 (tick 5.5 / margin 11 / axText 4.4)" $ do
+      effectiveHalfLine (themeBaseFontSize 22) `shouldBe` 11
+      effectiveTickLength (themeBaseFontSize 22) `shouldBe` 5.5
+      effectivePlotMargin (themeBaseFontSize 22) `shouldBe` Margin 11 11 11 11
+      effectiveAxTextMar (themeBaseFontSize 22) `shouldBe` 0.8 * 5.5
+    it "個別 theme setter が base 派生既定より優先" $ do
+      effectiveTickLength (themeBaseFontSize 22 <> themeTickLength 3) `shouldBe` 3
+      effectivePlotMargin (themeBaseFontSize 22 <> themePlotMargin 7 7 7 7)
+        `shouldBe` Margin 7 7 7 7
+    it "layout: base 拡大で spacing 予約も拡がる (font 増分と独立に tick/margin 分)" $ do
+      -- font 由来分を themeTickFont 等で固定し、 spacing 増分だけを観測する
+      let fixFonts = themeTitleFont (fontSize 13.2) <> themeAxisLabelFont (fontSize 11)
+                       <> themeTickFont (fontSize 8.8)
+      (rX (areaOf (fixFonts <> themeBaseFontSize 22)) > rX (areaOf fixFonts))
+        `shouldBe` True
 
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
