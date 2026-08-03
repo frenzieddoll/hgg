@@ -291,6 +291,7 @@ module Graphics.Hgg.Spec
   , themeCowplot, themeMinimalGrid, themeMap                    -- ★ Phase 63 A8
   , themeCowplotSized, themeMinimalGridSized, themeMapSized     -- ★ Phase 63 A14
   , themePlotBg                                                 -- ★ Phase 63 A18
+  , themeAxisText, themeAxisTitle                                -- ★ Phase 63 A19
   , panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont, themeAxisTextAngle
   , themeAxisTextAngleX, themeAxisTextAngleY, axisTextAngleXOf, axisTextAngleYOf

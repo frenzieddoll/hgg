@@ -74,6 +74,10 @@ module Graphics.Hgg.Layout
   , effectiveSubtitleSize
   , effectiveCaptionSize
   , effectiveTagSize
+    -- ★ Phase 63 A19: axis.text / axis.title 表示の実効値 (予約 computeLayout と
+    --   描画 tickMarks/labels で共有。 ThemeVoid のみ既定 False)。
+  , effectiveShowAxisText
+  , effectiveShowAxisTitle
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -258,12 +262,18 @@ computeLayout r spec0 =
         | not (null yCatLabels)    = yCatLabels
         | not (null explicitYLabs) = explicitYLabs
         | otherwise                = formatTicksGG yTicks
-      maxYTickW = if null yTickLabelStrs then 0
+      -- ★ Phase 63 A19: axis.text / axis.title 非表示 (ThemeVoid 既定 /
+      --   themeAxisText・themeAxisTitle False) はラベル文字・軸タイトルぶんの予約を
+      --   丸ごと落とす (ggplot element_blank = zero-size grob)。 tick 線の tickOut は
+      --   独立に残る (長さは effectiveTickLength、 ThemeVoid は既定 0)。
+      showAxText  = effectiveShowAxisText spec
+      showAxTitle = effectiveShowAxisTitle spec
+      maxYTickW = if not showAxText || null yTickLabelStrs then 0
                   else 0.6 * tickSize
                          * fromIntegral (maximum (map T.length yTickLabelStrs))
       hasTitle  = case getLast (vsTitle  spec) of Just _ -> True; _ -> False
-      hasXLabel = case getLast (vsXLabel spec) of Just _ -> True; _ -> False
-      hasYLabel = case getLast (vsYLabel spec) of Just _ -> True; _ -> False
+      hasXLabel = showAxTitle && case getLast (vsXLabel spec) of Just _ -> True; _ -> False
+      hasYLabel = showAxTitle && case getLast (vsYLabel spec) of Just _ -> True; _ -> False
       -- ★ Phase 37 A1: subplots container は自分の軸を描かない。 軸目盛り/軸タイトル分の
       --   マージン (tickLen/axTextMar/maxYTickW/軸タイトル) を予約せず、 plot.margin と
       --   タイトル帯・凡例・caption のみにする (= 描画範囲を各 panel に明け渡す)。
@@ -291,7 +301,9 @@ computeLayout r spec0 =
       --   凡例 gap) も half_line = base/2 派生の実効値へ (既定 11 で従来定数と bit 同値)。
       pm = effectivePlotMargin spec
       hl = effectiveHalfLine spec
-      axTextMar  = effectiveAxTextMar spec
+      -- ★ Phase 63 A19: axis.text 非表示なら axis.text margin も 0 (定義 1 箇所で
+      --   bM/lM/xTitleOff/yTitleOff/legendYOff の全 stack に波及)。
+      axTextMar  = if showAxText then effectiveAxTextMar spec else 0
       axTitleMar = effectiveAxTitleMar spec
       tM = sc * marTop pm + (if hasTitle then titleSize + sc * hl else 0)
                  + labsSubExtra + labsTagExtra
@@ -313,6 +325,7 @@ computeLayout r spec0 =
       --   左 margin の maxYTickW と対称に、 最大文字幅を回転角で投影して予約する
       --   (rotX=0 で従来 tickSize と一致)。 ggplot の回転ラベル margin と同方針。
       xTickReserve
+        | not showAxText = 0   -- ★ A19: ラベル文字が無いので高さ予約もしない
         | xRot == 0 = tickSize
         | otherwise = let rad = xRot * pi / 180
                       in tickSize * abs (cos rad) + maxXTickW * abs (sin rad)
@@ -975,10 +988,31 @@ effectiveLegendPos spec = case getLast (vsLegend spec) of
 
 -- | Phase 63 A4: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 half_line/2
 -- (ggplot axis.ticks.length。 ★A13: 固定 'ggTickLen' 2.75 から base 派生へ、
--- 既定 11 で bit 同値)。
+-- 既定 11 で bit 同値。 ★A19: ThemeVoid のみ既定 0 = ggplot theme_void の
+-- axis.ticks.length = 0)。
 effectiveTickLength :: VisualSpec -> Double
 effectiveTickLength spec =
-  maybe (effectiveHalfLine spec / 2) id (getLast (toTickLength (vsThemeOverride spec)))
+  maybe def id (getLast (toTickLength (vsThemeOverride spec)))
+  where def = if isVoidTheme spec then 0 else effectiveHalfLine spec / 2
+
+-- | Phase 63 A19: theme preset が ThemeVoid か (void 系の既定分岐用)。
+isVoidTheme :: VisualSpec -> Bool
+isVoidTheme spec = getLast (vsTheme spec) == Just ThemeVoid
+
+-- | Phase 63 A19: 実効 axis.text (目盛ラベル文字) 表示。 theme (toShowAxisText) >
+-- preset 既定 (ThemeVoid のみ False = ggplot theme_void の axis.text element_blank)。
+-- 表示 off は tick ラベル分の margin 予約 (axTextMar / xTickReserve / maxYTickW) に
+-- 波及するため、 computeLayout (予約) と Render.tickMarks (描画) の単一情報源。
+effectiveShowAxisText :: VisualSpec -> Bool
+effectiveShowAxisText spec =
+  maybe (not (isVoidTheme spec)) id (getLast (toShowAxisText (vsThemeOverride spec)))
+
+-- | Phase 63 A19: 実効 axis.title (軸タイトル) 表示。 既定は 'effectiveShowAxisText'
+-- と同じ規則 (ThemeVoid のみ False)。 computeLayout (予約) と Render.labels
+-- (描画) の単一情報源。
+effectiveShowAxisTitle :: VisualSpec -> Bool
+effectiveShowAxisTitle spec =
+  maybe (not (isVoidTheme spec)) id (getLast (toShowAxisTitle (vsThemeOverride spec)))
 
 -- | Phase 63 A4: 実効 tick 向き。 theme (toTickDir) > 既定 'TickOut' (ggplot 既定 = 外向き)。
 effectiveTickDir :: VisualSpec -> TickDir

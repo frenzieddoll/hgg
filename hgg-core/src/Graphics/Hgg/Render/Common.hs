@@ -24,6 +24,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       effectiveAxTextMar,
                                       effectiveSubtitleSize, effectiveCaptionSize,
                                       effectiveTagSize,
+                                      effectiveShowAxisText, effectiveShowAxisTitle,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -586,6 +587,11 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       -- Phase 32 (re-apply): 目盛線 (tick mark) は tpTickLineColor (ggplot=grey20)。
       --   軸線/枠 (axisFrame) は tpAxis のままで別物。
       tickStyle = solid (tpTickLineColor pal) 1.0
+      -- ★ Phase 63 A19: axis.text (目盛ラベル文字) の表示。 Layout の margin 予約
+      --   (effectiveShowAxisText) と単一情報源。 False は文字のみ落とし tick 線は
+      --   長さ (effectiveTickLength) と独立に残す。 mSpec 無し経路は従来どおり表示。
+      showText = maybe True effectiveShowAxisText mSpec
+      textPrims ps = if showText then ps else []
       xCats = lpXCategoryLabels layout
       yCats = lpYCategoryLabels layout
       -- ★ Phase 11 A4-d: 明示ラベル override。 lpXTicks と 1:1 対応 (computeLayout で censor
@@ -623,18 +629,19 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       xMark v =
         let px = scaleApply sx v
             yb = rY a + rH a
-        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle
+        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle ]
            -- Phase 8 C (small-viewport text fix): フォント由来オフセット (tickSize*k) は
            -- 等倍 (tkGap = sc*間隔 のみ scale)。 旧 *sc で小パネル時に数値が軸に被っていた。
-           , if rotX == 0
+           <> textPrims
+           [ if rotX == 0
                then PText (Point px (yb + tkGap + tickSize * 0.8)) (xLabel v) ts
                else PText (Point px (yb + tkGap + tickSize * 0.4)) (xLabel v) tsXrot
            ]
       yMark v =
         let py = scaleApply sy v
             xl = rX a
-        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle
-           , PText (Point (xl - tkGap) (py + tickSize * 0.35)) (yLabel v) tsYrot ]
+        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle ]
+           <> textPrims [ PText (Point (xl - tkGap) (py + tickSize * 0.35)) (yLabel v) tsYrot ]
       -- Phase 9 C flip: データ x 軸を左辺に (= yMark 風)、 データ y 軸を下辺に (= xMark 風)。
       --   ラベルは水平のまま (anchor のみ placement に対応)。 sxF=データ x→縦 px、 syF=データ y→横 px。
       coord = maybe CoordCartesian coordOf mSpec
@@ -643,13 +650,13 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       xMarkFlip v =
         let py = scaleApply sxF v
             xl = rX a
-        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle
-           , PText (Point (xl - tkGap) (py + tickSize * 0.35)) (xLabel v) tsY ]
+        in [ PLine (Point (xl + inLen) py) (Point (xl - outLen) py) tickStyle ]
+           <> textPrims [ PText (Point (xl - tkGap) (py + tickSize * 0.35)) (xLabel v) tsY ]
       yMarkFlip v =
         let px = scaleApply syF v
             yb = rY a + rH a
-        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle
-           , PText (Point px (yb + tkGap + tickSize * 0.8)) (yLabel v) ts ]
+        in [ PLine (Point px (yb - inLen)) (Point px (yb + outLen)) tickStyle ]
+           <> textPrims [ PText (Point px (yb + tkGap + tickSize * 0.8)) (yLabel v) ts ]
       (xMarkF, yMarkF) = case coord of
         CoordFlip -> (xMarkFlip, yMarkFlip)
         _         -> (xMark, yMark)
@@ -711,14 +718,17 @@ labels layout spec pal =
       --   方式)。 offset は Layout の margin 予約と同じ stack (lpXTitleOff/lpYTitleOff =
       --   単一情報源)。 旧 boxBottom/boxLeft 最外端 pin は LegendBottom/caption 時に
       --   タイトルが凡例の外側 (最下端) へ出ていた (J2/J5 root)。
+      -- ★ Phase 63 A19: axis.title の表示 (ThemeVoid 既定 False = element_blank)。
+      --   Layout の margin 予約 (hasXLabel/hasYLabel gating) と単一情報源。
+      showAxTitle = effectiveShowAxisTitle spec
       -- x 軸タイトル: baseline = panel 下端 + offset + ascent。
       xLP = case getLast (vsXLabel spec) of
-        Just t  -> [ PText (Point cx (rY a + rH a + lpXTitleOff layout + labelSize * 0.8)) t tsLabel ]
-        Nothing -> []
+        Just t | showAxTitle -> [ PText (Point cx (rY a + rH a + lpXTitleOff layout + labelSize * 0.8)) t tsLabel ]
+        _ -> []
       -- y 軸タイトル (rot 90 CCW = ascent が -x 側): baseline = panel 左端 - offset - descent。
       yLP = case getLast (vsYLabel spec) of
-        Just t  -> [ PText (Point (rX a - lpYTitleOff layout - labelSize * 0.2) cy) t tsLabelV ]
-        Nothing -> []
+        Just t | showAxTitle -> [ PText (Point (rX a - lpYTitleOff layout - labelSize * 0.2) cy) t tsLabelV ]
+        _ -> []
       -- ★ Phase 11 A5-a: subtitle (title 直下、 小フォント) / caption (図右下・
       --   小フォント・右寄せ) / tag (左上隅・やや大・左寄せ太字)。 Layout の margin 予約
       --   ('hasSubtitle'/'hasCaption'/'hasTag') と座標を揃える。

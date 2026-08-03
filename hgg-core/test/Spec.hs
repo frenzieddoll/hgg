@@ -3076,6 +3076,51 @@ main = hspec $ do
       , tpShowBackground (specThemePalette (themePlotBg False)) )
         `shouldBe` (True, False)
 
+  describe "Phase 63 A19: ThemeVoid 完全 void (axis.text / axis.title の blank 口)" $ do
+    let base19 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                (inline [2.0, 4.0, 1.0 :: Double]))
+                 <> title "T" <> xLabel "xt" <> yLabel "yt"
+        layOf extra = computeLayout emptyResolver (base19 <> extra)
+        textsOf extra = [ t | PText _ t _
+                            <- renderToPrimitives emptyResolver (layOf extra) (base19 <> extra) ]
+        -- 軸 text の代表 = tick ラベル "1" (x/y 両軸)、 軸タイトル = "xt"/"yt"
+        hasTickLabel extra = "1" `elem` textsOf extra
+        hasAxisTitle extra = "xt" `elem` textsOf extra || "yt" `elem` textsOf extra
+        panelBottom extra = let a = lpPlotArea (layOf extra) in rY a + rH a
+    it "実効値: 既定 True / ThemeVoid のみ既定 False" $ do
+      ( effectiveShowAxisText mempty, effectiveShowAxisTitle mempty )
+        `shouldBe` (True, True)
+      ( effectiveShowAxisText (theme ThemeVoid)
+        , effectiveShowAxisTitle (theme ThemeVoid) ) `shouldBe` (False, False)
+    it "ThemeVoid は tick 長も既定 0 (ggplot theme_void の axis.ticks.length = 0)" $
+      effectiveTickLength (theme ThemeVoid) `shouldBe` 0
+    it "ThemeVoid: tick ラベル文字・軸タイトルが消え、 タイトル系は残る" $ do
+      hasTickLabel (theme ThemeVoid) `shouldBe` False
+      hasAxisTitle (theme ThemeVoid) `shouldBe` False
+      ("T" `elem` textsOf (theme ThemeVoid)) `shouldBe` True
+    it "themeAxisText False: 文字のみ消え tick 線は残る (既定 theme)" $ do
+      hasTickLabel (themeAxisText False) `shouldBe` False
+      hasTickLabel mempty `shouldBe` True
+      -- tick 線 (PLine) の本数は不変 = 文字だけが落ちる
+      let nLines extra = length [ () | PLine _ _ _
+                                     <- renderToPrimitives emptyResolver (layOf extra)
+                                                           (base19 <> extra) ]
+      nLines (themeAxisText False) `shouldBe` nLines mempty
+    it "themeAxisTitle False: 軸タイトルのみ消える" $ do
+      hasAxisTitle (themeAxisTitle False) `shouldBe` False
+      hasTickLabel (themeAxisTitle False) `shouldBe` True
+    it "margin 予約が連動 (非表示で panel 下端が下がる = 予約解放)" $ do
+      (panelBottom (themeAxisText False) > panelBottom mempty) `shouldBe` True
+      (panelBottom (themeAxisTitle False) > panelBottom mempty) `shouldBe` True
+    it "ThemeVoid 後の themeAxisText True で再点灯 (Last 合成・override > preset)" $
+      hasTickLabel (theme ThemeVoid <> themeAxisText True) `shouldBe` True
+    it "themeMap (合成 preset) も axis.text / axis.title が blank" $ do
+      hasTickLabel themeMap `shouldBe` False
+      hasAxisTitle themeMap `shouldBe` False
+    it "JSON roundtrip (toShowAxisText / toShowAxisTitle field)" $
+      eitherDecode (encode (base19 <> themeAxisText False <> themeAxisTitle False))
+        `shouldBe` Right (base19 <> themeAxisText False <> themeAxisTitle False)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

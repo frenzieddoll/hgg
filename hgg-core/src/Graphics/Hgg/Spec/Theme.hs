@@ -184,6 +184,14 @@ data ThemeOverride = ThemeOverride
     --   'effectiveBaseFontSize' が解決し、 computeLayout (予約) と
     --   Render.mkFontTS (描画) の単一情報源になる。
   , toBaseFontSize  :: !(Last Double)  -- base font size (pt)
+    -- ★ Phase 63 A19: axis.text (目盛ラベル文字) / axis.title (軸タイトル) の表示。
+    --   False = ggplot element_blank 相当 (tick 線の有無は toTickLength と独立)。
+    --   表示 off は margin 予約に波及するため Layout の 'effectiveShowAxisText' /
+    --   'effectiveShowAxisTitle' が解決し、 computeLayout (予約) と Render
+    --   (tickMarks/labels の描画) の単一情報源になる。 既定は ThemeVoid のみ False
+    --   (ggplot theme_void = axis.text/axis.title とも element_blank)、 他 preset True。
+  , toShowAxisText  :: !(Last Bool)  -- axis.text on/off
+  , toShowAxisTitle :: !(Last Bool)  -- axis.title on/off
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field

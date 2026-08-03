@@ -25,6 +25,7 @@ module Graphics.Hgg.Spec.Setters
   , plotBg, themePlotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
   , themeTickLength, themeTickDir, themePlotMargin, themeBaseFontSize
+  , themeAxisText, themeAxisTitle
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
@@ -184,6 +185,18 @@ themeBaseFontSize :: Double -> VisualSpec
 themeBaseFontSize s =
   mempty { vsThemeOverride = mempty { toBaseFontSize = Last (Just s) } }
 
+-- | Phase 63 A19: 軸目盛ラベル文字 (ggplot @axis.text@) の表示。 False =
+-- element_blank 相当で文字のみ消える (tick 線の有無は 'themeTickLength' と独立)。
+-- ラベル文字ぶんの margin 予約も連動して落ちる。 既定は 'ThemeVoid' のみ False。
+themeAxisText :: Bool -> VisualSpec   -- axis.text on/off
+themeAxisText b = mempty { vsThemeOverride = mempty { toShowAxisText = Last (Just b) } }
+
+-- | Phase 63 A19: 軸タイトル (ggplot @axis.title@) の表示。 False = element_blank
+-- 相当 ('xLabel' / 'yLabel' 指定があっても描かず margin も予約しない)。
+-- 既定は 'ThemeVoid' のみ False。
+themeAxisTitle :: Bool -> VisualSpec  -- axis.title on/off
+themeAxisTitle b = mempty { vsThemeOverride = mempty { toShowAxisTitle = Last (Just b) } }
+
 -- ===========================================================================
 -- 合成 preset (cowplot 風、 Phase 63 A8)
 -- ===========================================================================
@@ -230,9 +243,10 @@ themeMinimalGridSized n =
 themeMinimalGrid :: VisualSpec
 themeMinimalGrid = themeMinimalGridSized 14
 
--- | cowplot @theme_map(font_size = N)@ 相当 = 軸線・grid・枠・tick 線を全て消す。
--- 軸ラベル文字と軸タイトルは現状の theme 系に blank 化の口が無く残る (残差は
--- phase-63 md 参照)。
+-- | cowplot @theme_map(font_size = N)@ 相当 = 軸線・grid・枠・tick 線・軸ラベル
+-- 文字・軸タイトルを全て消す (★A19: 'ThemeVoid' 既定で axis.text / axis.title も
+-- blank)。 タイトル系と凡例は残る。 facet strip は theme_map が grey80 で残すため
+-- 'stripFill' を明示 (ThemeVoid 既定は strip なし)。
 themeMapSized :: Double -> VisualSpec
 themeMapSized n =
      theme ThemeVoid
@@ -241,6 +255,7 @@ themeMapSized n =
   <> textColor "#000000" <> titleColor "#000000"
   <> themeTickLength 0
   <> themePlotBg False   -- ★ A18: cowplot は rect fill NA = 背景透過
+  <> stripFill "#cccccc" -- ★ A19: theme_map は strip.background grey80 を残す
 
 -- | cowplot @theme_map()@ 相当 (= 既定 font_size 14)。
 themeMap :: VisualSpec
