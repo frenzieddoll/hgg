@@ -289,6 +289,7 @@ module Graphics.Hgg.Spec
   , themePlotMargin                                             -- ★ Phase 63 A5
   , themeBaseFontSize                                           -- ★ Phase 63 A12
   , themeCowplot, themeMinimalGrid, themeMap                    -- ★ Phase 63 A8
+  , themeCowplotSized, themeMinimalGridSized, themeMapSized     -- ★ Phase 63 A14
   , panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont, themeAxisTextAngle
   , themeAxisTextAngleX, themeAxisTextAngleY, axisTextAngleXOf, axisTextAngleYOf

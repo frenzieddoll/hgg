@@ -22,6 +22,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       tickOutwardLen, effectivePlotMargin,
                                       effectiveBaseFontSize, effectiveHalfLine,
                                       effectiveAxTextMar,
+                                      effectiveSubtitleSize, effectiveCaptionSize,
+                                      effectiveTagSize,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
@@ -707,9 +709,11 @@ labels layout spec pal =
       --   小フォント・右寄せ) / tag (左上隅・やや大・左寄せ太字)。 Layout の margin 予約
       --   ('hasSubtitle'/'hasCaption'/'hasTag') と座標を揃える。
       --   ★ subtitle の水平揃えは plot.title と同じ ('tpTitleHjust'): theme_grey は左寄せ。
-      subSize  = 11 :: Double
-      capSize  =  9 :: Double
-      tagSize  = 13 :: Double
+      --   ★ Phase 63 A14: 固定 11/9/13 を base 派生 (×1 / ×0.8 / ×1.2 = ggplot
+      --   theme_grey 倍率) へ。 Layout の labs 予約と単一情報源。
+      subSize  = effectiveSubtitleSize spec
+      capSize  = effectiveCaptionSize spec
+      tagSize  = effectiveTagSize spec
       tsSub = (mkFontTS (Just spec) pal AxisLabelF AnchorMiddle 0) { tsSize = subSize }
       tsCap = (mkFontTS (Just spec) pal AxisLabelF AnchorEnd    0) { tsSize = capSize }
       tsTag = (mkFontTS (Just spec) pal TitleF     AnchorStart  0) { tsSize = tagSize, tsWeight = "bold" }

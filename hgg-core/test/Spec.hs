@@ -2842,7 +2842,11 @@ main = hspec $ do
       effectivePlotMargin themeMap `shouldBe` Margin 7 7 7 7
     it "後置 setter が preset を上書き (preset は普通の VisualSpec 値)" $ do
       effectiveTickLength (themeCowplot <> themeTickLength 5) `shouldBe` 5
-      effectiveTickLength (themeTickLength 5 <> themeCowplot) `shouldBe` 3.5
+      -- ★ A14: preset は tick 長を明示しない (base 派生に任せる) ため、 先置きの
+      --   明示 setter は preset を通っても生き残る (A8 当時は preset 明示 3.5 が勝った)。
+      effectiveTickLength (themeTickLength 5 <> themeCowplot) `shouldBe` 5
+      -- base font size は preset が明示するので後置 preset が勝つ (Last)。
+      effectiveBaseFontSize (themeBaseFontSize 12 <> themeCowplot) `shouldBe` 14
     it "JSON roundtrip (既存 field のみ = 新規 field 追加なし)" $
       eitherDecode (encode (p1 <> themeCowplot))
         `shouldBe` Right (p1 <> themeCowplot)
@@ -2905,6 +2909,47 @@ main = hspec $ do
                        <> themeTickFont (fontSize 8.8)
       (rX (areaOf (fixFonts <> themeBaseFontSize 22)) > rX (areaOf fixFonts))
         `shouldBe` True
+
+  describe "Phase 63 A14: themeCowplotSized (base_size 引数) + labs の base 派生" $ do
+    let p1 = layer (scatter (inline [1.0, 2.0 :: Double]) (inline [1.0, 2.0 :: Double]))
+        tp = Data.Text.pack
+        slotSizeOf sl spec = effectiveFontSize mempty (sl (vsThemeOverride spec)) 0
+        base70 = p1 <> title (tp "T") <> subtitle (tp "sub")
+                    <> caption (tp "cap") <> tag (tp "G")
+        primsOf70 extra = renderToPrimitives emptyResolver
+                            (computeLayout emptyResolver (base70 <> extra)) (base70 <> extra)
+        sizeOf70 extra t = [ tsSize ts | PText _ t' ts <- primsOf70 extra, t' == tp t ]
+    it "themeCowplot = themeCowplotSized 14 (minimal-grid/map も同形)" $ do
+      themeCowplot     `shouldBe` themeCowplotSized 14
+      themeMinimalGrid `shouldBe` themeMinimalGridSized 14
+      themeMap         `shouldBe` themeMapSized 14
+    it "themeCowplotSized N: base=N 焼き込みで tick N/4 / margin N/2 が自動連動 (A13)" $ do
+      effectiveBaseFontSize (themeCowplotSized 12) `shouldBe` 12
+      effectiveTickLength   (themeCowplotSized 12) `shouldBe` 3
+      effectivePlotMargin   (themeCowplotSized 12) `shouldBe` Margin 6 6 6 6
+      effectiveTickLength   (themeCowplotSized 14) `shouldBe` 3.5
+      effectivePlotMargin   (themeCowplotSized 14) `shouldBe` Margin 7 7 7 7
+      -- minimal-grid/map は tick 0 を明示 (base 派生させない)
+      effectiveTickLength   (themeMinimalGridSized 12) `shouldBe` 0
+      effectiveTickLength   (themeMapSized 12) `shouldBe` 0
+    it "cowplot 倍率 font (title ×16/14 bold / axis.title ×1 / text ×12/14)" $ do
+      slotSizeOf toTitleFont     (themeCowplotSized 12) `shouldBe` 12 * 16 / 14
+      slotSizeOf toAxisLabelFont (themeCowplotSized 12) `shouldBe` 12
+      slotSizeOf toTickFont      (themeCowplotSized 12) `shouldBe` 12 * 12 / 14
+      slotSizeOf toLegendFont    (themeCowplotSized 12) `shouldBe` 12 * 12 / 14
+      (getLast (toTitleFont (vsThemeOverride (themeCowplotSized 12)))
+         >>= getLast . fsWeight) `shouldBe` Just (tp "bold")
+    it "labs size = base 派生 (subtitle ×1 / caption ×0.8 / tag ×1.2 = ggplot 倍率)" $ do
+      effectiveSubtitleSize mempty `shouldBe` 11
+      effectiveCaptionSize  mempty `shouldBe` 0.8 * 11
+      effectiveTagSize      mempty `shouldBe` 1.2 * 11
+      effectiveSubtitleSize (themeBaseFontSize 14) `shouldBe` 14
+      effectiveCaptionSize  (themeBaseFontSize 14) `shouldBe` 0.8 * 14
+      effectiveTagSize      (themeBaseFontSize 14) `shouldBe` 1.2 * 14
+    it "render: subtitle/caption/tag の描画サイズも base 派生 (予約と単一情報源)" $ do
+      sizeOf70 (themeBaseFontSize 14) "sub" `shouldBe` [14.0]
+      sizeOf70 (themeBaseFontSize 14) "cap" `shouldBe` [0.8 * 14]
+      sizeOf70 (themeBaseFontSize 14) "G"   `shouldBe` [1.2 * 14]
 
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外

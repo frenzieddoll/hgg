@@ -70,6 +70,9 @@ module Graphics.Hgg.Layout
   , effectiveLegendBaseSize
   , effectiveLegendKeyW
   , effectiveLegendKeyPitch
+  , effectiveSubtitleSize
+  , effectiveCaptionSize
+  , effectiveTagSize
     -- ★ Phase 9 C: coord_flip 用の座標投影 helper (Render が共有)。
   , projectXY
   , projectRectData
@@ -255,9 +258,11 @@ computeLayout r spec0 =
       hasSubtitle = case getLast (vsSubtitle spec) of Just _ -> True; _ -> False
       hasCaption  = case getLast (vsCaption  spec) of Just _ -> True; _ -> False
       hasTag      = case getLast (vsTag      spec) of Just _ -> True; _ -> False
-      labsSubExtra = if hasSubtitle then 11 + sc * hl else 0
-      labsTagExtra = if hasTag && not (hasTitle || hasSubtitle) then 13 + sc * hl else 0
-      labsCapExtra = if hasCaption then 9 + sc * hl else 0
+      -- ★ Phase 63 A14: labs の font size も base 派生 (旧固定 11/9/13 は base 11 の
+      --   丸め値。 描画 Render.labels と同じ effective* を参照 = 単一情報源)。
+      labsSubExtra = if hasSubtitle then effectiveSubtitleSize spec + sc * hl else 0
+      labsTagExtra = if hasTag && not (hasTitle || hasSubtitle) then effectiveTagSize spec + sc * hl else 0
+      labsCapExtra = if hasCaption then effectiveCaptionSize spec + sc * hl else 0
       -- Phase 8 C (small-viewport text fix): 間隔定数 (halfLine/tickLen/axTextMar/
       -- axTitleMar) は sc 倍するが、 文字サイズ由来の項 (titleSize/tickSize/maxYTickW/
       -- axisLabelSize) は **等倍** (フォントは実寸描画で縮まないため)。 旧実装は全体を
@@ -968,6 +973,20 @@ effectiveLegendKeyW spec = 1.2 * effectiveLegendBaseSize spec * 1.3133
 
 effectiveLegendKeyPitch :: VisualSpec -> Double
 effectiveLegendKeyPitch = effectiveLegendKeyW
+
+-- | Phase 63 A14: 実効 subtitle / caption / tag font size (pt) = base 派生
+-- (ggplot theme_grey の倍率: plot.subtitle ×1 / plot.caption ×0.8 / plot.tag ×1.2)。
+-- 旧固定 11/9/13 は base 11 の丸め値 (caption 8.8→9 / tag 13.2→13) だったのを
+-- ggplot 忠実の派生式へ。 computeLayout (labs 予約) と Render.labels (描画) の
+-- 単一情報源。
+effectiveSubtitleSize :: VisualSpec -> Double
+effectiveSubtitleSize = effectiveBaseFontSize
+
+effectiveCaptionSize :: VisualSpec -> Double
+effectiveCaptionSize spec = 0.8 * effectiveBaseFontSize spec
+
+effectiveTagSize :: VisualSpec -> Double
+effectiveTagSize spec = 1.2 * effectiveBaseFontSize spec
 
 -- | Phase 63 A12: slot の実効 font size (pt)。 解決順は Render.mkFontTS と同一 =
 -- theme override (fsSize) > font setter (fsSize) > 既定 (base 派生)。
