@@ -2951,6 +2951,48 @@ main = hspec $ do
       sizeOf70 (themeBaseFontSize 14) "cap" `shouldBe` [0.8 * 14]
       sizeOf70 (themeBaseFontSize 14) "G"   `shouldBe` [1.2 * 14]
 
+  describe "Phase 63 A15: 軸タイトル = 軸 text 直下 + axis.title margin (最外端 pin 廃止)" $ do
+    let p71 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                            (inline [2.0, 4.0, 1.0 :: Double]))
+                <> xLabel "xt" <> yLabel "yt"
+        layOf71 extra = computeLayout emptyResolver (p71 <> extra)
+        primsOf71 extra = renderToPrimitives emptyResolver (layOf71 extra) (p71 <> extra)
+        textPtOf extra t = head [ p | PText p t' _ <- primsOf71 extra, t' == t ]
+    it "offset = tick 突出 + axis.text margin + tick ラベル帯 + axis.title margin (bM/lM 予約と同一 stack)" $ do
+      let lay = layOf71 mempty
+      -- x 側の tick ラベル帯 = tick font size (非回転 numeric)、 y 側 = 最長ラベル幅 (0.6em/char)
+      lpXTitleOff lay `shouldBe`
+        effectiveTickLength mempty + effectiveAxTextMar mempty + 0.8 * 11 + effectiveAxTitleMar mempty
+      lpYTitleOff lay `shouldBe`
+        effectiveTickLength mempty + effectiveAxTextMar mempty + 0.6 * (0.8 * 11) + effectiveAxTitleMar mempty
+    it "render: 軸タイトルは panel 端 + offset 基準 (boxBottom/boxLeft 最外端 pin 廃止)" $ do
+      let lay = layOf71 mempty
+          a = lpPlotArea lay
+          Point _ xy = textPtOf mempty "xt"
+          Point yx _ = textPtOf mempty "yt"
+      xy `shouldBe` rY a + rH a + lpXTitleOff lay + 0.8 * 11
+      yx `shouldBe` rX a - lpYTitleOff lay - 0.2 * 11
+    it "LegendBottom でも軸タイトルは軸 text 直下 = 凡例より内側 (J5 順序 fix)" $ do
+      let legended = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                    (inline [2.0, 4.0, 1.0 :: Double])
+                              <> colorBy (inlineCat ["a", "b", "c" :: Data.Text.Text]))
+                       <> xLabel "xt" <> themeLegendPos LegendBottom
+          lay = computeLayout emptyResolver legended
+          a = lpPlotArea lay
+          xy = head [ y | PText (Point _ y) t _ <- renderToPrimitives emptyResolver lay legended
+                        , t == "xt" ]
+      -- タイトル glyph 下端 (baseline + descent) が凡例帯 (panel 下端 + 50) より内側
+      (xy + 0.2 * 11 <= rY a + rH a + 50) `shouldBe` True
+      -- panel 相対位置は凡例の有無で不変 (旧 pin は legendH ぶん外へ出ていた = J5)
+      abs (xy - (rY a + rH a) - (lpXTitleOff lay + 0.8 * 11)) `shouldSatisfy` (< 1e-9)
+    it "caption があっても軸タイトルは軸 text 直下 (caption はさらに外側)" $ do
+      let withCap = p71 <> caption "cap"
+          layC = computeLayout emptyResolver withCap
+          aC = lpPlotArea layC
+          xyC = head [ y | PText (Point _ y) t _ <- renderToPrimitives emptyResolver layC withCap
+                         , t == "xt" ]
+      abs (xyC - (rY aC + rH aC) - (lpXTitleOff layC + 0.8 * 11)) `shouldSatisfy` (< 1e-9)
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

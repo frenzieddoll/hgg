@@ -697,13 +697,17 @@ labels layout spec pal =
       titleP = case getLast (vsTitle spec) of
         Just t  -> [ PText (Point titleX titleBaseY) t tsTitle' ]
         Nothing -> []
-      -- x 軸タイトル = 最下要素。 baseline = 下 plot.margin の上 (= boxBottom - margin - descent)。
+      -- ★ Phase 63 A15: 軸タイトルは「軸 text 直下 + axis.title margin」 基準 (= ggplot
+      --   方式)。 offset は Layout の margin 予約と同じ stack (lpXTitleOff/lpYTitleOff =
+      --   単一情報源)。 旧 boxBottom/boxLeft 最外端 pin は LegendBottom/caption 時に
+      --   タイトルが凡例の外側 (最下端) へ出ていた (J2/J5 root)。
+      -- x 軸タイトル: baseline = panel 下端 + offset + ascent。
       xLP = case getLast (vsXLabel spec) of
-        Just t  -> [ PText (Point cx (boxBottom - sc * (marBottom pm + labelSize * 0.2))) t tsLabel ]
+        Just t  -> [ PText (Point cx (rY a + rH a + lpXTitleOff layout + labelSize * 0.8)) t tsLabel ]
         Nothing -> []
-      -- y 軸タイトル = 最左要素 (rot -90)。 x = 左 plot.margin + ascent。
+      -- y 軸タイトル (rot 90 CCW = ascent が -x 側): baseline = panel 左端 - offset - descent。
       yLP = case getLast (vsYLabel spec) of
-        Just t  -> [ PText (Point (boxLeft + sc * (marLeft pm + labelSize * 0.7)) cy) t tsLabelV ]
+        Just t  -> [ PText (Point (rX a - lpYTitleOff layout - labelSize * 0.2) cy) t tsLabelV ]
         Nothing -> []
       -- ★ Phase 11 A5-a: subtitle (title 直下、 小フォント) / caption (図右下・
       --   小フォント・右寄せ) / tag (左上隅・やや大・左寄せ太字)。 Layout の margin 予約

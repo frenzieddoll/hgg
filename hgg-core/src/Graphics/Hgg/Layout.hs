@@ -194,6 +194,14 @@ data Layout = Layout
   , lpMarginTop    :: !Double
   , lpMarginLeft   :: !Double
   , lpMarginBottom :: !Double
+    -- ★ Phase 63 A15: 軸タイトルの配置 offset (panel 端 → axis.title margin 外縁まで =
+    --   tick 突出 + axis.text margin + tick ラベル帯 + axis.title margin)。 描画
+    --   (Render.labels) は panel 端 + この offset を基準に baseline を置く (= ggplot の
+    --   「軸 text 直下 + margin」 方式)。 bM/lM の予約 stack と同じ構成要素 (単一情報源)。
+    --   旧 boxBottom/boxLeft 最外端 pin は LegendBottom/caption 時にタイトルが凡例の
+    --   外側 (最下端) へ出ていた (J2/J5)。
+  , lpXTitleOff :: !Double
+  , lpYTitleOff :: !Double
   } deriving (Show, Eq)
 
 -- | 'VisualSpec' の全 layer から 'Resolver' で encX/encY を解決、 全 layer
@@ -306,6 +314,13 @@ computeLayout r spec0 =
       lM | isContainer = sc * marLeft pm
          | otherwise   = sc * (marLeft pm + tickOut + axTextMar) + maxYTickW
                  + (if hasYLabel then sc * axTitleMar + axisLabelSize else 0)
+      -- ★ Phase 63 A15: 軸タイトルの panel 端からの配置 offset。 bM/lM の予約 stack と
+      --   同じ構成要素で算出 (単一情報源)。 container は軸 stack を持たないので
+      --   axTitleMar のみ。
+      xTitleOff | isContainer = sc * axTitleMar
+                | otherwise   = sc * (tickOut + axTextMar + axTitleMar) + xTickReserve
+      yTitleOff | isContainer = sc * axTitleMar
+                | otherwise   = sc * (tickOut + axTextMar + axTitleMar) + maxYTickW
       -- Phase 9 A-5 (PS Layout と同一): 凡例ぶん plotArea を縮めて図内に収める (ggplot は
       -- legend を gtable の一部として扱い panel を縮める)。 Inside/None は予約しない。
       -- ★ Phase 34: facet 時も右凡例を予約する (旧実装は facet で legendW=0 にして凡例を
@@ -634,6 +649,8 @@ computeLayout r spec0 =
        , lpMarginTop    = tM
        , lpMarginLeft   = lM
        , lpMarginBottom = bM
+       , lpXTitleOff = xTitleOff
+       , lpYTitleOff = yTitleOff
        }
 
 -- | Phase 8 C (ggplot 準拠): margin 縮小係数を撤廃 (常に 1)。 ggplot は文字・余白を
