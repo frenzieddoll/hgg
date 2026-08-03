@@ -26,7 +26,8 @@ import           Graphics.Hgg.Layout (Layout (..), Rect (..), Scale (..),
                                       effectiveLegendKeyW, effectiveLegendKeyPitch,
                                       textWidthEm, legendGuideWidth,
                                       numToText, nubKeep, findColorEnc,
-                                      effectiveLegendTitle, allColorCategories,
+                                      effectiveLegendTitle, legendOrder,
+                                      allColorCategories,
                                       LegendGuide(..), collectGuides)
 import           Graphics.Hgg.Layout.RangeOf (qqPoints, ecdfPoints)  -- Phase 11 A6-2/A6-4
 import           Graphics.Hgg.Layout.Grid    (GridCell (..), GridPlacement (..),
@@ -951,29 +952,19 @@ legendHeaderText _ = ""
 
 -- ★ Phase 38: effectiveLegendTitle / nubKeep は Layout へ集約 (import 済)。
 
--- | Phase 11 A5-c: 凡例キーの表示順。 (originalIndex, label) を返し、 色は originalIndex で
---   引く (= reverse しても各キーの色は固定)。 vsLegendReverse=True で逆順。
-legendOrder :: VisualSpec -> [Text] -> [(Int, Text)]
-legendOrder spec vals =
-  let ix = zip [0 ..] vals
-  in if getLast (vsLegendReverse spec) == Just True then reverse ix else ix
+-- ★ Phase 63 A17: legendOrder は Layout へ移設 (auto-wrap の列幅計算と共有・import 済)。
 
 -- | Phase 11 A5-c: 縦凡例の ncol (>=1)。
 legendNcolOf :: VisualSpec -> Int
 legendNcolOf spec = max 1 (maybe 1 id (getLast (vsLegendNcol spec)))
 
--- | Phase 11 A5-c: 横凡例の nrow (>=1)。
-legendNrowOf :: VisualSpec -> Int
-legendNrowOf spec = max 1 (maybe 1 id (getLast (vsLegendNrow spec)))
+-- ★ Phase 63 A17: legendNrowOf/legendGridH は撤去 (bottom 凡例の列数は Layout の
+--   lpLegendNCol = 予約と同一の単一情報源へ。 grid 位置は nc から直接 (mod/div))。
 
 -- | 縦凡例グリッド: 表示 index k → (col, row)。 列優先 (column-major)、 nrows=ceil(n/ncol)。
 --   ncol=1 なら (0, k) で従来の単一列と一致。
 legendGridV :: Int -> Int -> Int -> (Int, Int)
 legendGridV ncol n k = let nr = (n + ncol - 1) `div` ncol in (k `div` nr, k `mod` nr)
-
--- | 横凡例グリッド: 行優先 (row-major)、 ncols=ceil(n/nrow)。 nrow=1 なら (k, 0)。
-legendGridH :: Int -> Int -> Int -> (Int, Int)
-legendGridH nrow n k = let nc = (n + nrow - 1) `div` nrow in (k `mod` nc, k `div` nc)
 
 -- | i 番目の categorical 色 (palette 長で wrap、 空なら default)。
 legendColorAt :: Layout -> ThemePalette -> Int -> Text
@@ -1277,10 +1268,14 @@ renderLegendRight spec r layout pal centered _enc =
   in go y0 guides
 
 -- | LegendBottom: panel 下の予約域に横並び (= PS renderLegendBottom)。
+-- ★ Phase 63 A17: 実位置 = panel 下端 + lpLegendYOff (Layout の bM 予約 stack と単一情報源
+--   = ticks→labels→title→legend の最外)。 旧 +50 固定は軸タイトルと逆順だった (J5)。
+--   行 pitch も予約と同じ effectiveLegendKeyPitch。 +7 は swatch 上端 (cy-7) を
+--   ブロック上端に一致させる内部 anchor (swatch/text の描画式は従来のまま)。
 renderLegendBottom :: VisualSpec -> Resolver -> Layout -> ThemePalette -> ColorEnc -> [Primitive]
 renderLegendBottom spec r layout pal enc =
   let area = lpPlotArea layout
-      y0 = rY area + rH area + 50
+      y0 = rY area + rH area + lpLegendYOff layout + 7
       tsItem  = mkFontTS (Just spec) pal LegendItemF  AnchorStart 0
       tsTitle = mkFontTS (Just spec) pal LegendTitleF AnchorStart 0
       -- Phase 11 A4-c: タイトル指定時のみ先頭に表示し chip を右へずらす (未指定はゼロ diff)。
@@ -1294,20 +1289,21 @@ renderLegendBottom spec r layout pal enc =
          let vals = allColorCategories r (vsLayers spec)  -- Phase 52.A10: 全レイヤ union
              items = legendOrder spec vals
              n     = length items
-             -- Phase 11 A5-c: nrow グリッド + reverse。 nrow=1・非 reverse で従来同型。
-             nrow  = legendNrowOf spec
-             nc    = max 1 ((n + nrow - 1) `div` nrow)  -- 列数 (legendGridH と同式)
-             rowH  = 16
+             -- ★ Phase 63 A17: 列数は Layout の auto-wrap 結果 (明示 legendNrow も
+             --   Layout 側で解決済 = 予約 legendH と同一の単一情報源)。
+             nc    = max 1 (lpLegendNCol layout)
+             rowH  = effectiveLegendKeyPitch spec
              -- ★ Phase 38: 各アイテムの横送りをラベル内容で算出 (旧 chipW=80 固定 → content-based)。
              --   item 横幅 = swatch→label gap(14) + ラベル幅 + 列間 gap(ggHalfLine)。
-             --   列 (legendGridH の col) ごとに、 その列に入る全行アイテムの最大幅を採る。
+             --   列 (k mod nc) ごとに、 その列に入る全行アイテムの最大幅を採る
+             --   (Layout の legFits 列幅と同式)。
              itemAdv lbl = 14 + tsSize tsItem * textWidthEm lbl + effectiveHalfLine spec
              labelAt k   = snd (items !! k)
              colWidth c  = maximum (0 : [ itemAdv (labelAt k) | k <- [0 .. n - 1], k `mod` nc == c ])
              -- colXs !! c = 第 c 列の左端 x (title 後を起点に列幅を累積)。
              colXs = scanl (+) (rX area + titleW) (map colWidth [0 .. nc - 1])
              chipFor k (origI, label) =
-               let (col, row) = legendGridH nrow n k
+               let (col, row) = (k `mod` nc, k `div` nc)  -- 行優先 (旧 legendGridH と同式)
                    cx = colXs !! col
                    cy = y0 + fromIntegral row * rowH
                in legendSwatch (legendPointLayer spec) (legendUsesPoint spec) (legendShapeFor spec origI) (legendMarkerDiam spec) pal cx (cy - 7) 10 (legendColorFor layout pal origI label)

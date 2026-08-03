@@ -2981,8 +2981,8 @@ main = hspec $ do
           a = lpPlotArea lay
           xy = head [ y | PText (Point _ y) t _ <- renderToPrimitives emptyResolver lay legended
                         , t == "xt" ]
-      -- タイトル glyph 下端 (baseline + descent) が凡例帯 (panel 下端 + 50) より内側
-      (xy + 0.2 * 11 <= rY a + rH a + 50) `shouldBe` True
+      -- タイトル glyph 下端 (baseline + descent) が凡例ブロック上端 (★A17: lpLegendYOff) より内側
+      (xy + 0.2 * 11 <= rY a + rH a + lpLegendYOff lay) `shouldBe` True
       -- panel 相対位置は凡例の有無で不変 (旧 pin は legendH ぶん外へ出ていた = J5)
       abs (xy - (rY a + rH a) - (lpXTitleOff lay + 0.8 * 11)) `shouldSatisfy` (< 1e-9)
     it "caption があっても軸タイトルは軸 text 直下 (caption はさらに外側)" $ do
@@ -3008,6 +3008,47 @@ main = hspec $ do
     it "per-axis 明示が theme より優先 (解決順の単一情報源)" $
       areaOf72 (xAxis (axisRotate 90) <> themeAxisTextAngleX 30)
         `shouldBe` areaOf72 (xAxis (axisRotate 90))
+
+  describe "Phase 63 A17: bottom 凡例の実位置 + wrap (予約と描画の単一情報源)" $ do
+    let cats73 = ["aa", "bb", "cc"] :: [Data.Text.Text]
+        p73 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                             (inline [2.0, 4.0, 1.0 :: Double])
+                       <> colorBy (inlineCat cats73))
+                <> xLabel "xt" <> themeLegendPos LegendBottom
+        lay73 = computeLayout emptyResolver p73
+        pb73 extra = let a = lpPlotArea (computeLayout emptyResolver (p73 <> extra))
+                     in rY a + rH a
+    it "lpLegendYOff = 軸 stack (bM 予約と同一) + 2×half_line (= legend.box.spacing)" $
+      lpLegendYOff lay73 `shouldBe`
+        effectiveTickLength mempty + effectiveAxTextMar mempty + 0.8 * 11
+          + effectiveAxTitleMar mempty + 11 + 2 * effectiveHalfLine mempty
+    it "render: 凡例は panel 下端 + lpLegendYOff 起点 = 軸タイトルの外側 (J5 順序 fix)" $ do
+      let a = lpPlotArea lay73
+          prims = renderToPrimitives emptyResolver lay73 p73
+          titleY = head [ y | PText (Point _ y) t _ <- prims, t == "xt" ]
+          legYs  = [ y | PText (Point _ y) t _ <- prims, t `elem` cats73 ]
+      length legYs `shouldBe` 3
+      -- chip text baseline = block 上端 (+7 anchor) + 2 (renderLegendBottom と同式)
+      all (\y -> abs (y - (rY a + rH a + lpLegendYOff lay73 + 9)) < 1e-9) legYs
+        `shouldBe` True
+      -- 凡例 text 上端がタイトル glyph 下端より外側 (ticks→labels→title→legend)
+      all (\y -> y - 0.8 * (0.8 * 11) >= titleY + 0.2 * 11) legYs `shouldBe` True
+    it "auto-wrap: panel 幅に収まらないラベル群は複数行 (行数 = ceil(n/lpLegendNCol))" $ do
+      let longCats = [ Data.Text.pack ("categorylabel-" <> show i) | i <- [1 .. 8 :: Int] ]
+          pW = layer (scatter (inline [1.0 .. 8.0 :: Double])
+                              (inline [1.0 .. 8.0 :: Double])
+                        <> colorBy (inlineCat longCats))
+                 <> themeLegendPos LegendBottom
+          layW = computeLayout emptyResolver pW
+          ys = Data.List.nub [ y | PText (Point _ y) t _
+                                     <- renderToPrimitives emptyResolver layW pW
+                                 , t `elem` longCats ]
+      (lpLegendNCol layW < 8) `shouldBe` True
+      length ys `shouldBe` (8 + lpLegendNCol layW - 1) `div` lpLegendNCol layW
+    it "明示 legendNrow は auto-wrap より優先 (nc = ceil(n/nrow) の従来コース)" $
+      lpLegendNCol (computeLayout emptyResolver (p73 <> legendNrow 3)) `shouldBe` 1
+    it "legendH 予約が行数連動 (nrow=2 は nrow=1 より panel 下端が上がる)" $
+      (pb73 (legendNrow 2) < pb73 (legendNrow 1)) `shouldBe` True
 
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外

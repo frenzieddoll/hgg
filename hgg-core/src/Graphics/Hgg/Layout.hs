@@ -44,6 +44,7 @@ module Graphics.Hgg.Layout
   , nubKeep
   , findColorEnc
   , effectiveLegendTitle
+  , legendOrder
   , allColorCategories
   , LegendGuide(..)
   , collectGuides
@@ -203,6 +204,13 @@ data Layout = Layout
     --   外側 (最下端) へ出ていた (J2/J5)。
   , lpXTitleOff :: !Double
   , lpYTitleOff :: !Double
+    -- ★ Phase 63 A17: bottom 凡例の配置 (予約 bM と描画 renderLegendBottom の単一情報源)。
+    --   lpLegendYOff = panel 下端 → 凡例ブロック上端 (= bM の軸 stack と同一構成 +
+    --   legend gap 2×half_line = ggplot legend.box.spacing)。 lpLegendNCol = 実効列数
+    --   (明示 legendNrow 優先、 未指定は panel 幅に収まる最大列数へ auto-wrap)。
+    --   旧 render は panel 下端 + 50 固定で軸タイトルと逆順 + 幅超過で右見切れ (J5)。
+  , lpLegendYOff :: !Double
+  , lpLegendNCol :: !Int
   } deriving (Show, Eq)
 
 -- | 'VisualSpec' の全 layer から 'Resolver' で encX/encY を解決、 全 layer
@@ -330,9 +338,6 @@ computeLayout r spec0 =
       -- ★ Phase 34: facet 時も右凡例を予約する (旧実装は facet で legendW=0 にして凡例を
       --   完全に落としていた = ggplot は facet でも凡例を出す)。
       legendPos = needsLegend spec (effectiveLegendPos spec)
-      -- Phase 11 A5-c: nrow グリッドぶん予約を拡げる (default 1 で従来同一 = ゼロ diff)。
-      --   ★ Phase 38: 右凡例は縦スタック (renderGuideBlock 単列) なので legNcol 予約は廃止。
-      legNrow = max 1 (maybe 1 id (getLast (vsLegendNrow spec)))
       -- ★ Phase 38: 右凡例幅を「最長ラベル」で算出 (固定 80/+70列 を撤去)。 renderGuideBlock の
       --   描画式に一致する 'legendGuideWidth' を全 guide に適用し、 縦スタックゆえ最大幅を予約。
       --   gap (panel→凡例 = 2*half_line) は renderLegendRight の x0 オフセットと一致。
@@ -374,7 +379,35 @@ computeLayout r spec0 =
       -- Phase 32 (re-apply): LegendRightCenter も右域に同じ幅を予約 (縦位置のみ違う)。
       legendW = if legendPos == LegendRight || legendPos == LegendRightCenter
                   then 2 * hl + legendGuidesW else 0
-      legendH = if legendPos == LegendBottom then 50 + fromIntegral (legNrow - 1) * 16 else 0
+      -- ★ Phase 63 A17: bottom 凡例の実寸予約 (旧 50 + (nrow-1)*16 固定を撤去 = J5)。
+      --   gap = 2×half_line (ggplot legend.box.spacing)、 行 pitch = effectiveLegendKeyPitch。
+      --   列数 = 明示 legendNrow 優先、 未指定は panel 幅 (availW) に収まる最大列数
+      --   (item/title 幅は renderLegendBottom の itemAdv/titleW と同式 = 予約と描画の
+      --   単一情報源)。 availW は lM/rM のみ依存で legendH と循環しない。
+      legendGapB = 2 * hl
+      legRowH    = effectiveLegendKeyPitch spec
+      legLabels  = map snd (legendOrder spec (allColorCategories r (vsLayers spec)))
+      nLeg       = length legLabels
+      legItemAdv lbl = 14 + legItemF * textWidthEm lbl + hl
+      legTitleWB = let t = effectiveLegendTitle spec
+                   in if t == "" then 0 else legTitleF * textWidthEm t + 12
+      legFits nc = let colW c = maximum (0 : [ legItemAdv (legLabels !! k)
+                                             | k <- [0 .. nLeg - 1], k `mod` nc == c ])
+                   in legTitleWB + sum (map colW [0 .. nc - 1]) <= availW
+      legNCol
+        | nLeg == 0 = 1
+        | otherwise = case getLast (vsLegendNrow spec) of
+            Just nr -> max 1 ((nLeg + max 1 nr - 1) `div` max 1 nr)
+            Nothing -> head ([ nc | nc <- [nLeg, nLeg - 1 .. 2], legFits nc ] ++ [1])
+      legNRowB = max 1 ((max 1 nLeg + legNCol - 1) `div` legNCol)
+      legendH = if legendPos == LegendBottom
+                  then legendGapB + fromIntegral legNRowB * legRowH else 0
+      -- panel 下端 → 凡例ブロック上端 = bM の軸 stack (legendH/labsCapExtra を除く
+      -- 内側部分) + gap。 caption は凡例のさらに外側 (bM の積み順と同じ)。
+      legendYOff | isContainer = legendGapB
+                 | otherwise   = sc * (tickOut + axTextMar) + xTickReserve
+                       + (if hasXLabel then sc * axTitleMar + axisLabelSize else 0)
+                       + legendGapB
       rM = sc * marRight pm + rightAxisW + legendW
       -- Phase 8 A2 Step2 (design §A-4): パネル本体は可用域 (margin を除いた残り) を取る。
       -- aspect 未指定 (Nothing) = ggplot Coord$aspect=NULL と同じく可用域を埋める。
@@ -655,6 +688,8 @@ computeLayout r spec0 =
        , lpMarginBottom = bM
        , lpXTitleOff = xTitleOff
        , lpYTitleOff = yTitleOff
+       , lpLegendYOff = legendYOff
+       , lpLegendNCol = legNCol
        }
 
 -- | Phase 8 C (ggplot 準拠): margin 縮小係数を撤廃 (常に 1)。 ggplot は文字・余白を
@@ -844,6 +879,15 @@ findColorEnc ls = case [ ce | l <- ls
 -- | 明示凡例タイトル (vsLegendTitle = scale name / labs(color=))。 未指定なら ""。
 effectiveLegendTitle :: VisualSpec -> Text
 effectiveLegendTitle spec = maybe "" id (getLast (vsLegendTitle spec))
+
+-- | Phase 11 A5-c: 凡例キーの表示順。 (originalIndex, label) を返し、 色は originalIndex で
+--   引く (= reverse しても各キーの色は固定)。 vsLegendReverse=True で逆順。
+--   ★ Phase 63 A17: Render/Layer から移設 (auto-wrap の列幅計算が表示順に依存するため
+--   予約 computeLayout と描画で共有 = 単一情報源)。
+legendOrder :: VisualSpec -> [Text] -> [(Int, Text)]
+legendOrder spec vals =
+  let ix = zip [0 ..] vals
+  in if getLast (vsLegendReverse spec) == Just True then reverse ix else ix
 
 -- | 全 ColorByCol レイヤのカテゴリを順序保存で union (= 凡例 swatch / glyph 色の正本)。
 --   明示 'colorCats' があればそれを先頭に、 無ければデータ水準を 'orderedCats' 順で。
