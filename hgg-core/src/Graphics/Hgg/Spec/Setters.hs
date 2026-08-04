@@ -29,6 +29,7 @@ module Graphics.Hgg.Spec.Setters
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont
+  , themeFontFamily
   , themeAxisTextAngle, themeAxisTextAngleX, themeAxisTextAngleY
   , axisTextAngleXOf, axisTextAngleYOf
     -- * 合成 preset (cowplot 風、 Phase 63 A8)
@@ -319,6 +320,15 @@ themeTickFont f = mempty { vsThemeOverride = mempty { toTickFont = Last (Just f)
 
 themeLegendFont :: FontSpec -> VisualSpec     -- legend.title / legend.text
 themeLegendFont f = mempty { vsThemeOverride = mempty { toLegendFont = Last (Just f) } }
+
+-- | ★ Phase 63 A20.5: 全 text slot 共通の font family (ggplot
+-- theme(text = element_text(family=...)) 相当)。 slot 別 FontSpec の
+-- 'Graphics.Hgg.Spec.fontFamily' 指定があればそちらが優先 ('mkFontTS' 解決)。
+-- slot 丸ごとの 'themeTitleFont' 等と違い preset の fontSize 焼き込みを潰さない。
+-- PNG backend は family 名を正規化してフォントファイルを解決する
+-- (不在なら既定フォント + stderr 警告)。
+themeFontFamily :: Text -> VisualSpec
+themeFontFamily fam = mempty { vsThemeOverride = mempty { toFontFamily = Last (Just fam) } }
 
 -- | axis.text の回転角 (度) を theme から指定。 per-axis 'axisRotate' 未指定時の fallback。
 themeAxisTextAngle :: Double -> VisualSpec

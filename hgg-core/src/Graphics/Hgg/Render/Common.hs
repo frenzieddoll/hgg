@@ -122,12 +122,17 @@ mkFontTS mSpec pal fk anchor rot =
         TitleF     -> tpTitleColor pal
         AxisLabelF -> tpTitleColor pal
         _          -> tpText pal
+      -- ★ Phase 63 A20.5: 全 slot 共通の family fallback (themeFontFamily)。
+      --   優先順位: slot 別 FontSpec の fsFamily > toFontFamily > "sans-serif"
+      defFamily = case mSpec of
+        Nothing   -> "sans-serif"
+        Just spec -> orElse (toFontFamily (vsThemeOverride spec)) "sans-serif"
   in case mFont of
-       Nothing -> TextStyle defColor defSize "sans-serif" anchor rot "normal" False
+       Nothing -> TextStyle defColor defSize defFamily anchor rot "normal" False
        Just fs -> TextStyle
          { tsColor  = orElse (Graphics.Hgg.Spec.fsColor  fs) defColor
          , tsSize   = orElse (Graphics.Hgg.Spec.fsSize   fs) defSize
-         , tsFamily = orElse (Graphics.Hgg.Spec.fsFamily fs) "sans-serif"
+         , tsFamily = orElse (Graphics.Hgg.Spec.fsFamily fs) defFamily
          , tsAnchor = anchor
          , tsRotate = rot
          , tsWeight = orElse (Graphics.Hgg.Spec.fsWeight fs) "normal"

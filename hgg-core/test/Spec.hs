@@ -3181,6 +3181,35 @@ main = hspec $ do
     it "ThemeGrey の bottom 凡例はキー数ぶんの grey95 (theme 口は生きる)" $
       greyKeys (theme ThemeGrey <> themeLegendPos LegendBottom) `shouldBe` 2
 
+  describe "Phase 63 A20.5: themeFontFamily (全 text slot 共通の family fallback)" $ do
+    let base205 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                 (inline [2.0, 4.0, 1.0 :: Double])
+                         <> colorBy (inlineCat (["a", "b", "a"] :: [Data.Text.Text])))
+                    <> title "t" <> xLabel "x" <> yLabel "y"
+        famsOf extra =
+          nubKeepT [ tsFamily ts
+                   | PText _ _ ts <- renderToPrimitives emptyResolver
+                       (computeLayout emptyResolver (base205 <> extra))
+                       (base205 <> extra) ]
+        nubKeepT = foldr (\x acc -> if x `elem` acc then acc else x : acc) []
+    it "themeFontFamily が全 text slot (title/axis/tick/legend) へ波及する" $
+      famsOf (themeFontFamily "DejaVu Sans") `shouldBe` ["DejaVu Sans"]
+    it "slot 別 FontSpec の family が themeFontFamily より優先" $ do
+      let fams = famsOf (themeFontFamily "A" <> themeTickFont (fontFamily "B"))
+      ("A" `elem` fams, "B" `elem` fams) `shouldBe` (True, True)
+    it "preset の fontSize 焼き込みを潰さない (cowplotSized 12 の text size 不変)" $
+      let sizesOf extra =
+            [ (tsSize ts, tsFamily ts)
+            | PText _ _ ts <- renderToPrimitives emptyResolver
+                (computeLayout emptyResolver (base205 <> extra))
+                (base205 <> extra) ]
+          withFam    = sizesOf (themeCowplotSized 12 <> themeFontFamily "X")
+          withoutFam = sizesOf (themeCowplotSized 12)
+      in map fst withFam `shouldBe` map fst withoutFam
+    it "JSON roundtrip (toFontFamily field)" $
+      eitherDecode (encode (base205 <> themeFontFamily "DejaVu Sans"))
+        `shouldBe` Right (base205 <> themeFontFamily "DejaVu Sans")
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

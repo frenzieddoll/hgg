@@ -6,6 +6,7 @@ module Main (main) where
 
 import           Graphics.Hgg.Backend.Rasterific (PNGConfig (..), PNGFonts (..),
                                                   defaultPNGConfig, loadPNGFonts,
+                                                  loadPNGFontsFor, normFamily,
                                                   savePNG, savePNGConfigured)
 import           Graphics.Hgg.Easy
 import           Graphics.Hgg.Layout             (computeLayout)
@@ -15,7 +16,8 @@ import           Codec.Picture                   (Image (..), PixelRGBA8,
                                                   convertRGBA8, decodePng)
 import qualified Data.ByteString                 as BS
 import qualified Graphics.Text.TrueType          as F
-import           System.Directory                (getTemporaryDirectory,
+import           System.Directory                (doesFileExist,
+                                                  getTemporaryDirectory,
                                                   removeFile)
 import           System.FilePath                 ((</>))
 import           Test.Hspec
@@ -121,3 +123,28 @@ main = hspec $ do
       img2 <- save 2.0 "hgg-png-test-2x.png"
       imageWidth img2  `shouldBe` 2 * imageWidth img1
       imageHeight img2 `shouldBe` 2 * imageHeight img1
+
+  describe "Phase 63 A20.5: fontFamily の PNG 配線" $ do
+    it "normFamily: 小文字化 + 空白/ハイフン除去" $ do
+      normFamily "DejaVu Sans" `shouldBe` "dejavusans"
+      normFamily "sans-serif" `shouldBe` "sansserif"
+      normFamily "HackGen" `shouldBe` "hackgen"
+    it "未解決 family は警告 + 既定束 fallback (pfFamilies 非収載)" $ do
+      fonts <- loadPNGFontsFor defaultPNGConfig ["NoSuchFontFamily12345"]
+      map fst (pfFamilies fonts) `shouldBe` []
+    it "pngFontPath 明示時は family 解決を行わない (全 text 一括最優先)" $ do
+      let p = "/usr/share/fonts/TTF/DejaVuSans.ttf"
+      ok <- doesFileExist p
+      if not ok
+        then pendingWith "DejaVuSans.ttf が無い環境のため skip"
+        else do
+          fonts <- loadPNGFontsFor defaultPNGConfig { pngFontPath = Just p }
+                     ["HackGen"]
+          map fst (pfFamilies fonts) `shouldBe` []
+    it "存在する family は収載され glyph が引ける" $ do
+      ok <- doesFileExist "/usr/share/fonts/TTF/DejaVuSans.ttf"
+      if not ok
+        then pendingWith "DejaVuSans.ttf が無い環境のため skip"
+        else do
+          fonts <- loadPNGFontsFor defaultPNGConfig ["DejaVu Sans"]
+          map fst (pfFamilies fonts) `shouldBe` ["dejavusans"]

@@ -293,6 +293,7 @@ module Graphics.Hgg.Spec
   , themePlotBg                                                 -- ★ Phase 63 A18
   , themeAxisText, themeAxisTitle                                -- ★ Phase 63 A19
   , themeLegendKeySize                                           -- ★ Phase 63 A19.5
+  , themeFontFamily                                              -- ★ Phase 63 A20.5
   , panelFill, panelBorder, themeAxisLine, gridColor, plotBg, axisColor, textColor
   , themeTitleFont, themeAxisLabelFont, themeTickFont, themeLegendFont, themeAxisTextAngle
   , themeAxisTextAngleX, themeAxisTextAngleY, axisTextAngleXOf, axisTextAngleYOf

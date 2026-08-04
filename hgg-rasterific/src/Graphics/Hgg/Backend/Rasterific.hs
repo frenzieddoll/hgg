@@ -30,6 +30,8 @@ module Graphics.Hgg.Backend.Rasterific
     -- * フォント解決 (診断 / テスト用)
   , PNGFonts (..)
   , loadPNGFonts
+  , loadPNGFontsFor
+  , normFamily
   ) where
 
 import           Graphics.Hgg.Frame        (BoundPlot (..))
@@ -50,7 +52,7 @@ import           Graphics.Hgg.Validate     (Severity (..), diagnosticSeverity,
                                             reportFacetInlineWarnings)
 import           Codec.Picture             (PixelRGBA8 (..), writePng)
 import           Data.Char                 (digitToInt, isHexDigit, toLower)
-import           Data.List                 (intercalate)
+import           Data.List                 (intercalate, nub)
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 import qualified Graphics.Rasterific       as R
@@ -143,7 +145,8 @@ savePrimitivesPNGBg bg cfg path w h prims = do
   let s  = max 1e-3 (pngScale cfg)
       wI = max 1 (ceiling (fromIntegral w * s)) :: Int
       hI = max 1 (ceiling (fromIntegral h * s)) :: Int
-  fonts <- loadPNGFonts cfg
+  -- ★ Phase 63 A20.5: 使用 family を先に収集して束を解決 (fontFamily の PNG 配線)
+  fonts <- loadPNGFontsFor cfg [ tsFamily ts | PText _ _ ts <- prims ]
   let img = R.renderDrawing wI hI bg $
               R.withTransformation (RTr.scale (f s) (f s)) $
                 drawPrims fonts prims
@@ -153,11 +156,15 @@ savePrimitivesPNGBg bg cfg path w h prims = do
 -- フォント探索 (fontconfig 非依存・決定的)
 -- ===========================================================================
 
--- | 解釈器に渡すフォント束。 v1 は family 非区別 (regular/bold の 2 face のみ。
--- 日本語 .ttf で serif/italic が揃う環境は稀のため。 計画 md の設計判断)。
+-- | 解釈器に渡すフォント束。 既定 (sans-serif) は regular/bold の 2 face、
+-- ★ Phase 63 A20.5: spec の 'fontFamily' 指定分は 'pfFamilies'
+-- (正規化 family 名 → face 対) で解決する。 italic は引き続き regular 代替
+-- (日本語 .ttf で italic が揃う環境は稀のため。 計画 md の設計判断)。
 data PNGFonts = PNGFonts
-  { pfRegular :: F.Font
-  , pfBold    :: F.Font
+  { pfRegular  :: F.Font
+  , pfBold     :: F.Font
+  , pfFamilies :: [(String, (F.Font, F.Font))]
+    -- ^ 'normFamily' 済 family 名 → (regular, bold)。 未収載 family は既定束へ fallback
   }
 
 -- | 候補ディレクトリ (存在するものだけ走査・/usr/share/fonts は再帰)。
@@ -195,9 +202,37 @@ boldCandidates =
   , "dejavusans-bold.ttf"
   ]
 
--- | フォント load。 明示 path → 候補探索 → loud エラー。
+-- | generic family "serif" / "monospace" の候補 (regular, bold の対)。
+serifCandidates, serifBoldCandidates, monoCandidates, monoBoldCandidates :: [String]
+serifCandidates =
+  [ "notoserifcjkjp-regular.ttf", "notoserifjp-regular.ttf"
+  , "ipamp.ttf", "ipam.ttf", "takaopmincho.ttf", "takaomincho.ttf"
+  , "dejavuserif.ttf"
+  ]
+serifBoldCandidates =
+  [ "notoserifcjkjp-bold.ttf", "notoserifjp-bold.ttf", "dejavuserif-bold.ttf" ]
+monoCandidates =
+  [ "hackgen-regular.ttf", "dejavusansmono.ttf", "hack-regular.ttf" ]
+monoBoldCandidates =
+  [ "hackgen-bold.ttf", "dejavusansmono-bold.ttf", "hack-bold.ttf" ]
+
+-- | family 名の正規化 (小文字化 + 空白/ハイフン除去)。 索引はファイル名の小文字
+-- 完全一致なので "DejaVu Sans" → "dejavusans" → dejavusans.ttf のように引ける。
+normFamily :: Text -> String
+normFamily = filter (\c -> c /= ' ' && c /= '-') . map toLower . T.unpack
+
+-- | フォント load (family 追加解決なし = 従来互換)。
 loadPNGFonts :: PNGConfig -> IO PNGFonts
-loadPNGFonts cfg = do
+loadPNGFonts cfg = loadPNGFontsFor cfg []
+
+-- | ★ Phase 63 A20.5: 既定束 + 使用 family 束を load。
+-- 'pngFontPath' 明示時は従来どおり**全 text 一括で最優先** (family 解決は行わない)。
+-- 解決規則 (fontconfig 非依存を維持):
+--   sans-serif/"" → 既定束 / serif・monospace → 専用候補リスト /
+--   その他 → 正規化名で @<名>.ttf@ → @<名>-regular.ttf@ (+ @-bold@)。
+-- 見つからない family は stderr 警告 + 既定束 fallback (loud エラーにはしない)。
+loadPNGFontsFor :: PNGConfig -> [Text] -> IO PNGFonts
+loadPNGFontsFor cfg families = do
   index <- ttfIndex
   reg <- resolveFont index "regular" (pngFontPath cfg) regularCandidates
   bold <- case pngFontPathBold cfg of
@@ -205,8 +240,33 @@ loadPNGFonts cfg = do
     Nothing -> case lookupCandidates index boldCandidates of
       Just p  -> loadOrDie p
       Nothing -> pure reg          -- bold 不在は regular で代替 (v1 制約)
-  pure (PNGFonts reg bold)
+  fams <- if pngFontPath cfg /= Nothing
+            then pure []           -- 明示 path = 全 text 一括 (従来どおり)
+            else fmap concat . mapM (resolveFamily index)
+                   . nub . filter (`notElem` ["", "sansserif"])
+                   . map normFamily $ families
+  pure (PNGFonts reg bold fams)
   where
+    -- 未解決 family の fallback は drawTextPrim 側 (map 未収載 = 既定束)
+    resolveFamily index fam = do
+      let (regCands, boldCands) = case fam of
+            "serif"     -> (serifCandidates, serifBoldCandidates)
+            "monospace" -> (monoCandidates, monoBoldCandidates)
+            "mono"      -> (monoCandidates, monoBoldCandidates)
+            n           -> ([n ++ ".ttf", n ++ "-regular.ttf"], [n ++ "-bold.ttf"])
+      case lookupCandidates index regCands of
+        Nothing -> do
+          hPutStrLn stderr ("hgg-rasterific: fontFamily \"" ++ fam
+                            ++ "\" が見つかりません (候補: "
+                            ++ intercalate ", " regCands
+                            ++ ")。 既定フォントで代替します。")
+          pure []
+        Just p  -> do
+          r <- loadOrDie p
+          b <- case lookupCandidates index boldCands of
+                 Just pb -> loadOrDie pb
+                 Nothing -> pure r     -- family の bold 不在は同 family regular 代替
+          pure [(fam, (r, b))]
     resolveFont index roleName mExplicit candidates = case mExplicit of
       Just p  -> do
         ok <- doesFileExist p
@@ -411,7 +471,8 @@ splitSubpaths = go (R.V2 0 0) []
 -- y 下向き同士なので符号そのまま (PDF と対照的)、 rotate→translate の合成で
 -- (x,y) 周りに回す。 tsSize は px → 'F.pixelSizeInPointAtDpi' で 96 dpi の
 -- point に変換 ('R.renderDrawing' = 96 dpi 固定)。
--- v1 は family 非区別: tsWeight == "bold" のみ分岐、 italic は regular で代替。
+-- ★ Phase 63 A20.5: tsFamily を 'pfFamilies' (正規化名) で解決、 未収載は
+-- 既定束へ fallback。 italic は引き続き regular で代替。
 drawTextPrim :: PNGFonts -> Point -> Text -> TextStyle
              -> R.Drawing PixelRGBA8 ()
 drawTextPrim fonts (Point x y) txt ts =
@@ -425,7 +486,10 @@ drawTextPrim fonts (Point x y) txt ts =
                 <> RTr.rotate (f (negate (tsRotate ts)) * pi / 180))
              (R.printTextAt font sizePt (R.V2 dx 0) str)
   where
-    font   = if tsWeight ts == "bold" then pfBold fonts else pfRegular fonts
+    isBold = tsWeight ts == "bold"
+    font   = case lookup (normFamily (tsFamily ts)) (pfFamilies fonts) of
+               Just (r, b) -> if isBold then b else r
+               Nothing     -> if isBold then pfBold fonts else pfRegular fonts
     sizePt = F.pixelSizeInPointAtDpi (f (max 1 (tsSize ts))) 96
     str    = T.unpack txt
     advW   = F._xMax (F.stringBoundingBox font 96 sizePt str)

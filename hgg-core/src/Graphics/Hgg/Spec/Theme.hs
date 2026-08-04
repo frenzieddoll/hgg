@@ -197,6 +197,11 @@ data ThemeOverride = ThemeOverride
     --   1.1 × font_size を明示上書きする (既定 = 1.2 lines = 1.2 × base × 1.3133)。
     --   凡例幅/高さの margin 予約に波及するため Layout の 'effectiveLegendKeyW' が解決。
   , toLegendKeySize :: !(Last Double)  -- legend.key.size (pt)
+    -- ★ Phase 63 A20.5: 全 text slot 共通の font family fallback (ggplot
+    --   theme(text = element_text(family=...)) 相当)。 優先順位は slot 別 FontSpec の
+    --   fsFamily > これ > "sans-serif" ('mkFontTS' が解決)。 slot 丸ごと置換
+    --   (Last FontSpec) と違い preset の fontSize 焼き込みを潰さない。
+  , toFontFamily    :: !(Last Text)    -- text family (全 slot 共通 fallback)
   } deriving stock (Generic, Show, Eq)
     -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field
