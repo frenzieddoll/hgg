@@ -2052,6 +2052,88 @@ main = hspec $ do
           ps = renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
       in length [() | PPath{} <- ps] `shouldBe` 4
 
+    -- ★ Phase 64 A3: categorical-cross geom 用の投影口 (CrossLoc 系)。
+    -- 直線座標系は「旧 geom 内 px 式と bit 一致」 が契約 (golden 差分ゼロの根拠)。
+    it "projectCrossPoint Cartesian: Point (sx d + off) (sy v) と bit 一致" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+          sx = scaleApply (lpXScale layC)
+          sy = scaleApply (lpYScale layC)
+      in projectCrossPoint CoordCartesian layC (CrossAt 1) 7 0.5
+           `shouldBe` Point (sx 1 + 7) (sy 0.5)
+
+    it "projectCrossPoint Flip: Point (syF v) (sxF d + off) と bit 一致" $
+      let layF = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordFlip)
+          sxF = scaleApply (lpXScaleFlipped layF)
+          syF = scaleApply (lpYScaleFlipped layF)
+      in projectCrossPoint CoordFlip layF (CrossAt 1) 7 0.5
+           `shouldBe` Point (syF 0.5) (sxF 1 + 7)
+
+    it "projectCrossPoint CrossMid Cartesian: cross = plotArea 中央 + off" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+          ar   = lpPlotArea layC
+          sy   = scaleApply (lpYScale layC)
+      in projectCrossPoint CoordCartesian layC CrossMid 3 0.5
+           `shouldBe` Point (rX ar + rW ar / 2 + 3) (sy 0.5)
+
+    it "projectCrossPoint PolarX off=0: projectXY と一致" $
+      projectCrossPoint CoordPolarX lay (CrossAt 1) 0 2
+        `shouldBe` uncurry Point (projectXY CoordPolarX lay 1 2)
+
+    it "projectCrossPoint PolarX の px offset は接線方向 (半径不変・弧長 ≈ off)" $
+      let Point x0 y0 = projectCrossPoint CoordPolarX lay (CrossAt 1) 0 2
+          Point x1 y1 = projectCrossPoint CoordPolarX lay (CrossAt 1) 5 2
+          rOf x y = sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
+          chord   = sqrt ((x1 - x0) ^ (2 :: Int) + (y1 - y0) ^ (2 :: Int))
+      in ( abs (rOf x1 y1 - rOf x0 y0) < 1e-9   -- 半径が変わらない (= 回転)
+         , abs (chord - 5) < 0.1 )              -- 弧長 5px ≈ 弦長
+           `shouldBe` (True, True)
+
+    it "projectCrossPoint PolarY の px offset は radial (半径が off だけ増える)" $
+      let layY = computeLayout emptyResolver
+                   (overlay [points [0, 1, 2, 3] [0, 1, 2, 3]] <> coordPolarY)
+          (cyx, cyy, _) = polarCenter layY
+          rOf (Point x y) = sqrt ((x - cyx) ^ (2 :: Int) + (y - cyy) ^ (2 :: Int))
+          p0 = projectCrossPoint CoordPolarY layY (CrossAt 2) 0 1
+          p1 = projectCrossPoint CoordPolarY layY (CrossAt 2) 5 1
+      in abs (rOf p1 - (rOf p0 + 5)) < 1e-9 `shouldBe` True
+
+    it "projectCrossSpan Cartesian: [off-half, off+half] の 2 点で bit 一致" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+      in projectCrossSpan CoordCartesian layC (CrossAt 1) 2 8 0.45 0.5
+           `shouldBe` [ projectCrossPoint CoordCartesian layC (CrossAt 1) (2 - 8) 0.5
+                      , projectCrossPoint CoordCartesian layC (CrossAt 1) (2 + 8) 0.5 ]
+
+    it "projectCrossSpan polar: data 半幅の弧 (3 点以上・全点同半径)" $
+      let ptsA = projectCrossSpan CoordPolarX lay (CrossAt 1.5) 0 999 1.0 3
+          ds   = [ sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
+                 | Point x y <- ptsA ]
+      in ( length ptsA > 2, maximum ds - minimum ds < 1e-6 )
+           `shouldBe` (True, True)
+
+    it "projectCrossBar Cartesian: 旧 mkRect 式 (cc±halfPx × min/abs) と bit 一致" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+          sx = scaleApply (lpXScale layC)
+          sy = scaleApply (lpYScale layC)
+          cc = sx 1 + 2
+      in projectCrossBar CoordCartesian layC (CrossAt 1) 2 8 0.45 0.2 0.7
+           `shouldBe` BarRect (Rect (cc - 8) (min (sy 0.2) (sy 0.7))
+                                   (2 * 8) (abs (sy 0.7 - sy 0.2)))
+
+    it "projectCrossBar polar: off=0 は projectBar の wedge と一致" $
+      projectCrossBar CoordPolarX lay (CrossAt 1) 0 999 0.45 0 2
+        `shouldBe` projectBar CoordPolarX lay 1 0 2 0.45 0
+
+    it "valueAxisPx: Cartesian = sy / Flip = syF と bit 一致" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+          layF = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordFlip)
+      in ( valueAxisPx CoordCartesian layC 0.3
+             == scaleApply (lpYScale layC) 0.3
+         , valueAxisPx CoordFlip layF 0.3
+             == scaleApply (lpYScaleFlipped layF) 0.3 )
+           `shouldBe` (True, True)
+
   -- =========================================================================
   -- Phase 11 A4-b: linetype aesthetic (固定 + categorical 群分け)
   -- =========================================================================

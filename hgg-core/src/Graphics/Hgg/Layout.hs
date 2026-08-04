@@ -98,6 +98,12 @@ module Graphics.Hgg.Layout
   , BarShape(..)
   , projectBar
   , wedgeSegments
+    -- ★ Phase 64 A3: categorical-cross geom (box/violin/strip/swarm) 用の投影口。
+  , CrossLoc(..)
+  , projectCrossPoint
+  , projectCrossSpan
+  , projectCrossBar
+  , valueAxisPx
   ) where
 
 import           Graphics.Hgg.Layout.RangeOf (collectXY, extentsOrDefault,
@@ -1391,6 +1397,124 @@ projectBar coord l centerD baseD valueD halfWidthD thicknessPx = case coord of
     dfy   = domFrac (lpYScale l)
     spanX = lsDomainHi (lpXScale l) - lsDomainLo (lpXScale l)
     hf    = if spanX == 0 then 0.5 else halfWidthD / spanX
+
+-- | Phase 64 A3: categorical-cross geom (box/violin/strip/swarm) の群中心指定。
+--   'CrossAt' = cross 軸の data 座標 (categorical slot 位置 / dodge sub-slot 中心)、
+--   'CrossMid' = 単一群 (カテゴリ軸なし) の「plotArea 中央」。 CrossMid を px で
+--   なく変種として持つのは、 中央 px 自体が coord (Cartesian=横 / Flip=縦) に
+--   依存するため (= geom 側から case coord of を無くす)。
+data CrossLoc = CrossAt !Double | CrossMid
+  deriving (Show, Eq)
+
+-- | CrossLoc の cross 軸 data 座標 (polar 経路用)。 CrossMid は x domain 中点
+--   (= scale が plotArea を張る前提で plotArea 中央と affine 一致)。
+crossLocD :: Layout -> CrossLoc -> Double
+crossLocD _ (CrossAt d) = d
+crossLocD l CrossMid    = (lsDomainLo (lpXScale l) + lsDomainHi (lpXScale l)) / 2
+
+-- | 極座標で「投影済み点を cross 軸方向へ offPx (px) ずらす」。 PolarX (cross=角度)
+--   は接線方向 = 中心まわりの回転 (弧長 offPx)、 PolarY (cross=半径) は radial。
+--   jitter / beeswarm / violin 幅は視覚 px 量 (点径・重なり回避) なので、 polar でも
+--   data 角度でなく px 弧長で当てるのが正 (半径によらず点間隔が保たれる)。
+--   半径 ≈ 0 は接線方向が定義できないため動かさない。 直線座標系は恒等
+--   (linear 経路は projectCross* が px 加算で処理し、 ここへは来ない)。
+polarNudgePx :: Coord -> Layout -> Double -> Point -> Point
+polarNudgePx coord l offPx p@(Point px py) =
+  let (cx, cy, _) = polarCenter l
+      dx = px - cx
+      dy = py - cy
+      r  = sqrt (dx * dx + dy * dy)
+  in if r < 1e-9 then p else case coord of
+       CoordPolarX ->
+         -- 弧長 offPx = 角度 offPx/r の回転 (polarPoint と同じ時計回りが正)。
+         let dTh = offPx / r
+             c = cos dTh
+             s = sin dTh
+         in Point (cx + dx * c - dy * s) (cy + dx * s + dy * c)
+       CoordPolarY ->
+         let k = (r + offPx) / r
+         in Point (cx + dx * k) (cy + dy * k)
+       _ -> p
+
+-- | Phase 64 A3: 「categorical cross × 連続 value」 geom の点投影。 box の外れ値・
+--   strip の jitter 点・swarm の beeswarm 点・violin outline は全てここを通す。
+--   offPx = cross 軸方向の px offset (nudge / jitter / 幅)。 Cartesian/Flip は
+--   旧 geom 内 px 式と bit 一致: Cartesian = Point (sx cross + offPx) (sy v)、
+--   Flip = Point (syF v) (sxF cross + offPx)。 polar は projectXY 投影後に
+--   'polarNudgePx' で px nudge。
+projectCrossPoint :: Coord -> Layout -> CrossLoc -> Double -> Double -> Point
+projectCrossPoint CoordCartesian l loc offPx v =
+  let base = case loc of
+        CrossAt d -> scaleApply (lpXScale l) d
+        CrossMid  -> let ar = lpPlotArea l in rX ar + rW ar / 2
+  in Point (base + offPx) (scaleApply (lpYScale l) v)
+projectCrossPoint CoordFlip l loc offPx v =
+  let base = case loc of
+        CrossAt d -> scaleApply (lpXScaleFlipped l) d
+        CrossMid  -> let ar = lpPlotArea l in rY ar + rH ar / 2
+  in Point (scaleApply (lpYScaleFlipped l) v) (base + offPx)
+projectCrossPoint coord l loc offPx v =
+  polarNudgePx coord l offPx
+    (uncurry Point (projectXY coord l (crossLocD l loc) v))
+
+-- | Phase 64 A3: value 軸方向の px 座標 (単調)。 beeswarm binning 等「値どうしの
+--   px 間隔」 が要る geom 用。 Cartesian/Flip は旧 sy / flip 式と bit 一致。
+--   polar は PolarX (value=半径) = 半径 px、 PolarY (value=角度) = 外周弧長 px。
+valueAxisPx :: Coord -> Layout -> Double -> Double
+valueAxisPx CoordCartesian l v = scaleApply (lpYScale l) v
+valueAxisPx CoordFlip      l v = scaleApply (lpYScaleFlipped l) v
+valueAxisPx CoordPolarX    l v =
+  let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * maxR
+valueAxisPx CoordPolarY    l v =
+  let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * (2 * pi * maxR)
+
+-- | Phase 64 A3: value 一定で cross 方向へ ±半幅の短線 (box の median / whisker cap)。
+--   直線座標系は px 半幅 halfPx の 2 点 (旧式 bit 一致: [base+offPx-halfPx,
+--   base+offPx+halfPx])、 polar は data 半幅 halfD の弧 ('projectSegment') を
+--   offPx だけ nudge した polyline (点列 ≥ 2)。
+projectCrossSpan :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
+                 -> Double -> [Point]
+projectCrossSpan coord l loc offPx halfPx halfD v
+  | not (isPolar coord) =
+      [ projectCrossPoint coord l loc (offPx - halfPx) v
+      , projectCrossPoint coord l loc (offPx + halfPx) v ]
+  | otherwise =
+      let d = crossLocD l loc
+      in map (polarNudgePx coord l offPx)
+             (projectSegment coord l (d - halfD, v) (d + halfD, v))
+
+-- | Phase 64 A3: box 本体等「cross 中心 ± 半幅 × value 区間」 の投影。 直線座標系は
+--   px 半幅 halfPx の Rect (旧 geom 内 mkRect 式と bit 一致)、 polar は 'projectBar'
+--   と同じ data 半幅 halfD の扇形 (wedge) を offPx だけ nudge。
+projectCrossBar :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
+                -> Double -> Double -> BarShape
+projectCrossBar CoordCartesian l loc offPx halfPx _halfD vLo vHi =
+  let base = case loc of
+        CrossAt d -> scaleApply (lpXScale l) d
+        CrossMid  -> let ar = lpPlotArea l in rX ar + rW ar / 2
+      cc = base + offPx
+      sy = scaleApply (lpYScale l)
+  in BarRect (Rect (cc - halfPx) (min (sy vLo) (sy vHi))
+                   (2 * halfPx) (abs (sy vHi - sy vLo)))
+projectCrossBar CoordFlip l loc offPx halfPx _halfD vLo vHi =
+  let base = case loc of
+        CrossAt d -> scaleApply (lpXScaleFlipped l) d
+        CrossMid  -> let ar = lpPlotArea l in rY ar + rH ar / 2
+      cc  = base + offPx
+      syF = scaleApply (lpYScaleFlipped l)
+  in BarRect (Rect (min (syF vLo) (syF vHi)) (cc - halfPx)
+                   (abs (syF vHi - syF vLo)) (2 * halfPx))
+projectCrossBar coord l loc offPx _halfPx halfD vLo vHi =
+  let d = crossLocD l loc
+      nudgeP = polarNudgePx coord l offPx
+      nudgeSeg seg = case seg of
+        MoveTo p        -> MoveTo (nudgeP p)
+        LineTo p        -> LineTo (nudgeP p)
+        CurveTo a b c   -> CurveTo (nudgeP a) (nudgeP b) (nudgeP c)
+        ClosePath       -> ClosePath
+  in case projectBar coord l d vLo vHi halfD 0 of
+       BarWedge segs | offPx /= 0 -> BarWedge (map nudgeSeg segs)
+       shape                      -> shape
 
 -- | Phase 10 A4-fix: categorical 1 スロットの cross 軸 px 幅 (bar/box 等の厚みに使う)。
 --   Cartesian は x 軸 (sx) の 1 単位、 Flip は category が縦に来るので flipped scale の
