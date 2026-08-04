@@ -10,7 +10,7 @@ description:
   hgg-core's Primitive / customMark API. Add it as a dependency only when
   you need these specialized visualizations (e.g. for random forests or
   hierarchical clustering).
-  .
+
   Currently ships a dendrogram mark (tree diagrams for hierarchical
   clustering), using pre-baked segments for easy cross-backend parity.
 license:            BSD-3-Clause

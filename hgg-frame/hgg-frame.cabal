@@ -6,14 +6,14 @@ synopsis:           DataFrame abstraction (class PlotData) and the df |>> spec b
 description:
   A dataframe-independent abstraction for writing hgg plots as
   "dataframe + column names".
-  .
+
   * 'PlotData' — a typeclass that bridges any dataframe type to a
     'Resolver' (column name to ColData). Zero-dependency instances for
     'Map' and assoc-lists are included, so it works without any dataframe
     library.
   * '(|>>)' — binds a dataframe to a spec, producing a 'BoundPlot'.
     (The Hackage @dataframe@ package already uses @|>@, hence @|>>@.)
-  .
+
   Rendering wrappers (saveSVGBound etc.) live in the backend packages
   (hgg-svg etc.), so this package depends only on hgg-core.
 license:            BSD-3-Clause

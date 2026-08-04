@@ -6,7 +6,7 @@ description:
   半導体ドメイン特化向けに、 DoE (実験計画) 用の
   MainEffects / Interaction / ResponseSurface 等の chart を、 hgg-core
   の汎用 API (= MContour / vsSubplots / 既存 layer) の合成 helper として提供。
-  .
+
   基盤 (MContour / vsSubplots) は hgg-core に置き、 doe package は
   **薄い semantic layer** のみ持つ。 core と独立に OSS 化判断ができるよう
   別 package として切り出している。

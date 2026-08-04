@@ -8,7 +8,7 @@ description:
   VisualSpec ADT, PlotData (Vector-based columns), pure-function layout
   computation, and a Renderer abstraction that emits a list of drawing
   Primitives.
-  .
+
   Dependencies are kept to base / vector / text / containers only;
   backends (SVG / PDF / Rasterific / LaTeX / ...) live in separate
   packages.

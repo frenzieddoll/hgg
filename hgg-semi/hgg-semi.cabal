@@ -8,7 +8,7 @@ description:
   実装する。 backend (SVG / PDF / Rasterific / Canvas) には依存せず、
   hgg-core の backend 非依存 'Primitive' 列を生成するだけ。 出力は
   既存 backend package が consume する (= 半導体特化機能のみを上乗せ)。
-  .
+
   Phase NN「半導体ドメイン特化チャート」 (旧 Phase 26 §F) の実体。
 license:            BSD-3-Clause
 homepage:           https://github.com/frenzieddoll/hgg

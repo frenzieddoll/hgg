@@ -7,7 +7,7 @@ description:
   Renders hanalyze's HBM ModelGraph directly to SVG / PNG / PDF via hgg.
   No graphviz CLI or Mermaid CDN dependency, which makes it suitable for
   embedding in production applications and for offline batch use.
-  .
+
   The existing Mermaid HTML (Hanalyze.Viz.ModelGraph) and Graphviz DOT
   (Hanalyze.Viz.ModelGraphDot) routes in hanalyze remain available;
   choose whichever fits the use case.

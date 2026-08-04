@@ -8,7 +8,7 @@ description:
   CPU-based projection plus the painter's algorithm let the existing hgg
   2D backends (SVG / PDF / Rasterific) render 3D scatter / line /
   wireframe / surface plots as-is.
-  .
+
   No WebGL required — pure Haskell end to end. Interactive 3D (camera
   rotation etc.) in web environments is handled by a separate
   PureScript / WebGL frontend outside this package, connected through the
