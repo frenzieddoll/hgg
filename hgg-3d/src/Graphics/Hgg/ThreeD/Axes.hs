@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Axes
--- Description : 3D 軸 (立方体 wireframe + 3 軸 tick / label)
+-- Description : 3D axes (cube wireframe with tick marks and labels on 3 axes)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

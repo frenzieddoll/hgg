@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Custom.Dendrogram
--- Description : 階層クラスタリングの樹形図 (dendrogram) を custom mark で描く
+-- Description : Draws a hierarchical-clustering dendrogram as a custom mark
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

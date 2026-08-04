@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Quick
--- Description : Easy 層の IO ワンショット保存 (= 1 行で SVG 出力)
+-- Description : IO one-shot save helpers for the Easy layer (SVG output in a single line)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Backend.SVG
--- Description : SVG backend (Resolver 対応版)
+-- Description : SVG backend (with Resolver support)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 {-# LANGUAGE OverloadedStrings #-}

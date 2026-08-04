@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Bar
--- Description : 3D bar (直方体 / stick) + 誤差棒
+-- Description : 3D bar charts (cuboid / stick) with error bars
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

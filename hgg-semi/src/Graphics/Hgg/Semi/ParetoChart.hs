@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Semi.ParetoChart
--- Description : パレート図 (件数バー + 累積% 線、 dual-Y)
+-- Description : Pareto chart (count bars plus cumulative-% line, dual-Y)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

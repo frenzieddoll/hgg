@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Easy
--- Description : 3D 出力経路の薄い wrap (saveSVG3D)
+-- Description : A thin wrapper over the 3D output paths (saveSVG3D)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

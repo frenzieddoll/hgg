@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Spec
--- Description : 3D VisualSpec / Layer + Monoid
+-- Description : 3D VisualSpec / Layer types with a Monoid instance
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

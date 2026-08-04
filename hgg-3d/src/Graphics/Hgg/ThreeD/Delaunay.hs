@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Delaunay
--- Description : 2D Delaunay 三角分割 (trisurf 用)
+-- Description : 2D Delaunay triangulation (for trisurf)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

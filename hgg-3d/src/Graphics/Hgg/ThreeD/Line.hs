@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Line
--- Description : 3D 線 / wireframe
+-- Description : 3D lines and wireframes
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 {-# LANGUAGE DeriveGeneric     #-}

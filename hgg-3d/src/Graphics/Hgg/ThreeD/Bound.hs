@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Bound
--- Description : 3D の df バインド (2D `df |>> spec` の 3D 対応)
+-- Description : 3D dataframe binding (the 3D counterpart of 2D's `df |>> spec`)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

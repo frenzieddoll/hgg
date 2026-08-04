@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Semi.BoxCoxPlot
--- Description : Box-Cox 変換のプロファイル対数尤度プロット (λ vs logLik + 最適 λ)
+-- Description : Box-Cox transform profile log-likelihood plot (λ vs logLik, with optimal λ)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

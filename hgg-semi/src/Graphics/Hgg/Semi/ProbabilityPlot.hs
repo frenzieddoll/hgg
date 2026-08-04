@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Semi.ProbabilityPlot
--- Description : 確率プロット (Normal / LogNormal / Weibull Q-Q + rank-based CI)
+-- Description : Probability plot (Normal / LogNormal / Weibull Q-Q with rank-based CI)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

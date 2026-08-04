@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Semi.ControlChart
--- Description : 統計的工程管理図 (X̄-R / I-MR / CUSUM / EWMA + WE/Nelson ルール)
+-- Description : SPC charts (X̄-R / I-MR / CUSUM / EWMA) with WE/Nelson rules
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

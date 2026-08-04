@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Semi.WaferMap
--- Description : 半導体 wafer map (die grid + bin 色塗り + edge 除外 + reticle + notch + yield/zone)
+-- Description : Semiconductor wafer map (die grid, bin colors, reticle, yield/zone)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Backend.PDF
--- Description : ベクタ PDF backend (HPDF)
+-- Description : Vector PDF backend (HPDF)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

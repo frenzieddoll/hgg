@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Bridge.Stat
--- Description : ggplot 風 stat-in (statLm/statSmooth) の回帰計算を hanalyze に委譲して解決
+-- Description : ggplot-style stat-in (statLm/statSmooth) via hanalyze
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

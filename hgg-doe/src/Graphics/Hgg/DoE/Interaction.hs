@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.DoE.Interaction
--- Description : 2 因子交互作用プロット
+-- Description : Two-factor interaction plot
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

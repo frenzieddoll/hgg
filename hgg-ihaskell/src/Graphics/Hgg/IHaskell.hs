@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.IHaskell
--- Description : iHaskell (Jupyter) inline display 配線
+-- Description : iHaskell (Jupyter) inline display wiring
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

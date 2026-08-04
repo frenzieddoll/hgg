@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.DoE.ResponseSurface
--- Description : 応答曲面プロット
+-- Description : Response surface plot
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

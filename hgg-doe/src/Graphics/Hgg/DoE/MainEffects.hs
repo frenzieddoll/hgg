@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.DoE.MainEffects
--- Description : 主効果プロット
+-- Description : Main effects plot
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

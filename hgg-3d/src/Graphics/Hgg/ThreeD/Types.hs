@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Types
--- Description : 3D の中核型 (Point3 / Vec3 / Mat4 / Camera3D / Projection3D)
+-- Description : Core 3D types (Point3 / Vec3 / Mat4 / Camera3D / Projection3D)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

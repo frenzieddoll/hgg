@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD
--- Description : hgg-3d 公開エントリ (= 主要 API の再エクスポート)
+-- Description : Public entry point of hgg-3d (re-exports the main API)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

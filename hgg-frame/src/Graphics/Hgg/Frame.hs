@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Frame
--- Description : DataFrame 抽象 (class PlotData) ─ 列名で図を書くための df 非依存橋
+-- Description : DataFrame abstraction (class PlotData) — a df-agnostic bridge
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

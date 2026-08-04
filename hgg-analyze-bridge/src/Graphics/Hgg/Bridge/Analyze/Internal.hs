@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Bridge.Analyze.Internal
--- Description : ModelGraph → DAGSpec 変換 (= 公開 API は Bridge.Analyze)
+-- Description : ModelGraph to DAGSpec conversion (public API lives in Bridge.Analyze)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

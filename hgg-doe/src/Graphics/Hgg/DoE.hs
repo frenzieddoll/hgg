@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.DoE
--- Description : DoE (Design of Experiments) chart helpers の集約 re-export
+-- Description : Aggregate re-export of DoE (Design of Experiments) chart helpers
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --

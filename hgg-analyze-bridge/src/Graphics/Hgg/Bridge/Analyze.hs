@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Bridge.Analyze
--- Description : hanalyze ModelGraph → hgg SVG/PNG/PDF 直描画 bridge
+-- Description : Bridge: renders hanalyze's ModelGraph to SVG/PNG/PDF
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
