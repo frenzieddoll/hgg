@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.Backend.SVG
--- Description : SVG backend (Phase 26 §B-1 Resolver 対応版)
+-- Description : SVG backend (Resolver 対応版)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 {-# LANGUAGE OverloadedStrings #-}
@@ -41,7 +41,9 @@ import qualified Data.Text             as T
 import qualified Data.Text.IO          as TIO
 import           System.IO             (hPutStrLn, stderr)
 
--- | 'Resolver' を渡して 'VisualSpec' を SVG text に。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して 'VisualSpec' を SVG text に。 'ColByName' を含む図用。
+--   [English]: Renders a 'VisualSpec' to SVG text given a 'Resolver'. For
+--   figures that include 'ColByName'.
 renderSVGWith :: Resolver -> VisualSpec -> Text
 renderSVGWith r spec =
   let layout     = computeLayout r spec
@@ -60,50 +62,79 @@ renderSVGWith r spec =
         ]
   in T.concat (header : primsToSvg primitives : ["</svg>"])
 
--- | render 'VisualSpec' to SVG text。 Resolver 不要 (= 全 ColRef が inline、
--- 'ColByName' が無い図で使う、 = 通常)。 列名参照を含む図は 'renderSVGWith'。
+-- | [日本語]: render 'VisualSpec' to SVG text。 Resolver 不要 (= 全 ColRef が inline、
+--   'ColByName' が無い図で使う、 = 通常)。 列名参照を含む図は 'renderSVGWith'。
+--   [English]: Renders a 'VisualSpec' to SVG text. No 'Resolver' needed (used
+--   for figures where every 'ColRef' is inline and there is no 'ColByName' —
+--   the usual case). For figures with column-name references, use
+--   'renderSVGWith'.
 renderSVG :: VisualSpec -> Text
 renderSVG = renderSVGWith emptyResolver
 
--- | 'Resolver' を渡して SVG ファイルに保存。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して SVG ファイルに保存。 'ColByName' を含む図用。
+--   [English]: Saves to an SVG file given a 'Resolver'. For figures that
+--   include 'ColByName'.
 saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveSVGWith path r spec = do
-  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  reportFacetInlineWarnings r spec   -- ★ 描画は継続
   TIO.writeFile path (renderSVGWith r spec)
 
--- | SVG ファイルに保存。 Resolver 不要 (= inline 列のみの図、 = 通常)。
--- 列名参照を含む図は 'saveSVGWith'、 DataFrame は 'saveSVGBound' (@df |>> spec@)。
+-- | [日本語]: SVG ファイルに保存。 Resolver 不要 (= inline 列のみの図、 = 通常)。
+--   列名参照を含む図は 'saveSVGWith'、 DataFrame は 'saveSVGBound' (@df |>> spec@)。
+--   [English]: Saves to an SVG file. No 'Resolver' needed (figures with
+--   inline columns only — the usual case). For figures with column-name
+--   references use 'saveSVGWith'; for a DataFrame use 'saveSVGBound'
+--   (@df |>> spec@).
 saveSVG :: FilePath -> VisualSpec -> IO ()
 saveSVG path = saveSVGWith path emptyResolver
 
--- | 'purePlot' (= 純粋値) と対をなす副作用関数。 中身は 'saveSVG' の alias、
--- SVG backend が default。 他 backend (PDF / PNG) を使う場合はそれぞれの
--- module の `plot` を import する。
+-- | [日本語]: 'purePlot' (= 純粋値) と対をなす副作用関数。 中身は 'saveSVG' の alias、
+--   SVG backend が default。 他 backend (PDF / PNG) を使う場合はそれぞれの
+--   module の `plot` を import する。
+--   [English]: The effectful counterpart of 'purePlot' (the pure value).
+--   Internally just an alias of 'saveSVG', with the SVG backend as default.
+--   To use another backend (PDF / PNG), import `plot` from the corresponding
+--   module instead.
 --
 -- > main = plot "out.svg" $ purePlot <> layer (scatter ...) <> title "..."
 plot :: FilePath -> VisualSpec -> IO ()
 plot = saveSVG
 
--- | Phase 14: 'BoundPlot' (= @df |>> spec@ の結果) を SVG text に。
--- 'renderSVGWith' を 'bpResolver' / 'bpSpec' で呼ぶ薄いラッパ。
--- 検証診断 ('bpDiagnostics') は副作用が無いここでは無視する
--- (報告は 'saveSVGBound' / 利用者が 'bpDiagnostics' を直接見る)。
+-- | [日本語]: 'BoundPlot' (= @df |>> spec@ の結果) を SVG text に。
+--   'renderSVGWith' を 'bpResolver' / 'bpSpec' で呼ぶ薄いラッパ。
+--   検証診断 ('bpDiagnostics') は副作用が無いここでは無視する
+--   (報告は 'saveSVGBound' / 利用者が 'bpDiagnostics' を直接見る)。
+--   [English]: Renders a 'BoundPlot' (the result of @df |>> spec@) to SVG
+--   text. A thin wrapper that calls 'renderSVGWith' with 'bpResolver' /
+--   'bpSpec'. The validation diagnostics ('bpDiagnostics') are ignored here
+--   since this function has no side effects (reporting is left to
+--   'saveSVGBound' or to the caller inspecting 'bpDiagnostics' directly).
 renderBound :: BoundPlot -> Text
 renderBound (BoundPlot r spec _) = renderSVGWith r spec
 
--- | Phase 14: 'BoundPlot' を SVG ファイルに保存。
--- 'bpDiagnostics' に Error severity があれば **stderr に報告**してから書き出す
--- (描画自体は止めない = 純値 '(|>>)' の lenient 既定。 無検証で通したい場合は
--- 'unBound' → 'saveSVGWith' を直接使う)。
+-- | [日本語]: 'BoundPlot' を SVG ファイルに保存。
+--   'bpDiagnostics' に Error severity があれば __stderr に報告__してから書き出す
+--   (描画自体は止めない = 純値 '(|>>)' の lenient 既定。 無検証で通したい場合は
+--   'unBound' → 'saveSVGWith' を直接使う)。
+--   [English]: Saves a 'BoundPlot' to an SVG file. If 'bpDiagnostics'
+--   contains an error-severity entry, __reports it to stderr__ before
+--   writing the file (rendering itself is not stopped — the lenient default
+--   of the pure '(|>>)'. To skip validation entirely, use 'unBound' followed
+--   by 'saveSVGWith' directly).
 saveSVGBound :: FilePath -> BoundPlot -> IO ()
 saveSVGBound path bp@(BoundPlot _ spec diags) = do
   reportErrors diags
   warnUnresolvedStats spec
   TIO.writeFile path (renderBound bp)
 
--- | Phase 16 footgun 緩和: spec に未解決 stat layer (@MStatLM@/@MStatSmooth@) が残っていたら
--- stderr に警告 (描画では skip され回帰線が出ない)。 回帰を描くには analyze-bridge の
--- @saveSVGBoundStats@ / @resolveStats@ を使う。 stat を使わない通常図では何もしない。
+-- | [日本語]: footgun 緩和: spec に未解決 stat layer (@MStatLM@/@MStatSmooth@) が残っていたら
+--   stderr に警告 (描画では skip され回帰線が出ない)。 回帰を描くには analyze-bridge の
+--   @saveSVGBoundStats@ / @resolveStats@ を使う。 stat を使わない通常図では何もしない。
+--   [English]: A footgun guard: if the spec still has an unresolved stat
+--   layer (@MStatLM@/@MStatSmooth@), warns on stderr (rendering skips it, so
+--   no regression line is drawn). To draw the regression, use
+--   analyze-bridge's @saveSVGBoundStats@ / @resolveStats@. Does nothing for
+--   ordinary figures that do not use a stat layer.
 warnUnresolvedStats :: VisualSpec -> IO ()
 warnUnresolvedStats spec
   | any isStat (vsLayers spec) =
@@ -117,15 +148,20 @@ warnUnresolvedStats spec
       Just MStatSmooth -> True
       _                -> False
 
--- | Error severity の診断のみ stderr に出す。
+-- | [日本語]: Error severity の診断のみ stderr に出す。
+--   [English]: Emits only the error-severity diagnostics to stderr.
 reportErrors :: [PlotDiagnostic] -> IO ()
 reportErrors diags =
   mapM_ (hPutStrLn stderr . T.unpack . renderDiagnostic)
         (filter ((== SevError) . diagnosticSeverity) diags)
 
--- | Interactive 版: hover tooltip (= 標準 native) に加えて、
--- ドラッグで pan / wheel で zoom できる inline JS を末尾に embed。
--- ブラウザで開いた時だけ動作、 raw SVG viewer では普通に静止画。
+-- | [日本語]: Interactive 版: hover tooltip (= 標準 native) に加えて、
+--   ドラッグで pan / wheel で zoom できる inline JS を末尾に embed。
+--   ブラウザで開いた時だけ動作、 raw SVG viewer では普通に静止画。
+--   [English]: The interactive variant: in addition to the standard native
+--   hover tooltip, embeds inline JS at the end that enables drag-to-pan and
+--   wheel-to-zoom. This only works when opened in a browser; in a raw SVG
+--   viewer it is just a static image.
 renderSVGInteractive :: Resolver -> VisualSpec -> Text
 renderSVGInteractive r spec =
   let base = renderSVGWith r spec
@@ -138,10 +174,16 @@ saveSVGInteractive path r spec = do
   reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3)
   TIO.writeFile path (renderSVGInteractive r spec)
 
--- | Phase 3 A8: '[Primitive]' を直接 SVG にする helper。
--- 'renderSVG' は VisualSpec 経由だが、 hgg-3d のように外部で
--- Primitive 列を生成済の場合に使う。 既存の 'primToSvg' converter をそのまま流用、
--- 出力 SVG 構造 (= header + light bg + title + body) は 'renderSVG' と同形式。
+-- | [日本語]: '[Primitive]' を直接 SVG にする helper。
+--   'renderSVG' は VisualSpec 経由だが、 hgg-3d のように外部で
+--   Primitive 列を生成済の場合に使う。 既存の 'primToSvg' converter をそのまま流用、
+--   出力 SVG 構造 (= header + light bg + title + body) は 'renderSVG' と同形式。
+--   [English]: A helper that turns a '[Primitive]' directly into SVG. While
+--   'renderSVG' goes through a VisualSpec, this is for cases where the
+--   primitives have already been generated externally, as in
+--   hgg-3d. Reuses the existing 'primToSvg' converter as-is, so the
+--   output SVG structure (header + light bg + title + body) matches
+--   'renderSVG'.
 renderPrimitivesSVG :: Int -> Int -> Text -> [Primitive] -> Text
 renderPrimitivesSVG w h titleTxt prims =
   let header = T.concat
@@ -163,12 +205,15 @@ renderPrimitivesSVG w h titleTxt prims =
         , " font-size=\"16\" fill=\"#333\">", titleTxt, "</text>" ]
   in T.concat (header : bg : title_ : primsToSvg prims : ["</svg>"])
 
--- | 'renderPrimitivesSVG' をファイル書出し版。
+-- | [日本語]: 'renderPrimitivesSVG' をファイル書出し版。
+--   [English]: The file-writing variant of 'renderPrimitivesSVG'.
 savePrimitivesSVG :: FilePath -> Int -> Int -> Text -> [Primitive] -> IO ()
 savePrimitivesSVG path w h t prims =
   TIO.writeFile path (renderPrimitivesSVG w h t prims)
 
--- | pan / zoom inline JS。 SVG の viewBox を操作するだけの最小実装。
+-- | [日本語]: pan / zoom inline JS。 SVG の viewBox を操作するだけの最小実装。
+--   [English]: The pan / zoom inline JS. A minimal implementation that only
+--   manipulates the SVG's viewBox.
 panZoomScript :: Text
 panZoomScript = T.concat
   [ "<script type=\"application/ecmascript\"><![CDATA[\n"
@@ -208,9 +253,14 @@ panZoomScript = T.concat
 -- Primitive → SVG element
 -- ---------------------------------------------------------------------------
 
--- | Phase 11 A7-a: clip stack を解決して SVG body に変換。 'PClipPush' で
+-- | [日本語]: clip stack を解決して SVG body に変換。 'PClipPush' で
 --   @\<clipPath\>@ + @\<g clip-path\>@ を開き、 'PClipPop' で @\</g\>@ を閉じる。
 --   clip プリミティブが無い列では @map primToSvg@ と完全同一出力なので既存 SVG ゼロ diff。
+--   [English]: Resolves the clip stack and converts it to SVG body. Opens
+--   @\<clipPath\>@ + @\<g clip-path\>@ at 'PClipPush', and closes @\</g\>@ at
+--   'PClipPop'. For a primitive list with no clip primitives, the output is
+--   byte-identical to @map primToSvg@, so it produces zero diff against
+--   existing SVG output.
 primsToSvg :: [Primitive] -> Text
 primsToSvg = T.concat . go (0 :: Int)
   where
@@ -314,8 +364,11 @@ strokeAttr Nothing                  = " stroke=\"none\""
 strokeAttr (Just (StrokeStyle c w)) =
   T.concat [" stroke=\"", c, "\" stroke-width=\"", numD w, "\""]
 
--- | Phase 11 A4-b: stroke-dasharray 属性。 空配列 (= 実線) は attr を出さない
+-- | [日本語]: stroke-dasharray 属性。 空配列 (= 実線) は attr を出さない
 --   (= 既存 SVG ゼロ diff の要)。 非空のみ \" stroke-dasharray=\\\"a,b,..\\\"\" を付す。
+--   [English]: The stroke-dasharray attribute. An empty array (a solid line)
+--   emits no attribute (needed for zero diff against existing SVG). Only for
+--   a non-empty list does it emit \" stroke-dasharray=\\\"a,b,..\\\"\".
 dashAttr :: [Double] -> Text
 dashAttr [] = ""
 dashAttr ds = T.concat [" stroke-dasharray=\"", T.intercalate "," (map numD ds), "\""]
