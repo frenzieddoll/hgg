@@ -1,19 +1,34 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Axes
--- Description : 3D 軸 (立方体 wireframe + 3 軸 tick / label) (Phase 3 A4)
+-- Description : 3D 軸 (立方体 wireframe + 3 軸 tick / label)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- mplot3d 風の axes: data bounding box (= xMin..zMax) を立方体 wireframe で
--- 囲み、 各軸に等間隔の tick を 1 列描画。 ラベルは tick の少し外側へ。
+-- [日本語]: mplot3d 風の axes: data bounding box (= xMin..zMax) を立方体
+--   wireframe で囲み、 各軸に等間隔の tick を 1 列描画。 ラベルは tick の少し
+--   外側へ。
 --
--- 設計判断:
+--   設計判断:
 --
---   * Phase 3 では「奥側面のみ」 を厳密判定せず、 12 辺全て描画 (= 多少視認性
---     落ちるが mplot3d 流の hairy wireframe より単純)
---   * tick は (xMin..xMax 等) の niceTicks3D で 5 点 default
---   * label: tick 値 + 軸名 (= "x"/"y"/"z")
---   * 出力は '[Primitive]' (= hgg-core の 2D primitive)、 既存 backend で描画
+--     * 「奥側面のみ」 を厳密判定せず、 12 辺全て描画 (= 多少視認性落ちるが
+--       mplot3d 流の hairy wireframe より単純)
+--     * tick は (xMin..xMax 等) の niceTicks3D で 5 点 default
+--     * label: tick 値 + 軸名 (= "x"/"y"/"z")
+--     * 出力は '[Primitive]' (= hgg-core の 2D primitive)、 既存
+--       backend で描画
+-- [English]: mplot3d-style axes: surrounds the data bounding box
+--   (xMin..zMax) with a cube wireframe and draws a row of evenly spaced
+--   ticks on each axis. Labels sit just outside the ticks.
+--
+--   Design decisions:
+--
+--     * Rather than strictly determining "only the back-facing sides", all
+--       12 edges are drawn (slightly less legible, but simpler than
+--       mplot3d's hairy wireframe)
+--     * Ticks default to 5 points via niceTicks3D over (xMin..xMax, etc.)
+--     * Labels: the tick value plus the axis name ("x"/"y"/"z")
+--     * Output is '[Primitive]' (the 2D primitive from hgg-core),
+--       rendered by the existing backends
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Axes
@@ -25,7 +40,7 @@ module Graphics.Hgg.ThreeD.Axes
   , renderAxes3D
   , renderAxes3DWith
   , renderAxes3DWithLabels
-    -- * 壁面 pane + gridline (Phase 25 A6)
+    -- * 壁面 pane + gridline
   , PaneStyle3D (..)
   , defaultPaneStyle3D
   , renderAxes3DPanes
@@ -47,7 +62,8 @@ import           Graphics.Hgg.ThreeD.Projection  (Projected (..), Viewport,
                                                   project3D)
 import           Graphics.Hgg.ThreeD.Types
 
--- | 3D 軸の bounding box + tick 数。
+-- | [日本語]: 3D 軸の bounding box + tick 数。
+--   [English]: The 3D axes' bounding box plus the tick count.
 data Axes3D = Axes3D
   { axesXMin  :: !Double
   , axesXMax  :: !Double
@@ -55,15 +71,20 @@ data Axes3D = Axes3D
   , axesYMax  :: !Double
   , axesZMin  :: !Double
   , axesZMax  :: !Double
-  , axesNTicks :: !Int       -- ^ 軸あたり tick 数 (= default 5)
-  , axesXLog  :: !Bool       -- ^ Phase 25 A8: x 軸を log scale に (既定 False)
-  , axesYLog  :: !Bool       -- ^ Phase 25 A8: y 軸を log scale に (既定 False)
-  , axesZLog  :: !Bool       -- ^ Phase 25 A8: z 軸を log scale に (既定 False)
+  , axesNTicks :: !Int       -- ^ [日本語]: 軸あたり tick 数 (= default 5)
+                              --   [English]: The number of ticks per axis (default 5).
+  , axesXLog  :: !Bool       -- ^ [日本語]: x 軸を log scale に (既定 False)
+                              --   [English]: Whether to use a log scale for the x axis (default False).
+  , axesYLog  :: !Bool       -- ^ [日本語]: y 軸を log scale に (既定 False)
+                              --   [English]: Whether to use a log scale for the y axis (default False).
+  , axesZLog  :: !Bool       -- ^ [日本語]: z 軸を log scale に (既定 False)
+                              --   [English]: Whether to use a log scale for the z axis (default False).
   } deriving (Show, Eq, Generic)
 instance ToJSON   Axes3D
 instance FromJSON Axes3D
 
--- | 単位 cube (= [-1, 1]^3) + tick 5。
+-- | [日本語]: 単位 cube (= [-1, 1]^3) + tick 5。
+--   [English]: The unit cube (@[-1, 1]^3@) with 5 ticks per axis.
 defaultAxes3D :: Axes3D
 defaultAxes3D = Axes3D
   { axesXMin = -1, axesXMax = 1
@@ -73,8 +94,10 @@ defaultAxes3D = Axes3D
   , axesXLog = False, axesYLog = False, axesZLog = False
   }
 
--- | 等間隔 tick 位置を 'n' 個生成。 niceNumbers アルゴリズム ではなく素朴な等間隔
--- (= mplot3d 風)。
+-- | [日本語]: 等間隔 tick 位置を @n@ 個生成。 niceNumbers アルゴリズム ではなく
+--   素朴な等間隔 (= mplot3d 風)。
+--   [English]: Generates @n@ evenly spaced tick positions. Uses plain even
+--   spacing (mplot3d-style) rather than a niceNumbers algorithm.
 niceTicks3D :: Int -> Double -> Double -> [Double]
 niceTicks3D n lo hi
   | n <= 1 || abs (hi - lo) < 1e-12 = [lo]
@@ -82,9 +105,14 @@ niceTicks3D n lo hi
       let step = (hi - lo) / fromIntegral (n - 1)
       in [ lo + step * fromIntegral i | i <- [0 .. n - 1] ]
 
--- | Phase 25 A8: log scale 軸の tick 位置 = @[lo, hi]@ 区間内の 10 の冪
--- (decade)。 端 (lo/hi) も含め、 冪が 1 個以下なら端 2 点で補う。 値は正前提
--- (lo<=0 は 1e-12 に clamp)。 軸ラベルは元の値のまま 'formatNum' で出る。
+-- | [日本語]: log scale 軸の tick 位置 = @[lo, hi]@ 区間内の 10 の冪
+--   (decade)。 端 (lo/hi) も含め、 冪が 1 個以下なら端 2 点で補う。 値は正前提
+--   (lo<=0 は 1e-12 に clamp)。 軸ラベルは元の値のまま 'formatNum' で出る。
+--   [English]: The tick positions for a log-scale axis: powers of 10
+--   (decades) within @[lo, hi]@. Includes the endpoints (lo/hi); if fewer
+--   than two powers fall in range, falls back to the two endpoints. Values
+--   are assumed positive (lo<=0 is clamped to 1e-12). Axis labels still show
+--   the original value via 'formatNum'.
 logTicks3D :: Double -> Double -> [Double]
 logTicks3D lo0 hi0 =
   let lo = max 1e-12 lo0
@@ -99,8 +127,10 @@ logTicks3D lo0 hi0 =
        (_:_:_) -> inRange
        _       -> [lo, hi]   -- 冪が足りなければ端 2 点
 
--- | Phase 25 A8: log フラグで tick 生成を切替える (log = 'logTicks3D'・線形 =
--- 'niceTicks3D')。 両 axes renderer が共有。
+-- | [日本語]: log フラグで tick 生成を切替える (log = 'logTicks3D'・線形 =
+--   'niceTicks3D')。 両 axes renderer が共有。
+--   [English]: Switches tick generation based on the log flag (log uses
+--   'logTicks3D', linear uses 'niceTicks3D'). Shared by both axes renderers.
 axisTicks3D :: Bool -> Int -> Double -> Double -> [Double]
 axisTicks3D isLog n lo hi
   | isLog     = logTicks3D lo hi
@@ -110,18 +140,26 @@ axisTicks3D isLog n lo hi
 -- 描画
 -- ===========================================================================
 
--- | Axes3D を 2D Primitive 列にレンダリング (= cube wireframe + 3 軸 tick + label)。
+-- | [日本語]: Axes3D を 2D Primitive 列にレンダリング (= cube wireframe + 3 軸 tick + label)。
+--   [English]: Renders an 'Axes3D' as a list of 2D primitives (cube
+--   wireframe plus ticks and labels on the 3 axes).
 renderAxes3D :: Camera3D -> Projection3D -> Viewport -> Axes3D -> [Primitive]
 renderAxes3D = renderAxes3DWith id
 
--- | Phase 24 A3: 投影前に座標変換 @f@ を合成する版。 @f@ に正規化
--- (データ bbox → [-1,1]^3) を渡すと、 **tick ラベルは元のデータ値のまま**
--- 形状だけ view box に収まる (saveSVG3D の正規化 pipeline 用)。
+-- | [日本語]: 投影前に座標変換 @f@ を合成する版。 @f@ に正規化
+--   (データ bbox → [-1,1]^3) を渡すと、 __tick ラベルは元のデータ値のまま__
+--   形状だけ view box に収まる (saveSVG3D の正規化 pipeline 用)。
+--   [English]: The variant that composes a coordinate transform @f@ before
+--   projection. Passing normalization (data bbox to @[-1,1]^3@) as @f@
+--   fits the shape into the view box, __leaving tick labels unchanged__
+--   (used by the @saveSVG3D@ normalization pipeline).
 renderAxes3DWith :: (Point3 -> Point3)
                  -> Camera3D -> Projection3D -> Viewport -> Axes3D -> [Primitive]
 renderAxes3DWith f = renderAxes3DWithLabels f ("x", "y", "z")
 
--- | Phase 24 A8: 軸名を任意指定する版 ('renderAxes3DWith' = @("x","y","z")@)。
+-- | [日本語]: 軸名を任意指定する版 ('renderAxes3DWith' = @("x","y","z")@)。
+--   [English]: The variant that takes arbitrary axis names ('renderAxes3DWith'
+--   is this with @("x","y","z")@).
 renderAxes3DWithLabels :: (Point3 -> Point3) -> (Text, Text, Text)
                        -> Camera3D -> Projection3D -> Viewport -> Axes3D -> [Primitive]
 renderAxes3DWithLabels f (xName, yName, zName) cam proj vp ax =
@@ -234,31 +272,50 @@ renderAxes3DWithLabels f (xName, yName, zName) cam proj vp ax =
   in cubeLines <> xTickPrims <> yTickPrims <> zTickPrims <> axisNames
 
 -- ===========================================================================
--- 壁面 pane + gridline (Phase 25 A6 = G5)
+-- 壁面 pane + gridline
 -- ===========================================================================
 
--- | Phase 25 A6: 壁面 pane (= mplot3d の背面 3 壁) のスタイル。
--- pane = 薄灰の塗り面、 gridline = 壁面に引く tick 格子線 (mplot3d 既定は白)。
+-- | [日本語]: 壁面 pane (= mplot3d の背面 3 壁) のスタイル。
+--   pane = 薄灰の塗り面、 gridline = 壁面に引く tick 格子線 (mplot3d 既定は白)。
+--   [English]: The style for a wall pane (mplot3d's 3 back walls). Pane =
+--   the light-gray filled face; gridline = the tick gridlines drawn on the
+--   wall (mplot3d's default is white).
 data PaneStyle3D = PaneStyle3D
-  { paneFill    :: !Text    -- ^ 壁面塗り色
-  , paneOpacity :: !Double  -- ^ 塗り不透明度 (0..1)
-  , paneGrid    :: !Text    -- ^ 格子線色
+  { paneFill    :: !Text    -- ^ [日本語]: 壁面塗り色
+                              --   [English]: The wall's fill color.
+  , paneOpacity :: !Double  -- ^ [日本語]: 塗り不透明度 (0..1)
+                              --   [English]: The fill opacity (0..1).
+  , paneGrid    :: !Text    -- ^ [日本語]: 格子線色
+                              --   [English]: The gridline color.
   } deriving (Show, Eq, Generic)
 instance ToJSON   PaneStyle3D
 instance FromJSON PaneStyle3D
 
--- | mplot3d 風 default (薄灰 pane + 白格子線)。
+-- | [日本語]: mplot3d 風 default (薄灰 pane + 白格子線)。
+--   [English]: The mplot3d-style default (a light-gray pane with white
+--   gridlines).
 defaultPaneStyle3D :: PaneStyle3D
 defaultPaneStyle3D = PaneStyle3D "#eaeaea" 1.0 "#ffffff"
 
--- | Phase 25 A6: 3 つの「奥壁」 を薄灰 pane で塗り、 各壁に tick 格子線を引く
--- (mplot3d 標準の axes pane)。 出力は @pane 塗り → gridline@ の順なので、
--- 'renderAxes3DWithLabels' (cube wireframe + tick) の **前** に置けば最背面に
--- なる (= データ・wireframe が pane の手前に来る)。
+-- | [日本語]: 3 つの「奥壁」 を薄灰 pane で塗り、 各壁に tick 格子線を引く
+--   (mplot3d 標準の axes pane)。 出力は @pane 塗り → gridline@ の順なので、
+--   'renderAxes3DWithLabels' (cube wireframe + tick) の __前__ に置けば最背面に
+--   なる (= データ・wireframe が pane の手前に来る)。
 --
--- 奥壁判定: 各軸の対向 2 面のうち、 面中心の投影 depth ('projDepth'、 +1 が奥)
--- が大きい方を奥壁に採る。 視点回転に追従する。 @f@ は 'renderAxes3DWith' と
--- 同じ正規化変換 (データ bbox → [-1,1]^3)。
+--   奥壁判定: 各軸の対向 2 面のうち、 面中心の投影 depth ('projDepth'、 +1 が奥)
+--   が大きい方を奥壁に採る。 視点回転に追従する。 @f@ は 'renderAxes3DWith' と
+--   同じ正規化変換 (データ bbox → [-1,1]^3)。
+--   [English]: Fills the 3 "back walls" with a light-gray pane and draws
+--   tick gridlines on each wall (mplot3d's standard axes pane). The output
+--   goes pane fill first, then gridlines, so placing this call __before__
+--   'renderAxes3DWithLabels' (the cube wireframe plus ticks) puts it at the
+--   very back (data and the wireframe end up drawn in front of the pane).
+--
+--   Back-wall determination: for each axis's pair of opposing faces, the
+--   one with the larger projected depth at its center ('projDepth', where
+--   +1 is farthest) is chosen as the back wall — this tracks camera
+--   rotation. @f@ is the same normalization transform (data bbox to
+--   @[-1,1]^3@) as 'renderAxes3DWith'.
 renderAxes3DPanes :: (Point3 -> Point3) -> PaneStyle3D
                   -> Camera3D -> Projection3D -> Viewport -> Axes3D -> [Primitive]
 renderAxes3DPanes f sty cam proj vp ax =
@@ -310,9 +367,14 @@ renderAxes3DPanes f sty cam proj vp ax =
 
   in [xPane, yPane, zPane] <> xGrid <> yGrid <> zGrid
 
--- | 数値を短く整形 (= 小数 1 桁、 末尾 0 と . を除去)。 ★末尾 0 除去は **小数点が
--- ある場合のみ** (整数の末尾 0 を削ると 10→1・100→1 になるバグを Phase 25 A8 で
--- 修正。 log tick の 10/100/1000 で顕在化)。
+-- | [日本語]: 数値を短く整形 (= 小数 1 桁、 末尾 0 と . を除去)。 ★末尾 0 除去は
+--   __小数点がある場合のみ__ (整数の末尾 0 を削ると 10→1・100→1 になるバグを
+--   修正済。 log tick の 10/100/1000 で顕在化)。
+--   [English]: Formats a number compactly (1 decimal place, trailing zeros
+--   and the decimal point stripped). ★Trailing-zero stripping only applies
+--   __when there is a decimal point__ (stripping trailing zeros from an
+--   integer used to turn 10 into 1 and 100 into 1 — a bug now fixed; it
+--   surfaced with log ticks like 10/100/1000).
 formatNum :: Double -> Text
 formatNum x =
   let s = T.pack (show (fromIntegral (round (x * 10) :: Int) / 10.0 :: Double))

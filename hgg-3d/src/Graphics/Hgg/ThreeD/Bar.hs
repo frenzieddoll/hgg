@@ -1,23 +1,43 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Bar
--- Description : 3D bar (直方体 / stick) + 誤差棒 (Phase 25 A5)
+-- Description : 3D bar (直方体 / stick) + 誤差棒
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- DoE / 実験データ定番の 3D 棒グラフ。 各 (x, y) 位置に底面 (base z) から高さ
--- (top z) までの棒を立てる。 2 スタイル:
+-- [日本語]: DoE / 実験データ定番の 3D 棒グラフ。 各 (x, y) 位置に底面 (base z)
+--   から高さ (top z) までの棒を立てる。 2 スタイル:
 --
---   * 'BarCuboid' — 直方体 (top + 4 側面の 5 quad)。 surface 同様 painter's の
---     depth 統合 ('barFacesDepth') に乗せ、 scatter/surface と層横断ソートされる。
---   * 'BarStick'  — 太い縦線 1 本 (面なし・軽量)。 line/wireframe 同様 depth 統合
---     対象外で前面に描く ('renderBarSticks')。
+--     * 'BarCuboid' — 直方体 (top + 4 側面の 5 quad)。 surface 同様 painter's の
+--       depth 統合 ('barFacesDepth') に乗せ、 scatter/surface と層横断ソートされる。
+--     * 'BarStick'  — 太い縦線 1 本 (面なし・軽量)。 line/wireframe 同様 depth 統合
+--       対象外で前面に描く ('renderBarSticks')。
 --
--- 誤差棒 ('renderErrorBars3D') は棒/点の頂点に z 方向 ±err の縦線 + 端キャップ。
--- bar・scatter どちらの layer にも付けられる (層の per-point err 列で駆動)。
+--   誤差棒 ('renderErrorBars3D') は棒/点の頂点に z 方向 ±err の縦線 + 端キャップ。
+--   bar・scatter どちらの layer にも付けられる (層の per-point err 列で駆動)。
 --
--- ⚠ 入力 ('Bar3D' の点・base・half-width・err) はすべて**正規化済**座標
--- ([-1,1]^3・z-aspect 適用後) を渡す前提。 正規化は 'Easy.normLayer3D' /
--- 'scaleZLayer' が担い、 本 module は投影 + 幾何のみ。
+--   ⚠ 入力 ('Bar3D' の点・base・half-width・err) はすべて__正規化済__座標
+--   ([-1,1]^3・z-aspect 適用後) を渡す前提。 正規化は 'Easy.normLayer3D' /
+--   @scaleZLayer@ が担い、 本 module は投影 + 幾何のみ。
+-- [English]: A 3D bar chart, a DoE / experimental-data staple. Each (x, y)
+--   position gets a bar from a base z to a top z. Two styles:
+--
+--     * 'BarCuboid' — a cuboid (top plus 4 side quads, 5 total). Like a
+--       surface, it joins the painter's-algorithm depth integration
+--       ('barFacesDepth') and is sorted across layers together with
+--       scatter / surface.
+--     * 'BarStick'  — a single thick vertical line (no faces, lightweight).
+--       Like line / wireframe, it stays outside depth integration and is
+--       drawn in front ('renderBarSticks').
+--
+--   Error bars ('renderErrorBars3D') draw a z-direction ±err vertical line
+--   plus end caps at each bar's or point's vertex; they can be attached to
+--   either a bar or scatter layer (driven by the layer's per-point err
+--   column).
+--
+--   ⚠ All inputs (the points, base, half-width, err of 'Bar3D') are assumed to be
+--   __already normalized__ coordinates (@[-1,1]^3@, after z-aspect is
+--   applied). Normalization is handled by 'Easy.normLayer3D' /
+--   @scaleZLayer@; this module only does projection and geometry.
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Bar
@@ -43,28 +63,40 @@ import           Graphics.Hgg.ThreeD.Projection  (Projected (..), Viewport,
                                                   project3D)
 import           Graphics.Hgg.ThreeD.Types
 
--- | 棒のスタイル。
+-- | [日本語]: 棒のスタイル。
+--   [English]: The bar's style.
 data BarStyle3D
-  = BarCuboid   -- ^ 直方体 (top + 4 側面・depth 統合)
-  | BarStick    -- ^ 太い縦線 (面なし・前面描画)
+  = BarCuboid   -- ^ [日本語]: 直方体 (top + 4 側面・depth 統合)
+                --   [English]: A cuboid (top plus 4 sides; joins depth integration).
+  | BarStick    -- ^ [日本語]: 太い縦線 (面なし・前面描画)
+                --   [English]: A thick vertical line (no faces; drawn in front).
   deriving (Show, Eq, Generic)
 instance ToJSON   BarStyle3D
 instance FromJSON BarStyle3D
 
--- | 3D bar 1 series 分の設定 (= 全点共通スタイル・点ごとに棒を立てる)。
+-- | [日本語]: 3D bar 1 series 分の設定 (= 全点共通スタイル・点ごとに棒を立てる)。
+--   [English]: The configuration for one series of a 3D bar chart (a shared
+--   style, with one bar per point).
 data Bar3D = Bar3D
-  { br3Tops   :: ![Point3]    -- ^ 各棒の頂点 (x, y, 高さ z)・正規化済
-  , br3BaseZ  :: !Double      -- ^ 底面 z (正規化済・通常 data z=0 の正規化値)
-  , br3HalfW  :: !Double      -- ^ footprint 半幅 (正規化空間・x/y 共通)
+  { br3Tops   :: ![Point3]    -- ^ [日本語]: 各棒の頂点 (x, y, 高さ z)・正規化済
+                                --   [English]: Each bar's top vertex (x, y, height z), already normalized.
+  , br3BaseZ  :: !Double      -- ^ [日本語]: 底面 z (正規化済・通常 data z=0 の正規化値)
+                                --   [English]: The base z (already normalized; usually the normalized value of data z=0).
+  , br3HalfW  :: !Double      -- ^ [日本語]: footprint 半幅 (正規化空間・x/y 共通)
+                                --   [English]: The footprint half-width (in normalized space; shared by x/y).
   , br3Style  :: !BarStyle3D
   , br3Color  :: !Text
-  , br3Alpha  :: !Double      -- ^ 面/線の不透明度 (0..1)
-  , br3Width  :: !Double      -- ^ stick 線幅 px ('BarStick' 時)
+  , br3Alpha  :: !Double      -- ^ [日本語]: 面/線の不透明度 (0..1)
+                                --   [English]: The face / line opacity (0..1).
+  , br3Width  :: !Double      -- ^ [日本語]: stick 線幅 px ('BarStick' 時)
+                                --   [English]: The stick line width in px (used with 'BarStick').
   } deriving (Show, Eq, Generic)
 instance ToJSON   Bar3D
 instance FromJSON Bar3D
 
--- | default: 青、 base 0、 半幅 0.04、 直方体、 alpha 1、 stick 幅 6。
+-- | [日本語]: default: 青、 base 0、 半幅 0.04、 直方体、 alpha 1、 stick 幅 6。
+--   [English]: The default: blue, base 0, half-width 0.04, cuboid, alpha 1,
+--   stick width 6.
 defaultBar3D :: [Point3] -> Bar3D
 defaultBar3D tops = Bar3D
   { br3Tops  = tops
@@ -80,9 +112,14 @@ defaultBar3D tops = Bar3D
 -- 直方体 face の depth 列 (= surfaceFacesDepth と同型・大域ソートに混ぜる)
 -- ===========================================================================
 
--- | 各棒を直方体の 5 quad (top + 4 側面・底面は隠れるので省く) に展開し、
--- @(投影 depth, PPath)@ で**未ソート**返す。 'BarStick' 時は @[]@ (= 'renderBarSticks'
--- が描く)。 簡易 Lambert shading (surface と同じ light) で立体感を付ける。
+-- | [日本語]: 各棒を直方体の 5 quad (top + 4 側面・底面は隠れるので省く) に展開し、
+--   @(投影 depth, PPath)@ で__未ソート__返す。 'BarStick' 時は @[]@ (= 'renderBarSticks'
+--   が描く)。 簡易 Lambert shading (surface と同じ light) で立体感を付ける。
+--   [English]: Expands each bar into the cuboid's 5 quads (top plus 4
+--   sides; the bottom is hidden and omitted), returning
+--   @(projected depth, PPath)@ pairs __unsorted__. Returns @[]@ for
+--   'BarStick' (drawn instead by 'renderBarSticks'). Adds a sense of solidity
+--   via simple Lambert shading (the same light as surfaces).
 barFacesDepth
   :: Camera3D -> Projection3D -> Viewport
   -> Bar3D -> [(Double, Primitive)]
@@ -128,7 +165,9 @@ barFacesDepth cam proj vp br
 -- stick スタイル (太い縦線・前面描画)
 -- ===========================================================================
 
--- | 'BarStick' 時、 各棒を底面→頂点の太い縦線で描く。 'BarCuboid' 時は @[]@。
+-- | [日本語]: 'BarStick' 時、 各棒を底面→頂点の太い縦線で描く。 'BarCuboid' 時は @[]@。
+--   [English]: For 'BarStick', draws each bar as a thick vertical line from
+--   base to top vertex. Returns @[]@ for 'BarCuboid'.
 renderBarSticks
   :: Camera3D -> Projection3D -> Viewport
   -> Bar3D -> [Primitive]
@@ -145,17 +184,25 @@ renderBarSticks cam proj vp br
                (solid (br3Color br) (br3Width br))
 
 -- ===========================================================================
--- stem (Phase 26 A4・3D lollipop = 細い垂線 + 先端マーカー・前面描画)
+-- stem (3D lollipop = 細い垂線 + 先端マーカー・前面描画)
 -- ===========================================================================
 
--- | Phase 26 A4: 各点を底面 ('br3BaseZ') → 先端の細い縦線 + 先端の円マーカーで
--- 描く (3D lollipop)。 'renderBarSticks' (太線・マーカー無し) と違い stem は
--- 細線 + マーカー。 線色/幅/alpha は 'Bar3D' から、 マーカー半径は引数 @markerR@
--- (px)。 depth 統合外の前面 overlay。 先端の depth cue で僅かに半径を変える
--- (scatter と同じ・近側が大きい)。
+-- | [日本語]: 各点を底面 ('br3BaseZ') → 先端の細い縦線 + 先端の円マーカーで
+--   描く (3D lollipop)。 'renderBarSticks' (太線・マーカー無し) と違い stem は
+--   細線 + マーカー。 線色/幅/alpha は 'Bar3D' から、 マーカー半径は引数 @markerR@
+--   (px)。 depth 統合外の前面 overlay。 先端の depth cue で僅かに半径を変える
+--   (scatter と同じ・近側が大きい)。
+--   [English]: Draws each point as a thin vertical line from the base
+--   ('br3BaseZ') to the top, plus a circular marker at the top (a 3D
+--   lollipop). Unlike 'renderBarSticks' (a thick line with no marker), a
+--   stem is a thin line plus marker. Line color / width / alpha come from
+--   'Bar3D'; the marker radius is the @markerR@ argument (px). Drawn as a
+--   front overlay outside depth integration. The tip's radius shifts
+--   slightly with a depth cue (same as scatter — nearer points are larger).
 renderStems3D
   :: Camera3D -> Projection3D -> Viewport
-  -> Bar3D -> Double          -- ^ マーカー基本半径 px
+  -> Bar3D -> Double          -- ^ [日本語]: マーカー基本半径 px
+                                --   [English]: The marker's base radius, in px.
   -> [Primitive]
 renderStems3D cam proj vp br markerR =
   concatMap stem (br3Tops br)
@@ -180,13 +227,20 @@ renderStems3D cam proj vp br markerR =
 -- 誤差棒 (z 方向 ±err・縦線 + 端キャップ)
 -- ===========================================================================
 
--- | 各頂点 @(x,y,z)@ に z 方向 ±err の縦線 + 上下端の水平キャップ (画面空間の
--- 短い横線) を描く。 err は正規化済 z 量 (= 'normLayer3D' で換算済)。 bar/scatter
--- どちらの頂点列にも使える。 err <= 0 の点はスキップ。 線色 'col'・幅 'lw'。
+-- | [日本語]: 各頂点 @(x,y,z)@ に z 方向 ±err の縦線 + 上下端の水平キャップ (画面空間の
+--   短い横線) を描く。 err は正規化済 z 量 (= 'Graphics.Hgg.ThreeD.Easy.normLayer3D' で換算済)。 bar/scatter
+--   どちらの頂点列にも使える。 err <= 0 の点はスキップ。 線色 @col@・幅 @lw@。
+--   [English]: Draws a z-direction ±err vertical line at each vertex
+--   @(x,y,z)@, plus horizontal end caps (short screen-space lines) at the
+--   top and bottom. err is an already-normalized z quantity (converted via
+--   'Graphics.Hgg.ThreeD.Easy.normLayer3D'). Works on either a bar or scatter vertex list. Points
+--   with err <= 0 are skipped. Line color @col@, width @lw@.
 renderErrorBars3D
   :: Camera3D -> Projection3D -> Viewport
-  -> Text -> Double          -- ^ 色・線幅 px
-  -> [(Point3, Double)]      -- ^ (頂点, 正規化 err)
+  -> Text -> Double          -- ^ [日本語]: 色・線幅 px
+                                --   [English]: The color and line width, in px.
+  -> [(Point3, Double)]      -- ^ [日本語]: (頂点, 正規化 err)
+                                --   [English]: (vertex, normalized err) pairs.
   -> [Primitive]
 renderErrorBars3D cam proj vp col lw pes =
   concatMap whisker pes

@@ -42,10 +42,10 @@ import           Hanalyze.Model.HBM  (ModelGraph (..), Node (..),
 -- 変換層
 -- ===========================================================================
 
--- | [日本語]: 全体変換: 'ModelGraph' → ('[DAGNode]', '[DAGEdge]', '[DAGPlate]')。
+-- | [日本語]: 全体変換: 'ModelGraph' → (@[DAGNode]@, @[DAGEdge]@, @[DAGPlate]@)。
 --   公開 API 側で 'Graphics.Hgg.DAG.dagPlotWithPlates' に渡す形に成形する。
---   [English]: The full conversion: 'ModelGraph' to ('[DAGNode]',
---   '[DAGEdge]', '[DAGPlate]'). Shapes the result into the form the public
+--   [English]: The full conversion: 'ModelGraph' to (@[DAGNode]@,
+--   @[DAGEdge]@, @[DAGPlate]@). Shapes the result into the form the public
 --   API passes to 'Graphics.Hgg.DAG.dagPlotWithPlates'.
 toDAGTriple :: ModelGraph -> ([Spec.DAGNode], [Spec.DAGEdge], [Spec.DAGPlate])
 toDAGTriple mg =
@@ -54,9 +54,9 @@ toDAGTriple mg =
   , toDAGPlates mg
   )
 
--- | [日本語]: 'mgNodes' を 'DAGNode' に変換。 dnX / dnY は 0 (= layout 計算で埋まる)、
+-- | [日本語]: 'mgNodes' を @DAGNode@ に変換。 dnX / dnY は 0 (= layout 計算で埋まる)、
 --   dnDist には分布名を 'Just' で入れる (= 空文字列なら 'Nothing' に正規化)。
---   [English]: Converts 'mgNodes' to 'DAGNode'. dnX / dnY start at 0 (filled
+--   [English]: Converts 'mgNodes' to @DAGNode@. dnX / dnY start at 0 (filled
 --   in later by layout computation); dnDist holds the distribution name as
 --   'Just' (normalized to 'Nothing' when the name is empty).
 toDAGNodes :: ModelGraph -> [Spec.DAGNode]
@@ -74,18 +74,18 @@ toDAGNodes mg =
   where
     nonEmpty t = if T.null t then Nothing else Just t
 
--- | [日本語]: 'mgEdges' (= (parent, child) 列) を 'DAGEdge' に。 dePath = Nothing
+-- | [日本語]: 'mgEdges' (= (parent, child) 列) を @DAGEdge@ に。 dePath = Nothing
 --   (= layout 計算で routing される)。 deRoute = Nothing (= 未 bake・layout で確定)。
 --   [English]: Converts 'mgEdges' (a list of (parent, child) pairs) to
---   'DAGEdge'. dePath is Nothing (routing happens later, during layout
+--   @DAGEdge@. dePath is Nothing (routing happens later, during layout
 --   computation); deRoute is Nothing (not yet baked — resolved by layout).
 toDAGEdges :: ModelGraph -> [Spec.DAGEdge]
 toDAGEdges mg = [ Spec.DAGEdge p c Nothing Nothing | (p, c) <- mgEdges mg ]
 
--- | [日本語]: 'mgPlates' (= plate 名 → サイズ N) を 'DAGPlate' に。
+-- | [日本語]: 'mgPlates' (= plate 名 → サイズ N) を @DAGPlate@ に。
 --   各 plate の dpNodeIds は @nodePlates@ に当該 plate 名を含む node を列挙。
 --   dpLabel は @"\<plate 名\> (N=\<size\>)"@ の形式 (= dot / PyMC 慣例に近い)。
---   [English]: Converts 'mgPlates' (plate name to size N) to 'DAGPlate'.
+--   [English]: Converts 'mgPlates' (plate name to size N) to @DAGPlate@.
 --   Each plate's dpNodeIds lists the nodes whose @nodePlates@ includes that
 --   plate name. dpLabel takes the form @"\<plate name\> (N=\<size\>)"@
 --   (close to the dot / PyMC convention).
@@ -105,12 +105,12 @@ toDAGPlates mg =
 -- Helpers
 -- ===========================================================================
 
--- | [日本語]: analyze の 'NodeKind' を hgg の 'DAGNodeKind' に。
+-- | [日本語]: analyze の 'NodeKind' を hgg の @DAGNodeKind@ に。
 --
 --   * 'LatentN'        → 'Spec.NodeLatent'    (= 楕円、 stochastic latent)
 --   * 'ObservedN _'    → 'Spec.NodeObserved'  (= 楕円 + 灰塗、 観測)
 --
---   [English]: Maps analyze's 'NodeKind' to hgg's 'DAGNodeKind'.
+--   [English]: Maps analyze's 'NodeKind' to hgg's @DAGNodeKind@.
 --
 --   * 'LatentN' maps to 'Spec.NodeLatent' (an ellipse, a stochastic latent)
 --   * 'ObservedN _' maps to 'Spec.NodeObserved' (an ellipse filled grey, an

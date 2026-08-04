@@ -42,7 +42,7 @@ module Graphics.Hgg.Backend.LaTeX
   ( -- * 通常 (Resolver 不要 = inline 列のみの図)
     saveTeX
   , renderTeX
-    -- * Resolver 同伴 (= 'ColByName' を含む図)
+    -- * Resolver 同伴 (= @ColByName@ を含む図)
   , saveTeXWith
   , renderTeXWith
     -- * 出力設定 (standalone / 素片 mode・preamble 差し替え・CJK family)
@@ -93,9 +93,9 @@ import           System.IO             (hPutStrLn, stderr)
 saveTeX :: FilePath -> VisualSpec -> IO ()
 saveTeX path = saveTeXWith path emptyResolver
 
--- | [日本語]: 'Resolver' を渡して LaTeX ファイルに保存。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して LaTeX ファイルに保存。 @ColByName@ を含む図用。
 --   [English]: Saves to a LaTeX file given a 'Resolver'. For figures that
---   include 'ColByName'.
+--   include @ColByName@.
 saveTeXWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveTeXWith = saveTeXConfigured defaultTeXConfig
 
@@ -195,8 +195,8 @@ luaLaTeXConfig = defaultTeXConfig
   , texExtraPreamble = ["\\usepackage{luatexja}"]
   }
 
--- | [日本語]: 設定付き保存 ('savePNGConfigured' と対称)。
---   [English]: Saves with a config (mirrors 'savePNGConfigured').
+-- | [日本語]: 設定付き保存 (@savePNGConfigured@ と対称)。
+--   [English]: Saves with a config (mirrors @savePNGConfigured@).
 saveTeXConfigured :: TeXConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
 saveTeXConfigured cfg path r spec = do
   reportFacetInlineWarnings r spec   -- ★ 描画は継続
@@ -396,13 +396,13 @@ clipRectOf h (Rect x y w rh) =
 
 -- | [日本語]: SVG 系 Transform → TikZ cm= 明示行列 (a,b,c,d,(tx,ty))。 y 反転 F が
 --   per-primitive に掛かるため __F∘M∘F (共役)__ で写す — PDF backend の
---   'matrixOf' と同一式: translate (dx,dy) → (dx,−dy) / scale (sx,sy) →
+--   @matrixOf@ と同一式: translate (dx,dy) → (dx,−dy) / scale (sx,sy) →
 --   平行移動 (0, h(1−sy)) 付き scale。 ※現状 core は PTransformPush を発行しない
 --   (SVG backend も未対応) — 将来の発行に備えた整合実装。
 --   [English]: Converts an SVG-style Transform to a TikZ cm= explicit matrix
 --   (a,b,c,d,(tx,ty)). Since the y flip F is applied per primitive, it is
 --   mapped using __F∘M∘F (conjugation)__ — the same formula as the PDF
---   backend's 'matrixOf': translate (dx,dy) → (dx,−dy); scale (sx,sy) → a
+--   backend's @matrixOf@: translate (dx,dy) → (dx,−dy); scale (sx,sy) → a
 --   scale with a translation of (0, h(1−sy)). Note: core currently never
 --   emits PTransformPush (nor does the SVG backend support it) — this is a
 --   consistent implementation kept ready for when it eventually does.

@@ -1,35 +1,49 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Easy
--- Description : 3D 出力経路の薄い wrap (Phase 5 A6 saveSVG3D)
+-- Description : 3D 出力経路の薄い wrap (saveSVG3D)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 'VisualSpec3D' から各出力経路への dispatch helper。 3 経路:
+-- [日本語]: 'VisualSpec3D' から各出力経路への dispatch helper。 3 経路:
 --
---   * 'saveSVG3D'   ─ Phase 3 CPU projection (= 静的 SVG 出力、 本 module 実装)
---   * 'saveHTML3D'  ─ Phase 4 WebGL bundle 埋込 HTML (= 'Graphics.Hgg.ThreeD.Browser')
---   * 'showBrowser' ─ tmp HTML + xdg-open (= 'Graphics.Hgg.ThreeD.Browser')
+--   * 'saveSVG3D'   ─ CPU projection (= 静的 SVG 出力、 本 module 実装)
+--   * 'Graphics.Hgg.ThreeD.Browser.saveHTML3D'  ─ WebGL bundle 埋込 HTML (= 'Graphics.Hgg.ThreeD.Browser')
+--   * 'Graphics.Hgg.ThreeD.Browser.showBrowser' ─ tmp HTML + xdg-open (= 'Graphics.Hgg.ThreeD.Browser')
 --
--- 同 spec を 3 経路に出し分けられる。 用途で使い分け:
+--   同 spec を 3 経路に出し分けられる。 用途で使い分け:
 --
 --   * 印刷 / doc 埋込 → 'saveSVG3D'
---   * 配布 / 単一 HTML 配布 → 'saveHTML3D'
---   * 開発時 interactive 確認 → 'showBrowser'
+--   * 配布 / 単一 HTML 配布 → 'Graphics.Hgg.ThreeD.Browser.saveHTML3D'
+--   * 開発時 interactive 確認 → 'Graphics.Hgg.ThreeD.Browser.showBrowser'
+-- [English]: Dispatch helpers from a 'VisualSpec3D' to each output path.
+--   Three paths:
+--
+--   * 'saveSVG3D'   ─ CPU projection (static SVG output, implemented here)
+--   * 'Graphics.Hgg.ThreeD.Browser.saveHTML3D'  ─ WebGL bundle embedded in HTML (see
+--     'Graphics.Hgg.ThreeD.Browser')
+--   * 'Graphics.Hgg.ThreeD.Browser.showBrowser' ─ a tmp HTML file plus xdg-open (see
+--     'Graphics.Hgg.ThreeD.Browser')
+--
+--   The same spec can be routed to any of the three. Pick based on use case:
+--
+--   * printing / embedding in a doc → 'saveSVG3D'
+--   * distribution as a single HTML file → 'Graphics.Hgg.ThreeD.Browser.saveHTML3D'
+--   * interactive checking during development → 'Graphics.Hgg.ThreeD.Browser.showBrowser'
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Easy
   ( saveSVG3D
-    -- * PDF / PNG 出力 (Phase 24 A8 glue)
+    -- * PDF / PNG 出力 (glue)
   , savePDF3D
   , savePNG3D
   , spec3DToPrimitives
-    -- * 群別タイル配置 (Phase 24 A7)
+    -- * 群別タイル配置
   , saveSVG3DFacet
   , renderSpec3DInPanel
-    -- * 正規化 pipeline (Phase 24 A3・test 用に公開)
+    -- * 正規化 pipeline (test 用に公開)
   , padAxes3D
   , normPoint3D
   , normLayer3D
-    -- * 投影 contour (Phase 24 A5・test 用に公開)
+    -- * 投影 contour (test 用に公開)
   , renderProjectedContour3D
   ) where
 
@@ -95,13 +109,22 @@ import           Graphics.Hgg.ThreeD.Bar          (Bar3D (..), barFacesDepth,
                                                     renderErrorBars3D)
 import           Graphics.Hgg.ThreeD.Types
 
--- | 'VisualSpec3D' を Phase 3 CPU projection で SVG に保存。
+-- | [日本語]: 'VisualSpec3D' を CPU projection で SVG に保存。
 --
--- defaults:
+--   defaults:
 --
 --   * camera     → 'defaultCameraZUp' 3
 --   * projection → 'defaultPerspective'
 --   * axes       → 'autoAxes3D' (= layers の Point3 集合から bbox 算出)
+--   * width / height → 700 / 700
+--   * title      → ""
+--   [English]: Saves a 'VisualSpec3D' as SVG via CPU projection.
+--
+--   Defaults:
+--
+--   * camera     → 'defaultCameraZUp' 3
+--   * projection → 'defaultPerspective'
+--   * axes       → 'autoAxes3D' (bbox computed from the layers' Point3 sets)
 --   * width / height → 700 / 700
 --   * title      → ""
 saveSVG3D :: FilePath -> VisualSpec3D -> IO ()
@@ -109,10 +132,16 @@ saveSVG3D path spec =
   let (w, h, title, prims) = spec3DToPrimitives spec
   in savePrimitivesSVG path w h title prims
 
--- | Phase 24 A8: 'VisualSpec3D' を (幅, 高さ, タイトル, [Primitive]) に落とす
--- 共通核。 各 backend (SVG/PDF/PNG) の出力関数が共有する。 prims は
--- 'renderSpec3DInPanel' 単一 panel (= キャンバス全域)。 title は別返し
--- (SVG は backend が <text> 化・PDF/PNG は 'savePDF3D'/'savePNG3D' が PText 化)。
+-- | [日本語]: 'VisualSpec3D' を (幅, 高さ, タイトル, [Primitive]) に落とす
+--   共通核。 各 backend (SVG/PDF/PNG) の出力関数が共有する。 prims は
+--   'renderSpec3DInPanel' 単一 panel (= キャンバス全域)。 title は別返し
+--   (SVG は backend が <text> 化・PDF/PNG は 'savePDF3D'/'savePNG3D' が PText 化)。
+--   [English]: The shared core that reduces a 'VisualSpec3D' to
+--   (width, height, title, [Primitive]), shared by each backend's (SVG /
+--   PDF / PNG) output function. prims come from a single
+--   'renderSpec3DInPanel' panel (the whole canvas). title is returned
+--   separately (the SVG backend turns it into @\<text\>@; PDF/PNG have
+--   'savePDF3D' / 'savePNG3D' turn it into a @PText@).
 spec3DToPrimitives :: VisualSpec3D -> (Int, Int, Text, [Primitive])
 spec3DToPrimitives spec =
   let w     = fromMaybe 700 (getLast (vs3Width  spec))
@@ -121,24 +150,35 @@ spec3DToPrimitives spec =
       prims = renderSpec3DInPanel 0 0 (fromIntegral w) (fromIntegral h) spec
   in (w, h, title, prims)
 
--- | Phase 24 A8: 3D 図を PDF に保存 ('saveSVG3D' の PDF 版)。 [Primitive] を
--- 既存 PDF backend ('savePrimitivesPDF') へ配線。 title は上部中央の PText に
--- する (PDF backend は title 引数を持たないため)。 ⚠ PDF 標準フォントは
--- Latin-1 のみ (日本語ラベルは 'savePNG3D')。
+-- | [日本語]: 3D 図を PDF に保存 ('saveSVG3D' の PDF 版)。 [Primitive] を
+--   既存 PDF backend ('savePrimitivesPDF') へ配線。 title は上部中央の PText に
+--   する (PDF backend は title 引数を持たないため)。 ⚠ PDF 標準フォントは
+--   Latin-1 のみ (日本語ラベルは 'savePNG3D')。
+--   [English]: Saves a 3D figure as PDF (the PDF counterpart of
+--   'saveSVG3D'). Wires @[Primitive]@ to the existing PDF backend
+--   ('savePrimitivesPDF'). The title is turned into a top-centered 'PText'
+--   (the PDF backend has no title argument). ⚠ PDF's standard fonts are
+--   Latin-1 only (use 'savePNG3D' for Japanese labels).
 savePDF3D :: FilePath -> VisualSpec3D -> IO ()
 savePDF3D path spec =
   let (w, h, title, prims) = spec3DToPrimitives spec
   in savePrimitivesPDF path w h (titlePrims w title <> prims)
 
--- | Phase 24 A8: 3D 図を PNG に保存 ('saveSVG3D' の PNG 版・日本語ラベル可)。
--- [Primitive] を既存 Rasterific backend ('savePrimitivesPNG') へ配線。
+-- | [日本語]: 3D 図を PNG に保存 ('saveSVG3D' の PNG 版・日本語ラベル可)。
+--   [Primitive] を既存 Rasterific backend ('savePrimitivesPNG') へ配線。
+--   [English]: Saves a 3D figure as PNG (the PNG counterpart of
+--   'saveSVG3D'; supports Japanese labels). Wires @[Primitive]@ to the
+--   existing Rasterific backend ('savePrimitivesPNG').
 savePNG3D :: FilePath -> VisualSpec3D -> IO ()
 savePNG3D path spec =
   let (w, h, title, prims) = spec3DToPrimitives spec
   in savePrimitivesPNG defaultPNGConfig path w h (titlePrims w title <> prims)
 
--- | タイトルを上部中央の PText に (空なら無し)。 SVG backend の title 描画
--- (font-size 16・中央・y≈24) に概ね合わせる。
+-- | [日本語]: タイトルを上部中央の PText に (空なら無し)。 SVG backend の title 描画
+--   (font-size 16・中央・y≈24) に概ね合わせる。
+--   [English]: Turns the title into a top-centered 'PText' (nothing if
+--   empty). Roughly matches the SVG backend's title rendering (font-size
+--   16, centered, y≈24).
 titlePrims :: Int -> Text -> [Primitive]
 titlePrims w title
   | T.null title = []
@@ -146,10 +186,16 @@ titlePrims w title
       [ PText (Point (fromIntegral w / 2) 24) title
               (TextStyle "#333333" 16 "sans-serif" AnchorMiddle 0 "normal" False) ]
 
--- | Phase 24 A7: 'VisualSpec3D' を**任意のパネル矩形** @(px,py,pw,ph)@ 内に
--- 描画する純粋核 ('saveSVG3D' と 'saveSVG3DFacet' が共有)。 軸 box・正規化
--- pipeline・layer・colorbar をパネル局所座標で出す。 @(0,0,w,h)@ で呼ぶと
--- 旧 'saveSVG3D' とビット同一 (margin 50・colorbar 右端)。
+-- | [日本語]: 'VisualSpec3D' を__任意のパネル矩形__ @(px,py,pw,ph)@ 内に
+--   描画する純粋核 ('saveSVG3D' と 'saveSVG3DFacet' が共有)。 軸 box・正規化
+--   pipeline・layer・colorbar をパネル局所座標で出す。 @(0,0,w,h)@ で呼ぶと
+--   旧 'saveSVG3D' とビット同一 (margin 50・colorbar 右端)。
+--   [English]: The pure core that renders a 'VisualSpec3D' into
+--   __an arbitrary panel rectangle__ @(px,py,pw,ph)@ (shared by 'saveSVG3D'
+--   and 'saveSVG3DFacet'). Emits the axis box, normalization pipeline,
+--   layers, and colorbar in panel-local coordinates. Calling it with
+--   @(0,0,w,h)@ is bit-identical to the original 'saveSVG3D' (margin 50,
+--   colorbar on the right edge).
 renderSpec3DInPanel :: Double -> Double -> Double -> Double -> VisualSpec3D -> [Primitive]
 renderSpec3DInPanel px py pw ph spec =
   let layers = vs3Layers spec
@@ -218,8 +264,12 @@ renderSpec3DInPanel px py pw ph spec =
        <> maybe [] (renderColorbar3D px py pw ph) cbInfo
        <> renderLegend3D px py pw ph legendEntries
 
--- | Phase 25 A2: 群色分けの離散凡例 (色チップ + ラベル) をパネル右端に縦並び。
--- colorbar があればその左、 無ければ右端。 entries = (カテゴリ, 色) の初出順。
+-- | [日本語]: 群色分けの離散凡例 (色チップ + ラベル) をパネル右端に縦並び。
+--   colorbar があればその左、 無ければ右端。 entries = (カテゴリ, 色) の初出順。
+--   [English]: Renders the discrete group-coloring legend (color chips plus
+--   labels), stacked vertically along the panel's right edge. Sits left of
+--   the colorbar if there is one, otherwise flush right. entries are
+--   (category, color) pairs in first-occurrence order.
 renderLegend3D :: Double -> Double -> Double -> Double -> [(Text, Text)] -> [Primitive]
 renderLegend3D _  _  _  _  []      = []
 renderLegend3D px py pw ph entries =
@@ -236,8 +286,11 @@ renderLegend3D px py pw ph entries =
            , PText (Point (x0 + chip + 6) (y + chip - 2)) cat tsL ]
   in concatMap row (zip [0 :: Int ..] entries)
 
--- | Phase 24 A8: depth 統合対象 (surface 面・scatter 点) を @(depth, Primitive)@
--- で返す。 line/wireframe/floor は対象外 ([])。
+-- | [日本語]: depth 統合対象 (surface 面・scatter 点) を @(depth, Primitive)@
+--   で返す。 line/wireframe/floor は対象外 ([])。
+--   [English]: Returns the depth-integration targets (surface faces,
+--   scatter points) as @(depth, Primitive)@ pairs. line / wireframe / floor
+--   are excluded (@[]@).
 depthItemsOf :: Camera3D -> Projection3D -> Viewport -> Layer3D -> [(Double, Primitive)]
 depthItemsOf cam proj vp l = case getFirst (lyr3Kind l) of
   Just M3Surface -> surfaceFacesDepth  cam proj vp (layerToSurface l)
@@ -257,7 +310,9 @@ depthItemsOf cam proj vp l = case getFirst (lyr3Kind l) of
     in trianglesFacesDepth cam proj vp col ecol shaded cmap alpha triPts
   _              -> []
 
--- | Phase 24 A8: depth 統合対象外の layer (line/wireframe・bar stick) を描く。
+-- | [日本語]: depth 統合対象外の layer (line/wireframe・bar stick) を描く。
+--   [English]: Draws the layers that are excluded from depth integration
+--   (line / wireframe, bar sticks).
 otherLayerPrims :: Camera3D -> Projection3D -> Viewport -> Layer3D -> [Primitive]
 otherLayerPrims cam proj vp l = case getFirst (lyr3Kind l) of
   Just M3Line      -> renderLine3D      cam proj vp (layerToLine      l)
@@ -273,8 +328,12 @@ otherLayerPrims cam proj vp l = case getFirst (lyr3Kind l) of
   Just M3Quiver    -> renderQuiver3D cam proj vp (layerToQuiver l)
   _                -> []
 
--- | Phase 25 A5: 層の per-point err (正規化済) があれば誤差棒を描く (bar/scatter
--- 共通)。 頂点列は正規化済 'lyr3Points'。 最前面に描くため depth 統合外。
+-- | [日本語]: 層の per-point err (正規化済) があれば誤差棒を描く (bar/scatter
+--   共通)。 頂点列は正規化済 'lyr3Points'。 最前面に描くため depth 統合外。
+--   [English]: Draws error bars when a layer's per-point err (already
+--   normalized) is present (shared by bar and scatter). Vertices come from
+--   the already-normalized 'lyr3Points'. Drawn in front, outside depth
+--   integration.
 errorBarPrimsOf :: Camera3D -> Projection3D -> Viewport -> Layer3D -> [Primitive]
 errorBarPrimsOf cam proj vp l =
   case (getLast (lyr3PtErrs l), getLast (lyr3Points l)) of
@@ -282,10 +341,15 @@ errorBarPrimsOf cam proj vp l =
       renderErrorBars3D cam proj vp "#333333" 1.0 (zip pts es)
     _ -> []
 
--- | Phase 25 A7: テキスト注釈 layer (M3Text) を描く。 正規化済 'lyr3Points' を
--- 投影し、 各点に 'lyr3Labels' の文字列を PText で置く (depth 統合外の前面 overlay)。
--- 文字色 = 'lyr3Color' (既定 @#333333@)、 サイズ = 'lyr3Size' (既定 11)。 点の
--- 少し上 (-6px) に中央寄せ。
+-- | [日本語]: テキスト注釈 layer (M3Text) を描く。 正規化済 'lyr3Points' を
+--   投影し、 各点に 'lyr3Labels' の文字列を PText で置く (depth 統合外の前面 overlay)。
+--   文字色 = 'lyr3Color' (既定 @#333333@)、 サイズ = 'lyr3Size' (既定 11)。 点の
+--   少し上 (-6px) に中央寄せ。
+--   [English]: Draws the text-annotation layer (M3Text). Projects the
+--   already-normalized 'lyr3Points' and places each point's 'lyr3Labels'
+--   string as a 'PText' (a front overlay outside depth integration). Text
+--   color comes from 'lyr3Color' (default @#333333@), size from
+--   'lyr3Size' (default 11). Centered, slightly above each point (-6px).
 textPrimsOf :: Camera3D -> Projection3D -> Viewport -> Layer3D -> [Primitive]
 textPrimsOf cam proj vp l = case getFirst (lyr3Kind l) of
   Just M3Text ->
@@ -299,10 +363,16 @@ textPrimsOf cam proj vp l = case getFirst (lyr3Kind l) of
     in zipWith place pts lbs
   _ -> []
 
--- | Phase 24 A8 / 25 A8: 正規化済 layer を box aspect @(xa, ya, za)@ 倍する。
--- surface は grid z (za) と x/y range (xa/ya)、 それ以外は点列の各成分。
--- @(1,1,1)@ は恒等 (= 旧出力ビット不変)。 surface の grid x/y は xRange を縮める
--- ことで反映 (Surface.hs が xRange を線形補間して頂点を置くため)。
+-- | [日本語]: 正規化済 layer を box aspect @(xa, ya, za)@ 倍する。
+--   surface は grid z (za) と x/y range (xa/ya)、 それ以外は点列の各成分。
+--   @(1,1,1)@ は恒等 (= 旧出力ビット不変)。 surface の grid x/y は xRange を縮める
+--   ことで反映 (Surface.hs が xRange を線形補間して頂点を置くため)。
+--   [English]: Scales an already-normalized layer by the box aspect
+--   @(xa, ya, za)@. For a surface, this scales grid z (za) and the x/y
+--   range (xa/ya); for other layers, each component of the point list.
+--   @(1,1,1)@ is the identity (bit-identical to legacy output). A surface's
+--   grid x/y is reflected by shrinking xRange (since Surface.hs places
+--   vertices by linearly interpolating xRange).
 scaleAspectLayer :: Double -> Double -> Double -> Layer3D -> Layer3D
 scaleAspectLayer xa ya za l
   | xa == 1 && ya == 1 && za == 1 = l
@@ -324,12 +394,21 @@ scaleAspectLayer xa ya za l
         sv (Vec3 vx vy vz) = Vec3 (vx * xa) (vy * ya) (vz * za)
         scaleRange a (lo, hi) = (lo * a, hi * a)
 
--- | Phase 24 A7: 群別 3D 図のタイル配置 (= 「群別曲面の並置」)。 N 個の
--- @(群ラベル, spec)@ を near-square グリッド (@ncol = ceil(√n)@) に並べ、 各
--- パネルを 'renderSpec3DInPanel' で描き、 上部に群ラベルを置く。 colorbar は
--- panel 毎 (各 spec の colormap surface に追従)。 camera/axes は各 spec が個別に
--- 持つ前提 (analyze の群別 'surfaceOf' 出力をそのまま渡せる)。 1 パネルの
--- 既定サイズは 380×380 px (spec が 'width3DV'/'height3DV' を持てばそれを使う)。
+-- | [日本語]: 群別 3D 図のタイル配置 (= 「群別曲面の並置」)。 N 個の
+--   @(群ラベル, spec)@ を near-square グリッド (@ncol = ceil(√n)@) に並べ、 各
+--   パネルを 'renderSpec3DInPanel' で描き、 上部に群ラベルを置く。 colorbar は
+--   panel 毎 (各 spec の colormap surface に追従)。 camera/axes は各 spec が個別に
+--   持つ前提 (analyze の群別 @surfaceOf@ 出力をそのまま渡せる)。 1 パネルの
+--   既定サイズは 380×380 px (spec が @width3DV@/@height3DV@ を持てばそれを使う)。
+--   [English]: Tiles a set of grouped 3D figures ("placing group surfaces
+--   side by side"). Arranges N @(group label, spec)@ pairs into a
+--   near-square grid (@ncol = ceil(√n)@), draws each panel with
+--   'renderSpec3DInPanel', and places the group label above it. The
+--   colorbar is per-panel (following each spec's colormap surface).
+--   camera / axes are assumed to belong to each spec individually (so
+--   output from hanalyze's grouped @surfaceOf@ can be passed
+--   straight through). Each panel defaults to 380×380 px (used unless the
+--   spec sets @width3DV@/@height3DV@).
 saveSVG3DFacet :: FilePath -> [(Text, VisualSpec3D)] -> IO ()
 saveSVG3DFacet _    []     = pure ()
 saveSVG3DFacet path panels = do
@@ -352,7 +431,9 @@ saveSVG3DFacet path panels = do
       prims = concat (zipWith panelPrims [0 ..] panels)
   savePrimitivesSVG path wPx hPx "" prims
 
--- | Phase 24 A3: 退化した軸 (min == max) を ±0.5 に広げる (正規化の 0 割り防止)。
+-- | [日本語]: 退化した軸 (min == max) を ±0.5 に広げる (正規化の 0 割り防止)。
+--   [English]: Widens a degenerate axis (min == max) to ±0.5 (prevents
+--   division by zero during normalization).
 padAxes3D :: Axes3D -> Axes3D
 padAxes3D ax =
   let pad lo hi | hi > lo   = (lo, hi)
@@ -364,16 +445,22 @@ padAxes3D ax =
         , axesYMin = y0, axesYMax = y1
         , axesZMin = z0, axesZMax = z1 }
 
--- | Phase 24 A3 / 25 A8: 軸 bbox を [-1,1]^3 へ写す正規化 (各軸独立)。 log 軸
--- ('axes*Log') は log10 空間で affine、 線形軸はそのまま affine。
+-- | [日本語]: 軸 bbox を [-1,1]^3 へ写す正規化 (各軸独立)。 log 軸
+--   ('axes*Log') は log10 空間で affine、 線形軸はそのまま affine。
+--   [English]: Normalizes the axis bbox to @[-1,1]^3@ (each axis
+--   independently). A log axis ('axes*Log') is affine in log10 space; a
+--   linear axis is affine directly.
 normPoint3D :: Axes3D -> Point3 -> Point3
 normPoint3D ax (Point3 x y z) =
   Point3 (normCoord (axesXLog ax) (axesXMin ax) (axesXMax ax) x)
          (normCoord (axesYLog ax) (axesYMin ax) (axesYMax ax) y)
          (normCoord (axesZLog ax) (axesZMin ax) (axesZMax ax) z)
 
--- | Phase 25 A8: 1 軸の正規化 (log/線形)。 @[lo,hi]@ → @[-1,1]@。 log は値・端を
--- 1e-12 に clamp してから log10 空間で affine。
+-- | [日本語]: 1 軸の正規化 (log/線形)。 @[lo,hi]@ → @[-1,1]@。 log は値・端を
+--   1e-12 に clamp してから log10 空間で affine。
+--   [English]: Normalizes a single axis (log or linear): @[lo,hi]@ to
+--   @[-1,1]@. For log, values and endpoints are clamped to 1e-12 and then
+--   made affine in log10 space.
 normCoord :: Bool -> Double -> Double -> Double -> Double
 normCoord isLog lo hi v
   | isLog =
@@ -384,8 +471,12 @@ normCoord isLog lo hi v
   | hi <= lo  = 0
   | otherwise = -1 + 2 * (v - lo) / (hi - lo)
 
--- | Phase 24 A3: layer のデータを正規化座標に写す。 surface は grid の z と
--- x/y range、 それ以外は点列。 colormap の色は z 正規化に対して不変 (affine)。
+-- | [日本語]: layer のデータを正規化座標に写す。 surface は grid の z と
+--   x/y range、 それ以外は点列。 colormap の色は z 正規化に対して不変 (affine)。
+--   [English]: Maps a layer's data into normalized coordinates. For a
+--   surface, this is the grid's z and the x/y range; for other layers, the
+--   point list. Colormap colors are invariant under z normalization
+--   (it's affine).
 normLayer3D :: Axes3D -> Layer3D -> Layer3D
 normLayer3D ax l0 = case getFirst (lyr3Kind l) of
   Just M3Surface ->
@@ -430,9 +521,13 @@ normLayer3D ax l0 = case getFirst (lyr3Kind l) of
                , lyr3Labels = Last (Just (map snd annots)) }
           _ -> l0
 
--- | Phase 24 A2: パネル右端の縦 colorbar (gradient strip + min/mid/max ラベル)。
+-- | [日本語]: パネル右端の縦 colorbar (gradient strip + min/mid/max ラベル)。
 --   2D の gradient bar 凡例と同じ 'continuousColor' 補間 = palette 整合。
---   Phase 24 A7: パネル矩形 @(px,py,pw,ph)@ 局所座標で配置 (facet 対応)。
+--   パネル矩形 @(px,py,pw,ph)@ 局所座標で配置 (facet 対応)。
+--   [English]: The vertical colorbar (a gradient strip plus min/mid/max
+--   labels) along the panel's right edge, using the same 'continuousColor'
+--   interpolation as the 2D gradient-bar legend (palette-consistent).
+--   Positioned in panel-local coordinates @(px,py,pw,ph)@ (supports facets).
 renderColorbar3D :: Double -> Double -> Double -> Double -> ([Text], Double, Double) -> [Primitive]
 renderColorbar3D px py pw ph (stops, zMin, zMax) =
   let barW = 14 :: Double
@@ -456,14 +551,16 @@ renderColorbar3D px py pw ph (stops, zMin, zMax) =
   in map strip [0 .. nStrip - 1]
      <> map tick [zMin, (zMin + zMax) / 2, zMax]
 
--- | tick 値の短い整形 (Axes3D の formatNum と同形)。
+-- | [日本語]: tick 値の短い整形 (Axes3D の formatNum と同形)。
+--   [English]: A compact formatting for tick values (the same shape as
+--   Axes3D's formatNum).
 fmtNum3D :: Double -> Text
 fmtNum3D x =
   let s = T.pack (show (fromIntegral (round (x * 10) :: Int) / 10.0 :: Double))
   in T.dropWhileEnd (== '.') (T.dropWhileEnd (== '0') s)
 
--- | Phase 24 A5 / #2: surface の contour を壁面へ投影する (matplotlib
--- @contour(..., zdir=)@ 相当)。 'lyr3Contours' の各 @(dir, n)@ を描く:
+-- | [日本語]: surface の contour を壁面へ投影する (matplotlib
+--   @contour(..., zdir=)@ 相当)。 'lyr3Contours' の各 @(dir, n)@ を描く:
 --
 --   * 'ContourZ' (床) = z 等値面 level set @{f=z_k}@ を 'marchingSegments' で抽出し
 --     floor へ落とす (topographic map)。
@@ -471,9 +568,27 @@ fmtNum3D x =
 --     @z = f(x_k, y)@ を yz 壁へ描く。
 --   * 'ContourY' (前後壁) = y 軸の @n@ 位置で断面 @z = f(x, y_k)@ を xz 壁へ描く。
 --
--- 投影壁は **カメラから遠い面に自動固定** (eye と target の各軸符号で min/max 面を選ぶ・
--- 曲面の手前に出て遮らないように)。 grid・aspect 正規化済 layer を受ける。 mpl の
--- rotate_axes 経路 (= dir⊥平面で切った断面を壁へ投影) を再現 (実測で数値突合済)。
+--   投影壁は __カメラから遠い面に自動固定__ (eye と target の各軸符号で min/max 面を選ぶ・
+--   曲面の手前に出て遮らないように)。 grid・aspect 正規化済 layer を受ける。 mpl の
+--   rotate_axes 経路 (= dir⊥平面で切った断面を壁へ投影) を再現 (実測で数値突合済)。
+--   [English]: Projects a surface's contour onto a wall (equivalent to
+--   matplotlib's @contour(..., zdir=)@). Draws each @(dir, n)@ from
+--   'lyr3Contours':
+--
+--   * 'ContourZ' (floor) — extracts the z level-set contour @{f=z_k}@ via
+--     'marchingSegments' and drops it onto the floor (a topographic map).
+--   * 'ContourX' (left/right wall) — slices the surface at @n@ positions
+--     along x, drawing the cross-section profile @z = f(x_k, y)@ on the yz
+--     wall.
+--   * 'ContourY' (front/back wall) — draws the cross-section
+--     @z = f(x, y_k)@ at @n@ positions along y on the xz wall.
+--
+--   The projection wall __auto-pins to the far face from the camera__
+--   (chosen from the eye's and target's sign along each axis, so it never
+--   gets in front of the surface and occludes it). Takes an
+--   already grid- and aspect-normalized layer. Reproduces matplotlib's
+--   rotate_axes path (projecting a cross-section cut perpendicular to
+--   @dir@ onto the wall); verified numerically against it.
 renderProjectedContour3D
   :: (Double, Double, Double)
   -> Camera3D -> Projection3D -> Viewport -> Layer3D -> [Primitive]
@@ -532,8 +647,12 @@ renderProjectedContour3D (xa, ya, za) cam proj vp l =
               in concatMap section (innerLevels nLev yMin yMax)
         in concatMap one cs
 
--- | 1 次元線形補間。 @interp1 nodes vals p@ は昇順 @nodes@ 上の値 @vals@ を位置 @p@ で
--- 補間 (範囲外は端値で clamp・隣接 2 点で線形)。 断面 contour の grid 補間に使う。
+-- | [日本語]: 1 次元線形補間。 @interp1 nodes vals p@ は昇順 @nodes@ 上の値 @vals@ を位置 @p@ で
+--   補間 (範囲外は端値で clamp・隣接 2 点で線形)。 断面 contour の grid 補間に使う。
+--   [English]: 1D linear interpolation. @interp1 nodes vals p@ interpolates
+--   the values @vals@ over ascending @nodes@ at position @p@ (out-of-range
+--   is clamped to the endpoint value; linear between the two neighbors).
+--   Used for grid interpolation in cross-section contours.
 interp1 :: [Double] -> [Double] -> Double -> Double
 interp1 nodes vals p = go (zip nodes vals)
   where

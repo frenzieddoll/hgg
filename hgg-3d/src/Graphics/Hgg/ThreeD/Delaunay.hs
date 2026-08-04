@@ -1,17 +1,29 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Delaunay
--- Description : 2D Delaunay 三角分割 (Phase 26 A5・trisurf 用)
+-- Description : 2D Delaunay 三角分割 (trisurf 用)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 不規則 (非 grid) 点群を 'trisurf' で曲面化するための **純 Haskell** 2D Delaunay
--- 三角分割。 外部ライブラリ / バイナリ依存ゼロ (= spec §10.7・graphviz parity と
--- 同じ「自己完結」 方針)。 アルゴリズムは Bowyer-Watson の素朴版 (O(n²) 程度・
--- trisurf の点数は数十〜低数百なので十分)。
+-- [日本語]: 不規則 (非 grid) 点群を 'Graphics.Hgg.ThreeD.Spec.trisurf' で曲面化するための __純 Haskell__
+--   2D Delaunay 三角分割。 外部ライブラリ / バイナリ依存ゼロ (= spec §10.7・
+--   graphviz parity と同じ「自己完結」 方針)。 アルゴリズムは Bowyer-Watson の
+--   素朴版 (O(n²) 程度・trisurf の点数は数十〜低数百なので十分)。
 --
--- 入力は (x,y) 列。 z は呼び出し側で分割後に各頂点へ持ち上げる (= trisurf は
--- (x,y) 平面の 2D 分割だけで足り、 3D 四面体分割は不要)。 退化 (共円・共線) は
--- incircle 述語の符号で素朴に扱う (demo 用途では実害なし)。
+--   入力は (x,y) 列。 z は呼び出し側で分割後に各頂点へ持ち上げる (= trisurf は
+--   (x,y) 平面の 2D 分割だけで足り、 3D 四面体分割は不要)。 退化 (共円・共線) は
+--   incircle 述語の符号で素朴に扱う (demo 用途では実害なし)。
+-- [English]: A __pure Haskell__ 2D Delaunay triangulation for turning
+--   irregular (non-grid) point clouds into a surface via 'Graphics.Hgg.ThreeD.Spec.trisurf'. Zero
+--   external library / binary dependencies (the same "self-contained"
+--   policy as spec §10.7 / graphviz parity). The algorithm is a naive
+--   Bowyer-Watson implementation (roughly O(n²), which is fine since
+--   'Graphics.Hgg.ThreeD.Spec.trisurf' typically deals with tens to low hundreds of points).
+--
+--   The input is a list of (x,y) columns; z is lifted onto each vertex by
+--   the caller after triangulation ('Graphics.Hgg.ThreeD.Spec.trisurf' only needs the 2D
+--   triangulation of the (x,y) plane, not a 3D tetrahedralization).
+--   Degenerate cases (co-circular or collinear points) are handled naively
+--   via the sign of the incircle predicate (harmless for demo purposes).
 {-# LANGUAGE BangPatterns #-}
 module Graphics.Hgg.ThreeD.Delaunay
   ( delaunay2D
@@ -20,8 +32,12 @@ module Graphics.Hgg.ThreeD.Delaunay
 import           Data.List       (foldl')
 import qualified Data.Map.Strict as M
 
--- | (x,y) 点列を 2D Delaunay 三角分割し、 三角形を元の点配列への index 三つ組
+-- | [日本語]: (x,y) 点列を 2D Delaunay 三角分割し、 三角形を元の点配列への index 三つ組
 --   @(i,j,k)@ で返す。 点が 3 未満 / 全点共線などで三角形が作れない時は @[]@。
+--   [English]: Triangulates a list of (x,y) points via 2D Delaunay
+--   triangulation, returning each triangle as an index triple @(i,j,k)@ into
+--   the original point array. Returns @[]@ when fewer than 3 points are
+--   given, or triangulation is impossible (e.g. all points collinear).
 delaunay2D :: [(Double, Double)] -> [(Int, Int, Int)]
 delaunay2D pts0
   | n < 3     = []
@@ -64,7 +80,9 @@ delaunay2D pts0
 
     triEdges (a, b, c) = [(a, b), (b, c), (c, a)]
 
--- | 点 d が三角形 (a,b,c) の外接円の内部か。 三角形の向き (CCW/CW) を符号で吸収。
+-- | [日本語]: 点 d が三角形 (a,b,c) の外接円の内部か。 三角形の向き (CCW/CW) を符号で吸収。
+--   [English]: Whether point d lies inside the circumcircle of triangle
+--   (a,b,c). The triangle's winding order (CCW/CW) is absorbed via the sign.
 inCircle :: (Double, Double) -> (Double, Double) -> (Double, Double)
          -> (Double, Double) -> Bool
 inCircle (ax, ay) (bx, by) (cx, cy) (dx, dy) =

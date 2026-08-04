@@ -254,13 +254,13 @@ resolveLM ly xs ys = do
         , lineLy ] -- 線を後に (前面)
 
 -- | [日本語]: smooth: B-spline 平滑。 knot 数は lyBinCount (既定 6)。
---   'lyStatLevel' が Just (= 'statSmoothCI') なら bs 設計行列の 'LM.confidenceBand' で
---   信頼帯 (band) + 曲線 (line)、 Nothing (= 'statSmooth') なら曲線のみ。
+--   'lyStatLevel' が Just (= @statSmoothCI@) なら bs 設計行列の 'LM.confidenceBand' で
+--   信頼帯 (band) + 曲線 (line)、 Nothing (= @statSmooth@) なら曲線のみ。
 --   [English]: smooth: B-spline smoothing. The knot count comes from
 --   lyBinCount (default 6). When 'lyStatLevel' is Just (i.e.
---   'statSmoothCI'), computes a confidence band (band) + curve (line) via
+--   @statSmoothCI@), computes a confidence band (band) + curve (line) via
 --   the bs design matrix's 'LM.confidenceBand'; when Nothing (i.e.
---   'statSmooth'), computes only the curve.
+--   @statSmooth@), computes only the curve.
 resolveSmooth :: StatFn
 resolveSmooth ly xs ys = do
   let n       = maybe 6 id (getLast (lyBinCount ly))

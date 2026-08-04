@@ -116,10 +116,10 @@ modelGraphToDAGPlates = I.toDAGPlates
 
 -- | [日本語]: 'ModelGraph' を Sugiyama framework + plate-aware
 --   ordering + Catmull-Rom spline + port snap の DAG layout でレンダリングし、
---   'VisualSpec' に包んで返す。 ユーザは title / theme / size 等を追加合成可能。
+--   @VisualSpec@ に包んで返す。 ユーザは title / theme / size 等を追加合成可能。
 --   [English]: Renders a 'ModelGraph' with a DAG layout (Sugiyama framework
 --   + plate-aware ordering + Catmull-Rom splines + port snapping) and
---   returns it wrapped in a 'VisualSpec'. Callers can further compose in
+--   returns it wrapped in a @VisualSpec@. Callers can further compose in
 --   title / theme / size and the like.
 --
 -- @
@@ -140,10 +140,10 @@ modelGraphToVisualSpec mg =
   in Easy.purePlot <> Easy.layer (dagSpec <> Easy.size 22)
 
 -- | [日本語]: 'ModelGraph' を SVG ファイルに直描画。 title は plot 上部に表示。
---   size / theme 等を細かく指定したい場合は 'modelGraphToVisualSpec' + 'plot' を使う。
+--   size / theme 等を細かく指定したい場合は 'modelGraphToVisualSpec' + @plot@ を使う。
 --   [English]: Renders a 'ModelGraph' directly to an SVG file. The title is
 --   shown at the top of the plot. For finer control over size / theme and
---   the like, use 'modelGraphToVisualSpec' with 'plot' instead.
+--   the like, use 'modelGraphToVisualSpec' with @plot@ instead.
 --
 -- @
 -- renderModelGraphSVG \"out\/dag.svg\" \"My HBM\" mg

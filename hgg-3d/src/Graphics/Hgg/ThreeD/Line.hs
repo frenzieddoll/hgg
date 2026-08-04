@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Line
--- Description : 3D 線 / wireframe (Phase 3 A6)
+-- Description : 3D 線 / wireframe
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 {-# LANGUAGE DeriveGeneric     #-}
@@ -86,15 +86,24 @@ renderWireframe3D cam proj vp wf =
   in map mkLine sorted
 
 -- ===========================================================================
--- Phase 26 A3: 3D vector field (quiver3D)
+-- 3D vector field (quiver3D)
 -- ===========================================================================
 
--- | 3D vector field。 各矢印は始点 'q3Starts' → 終点 'q3Ends' (= 正規化済・
--- autoscale + aspect 適用後の点列)。 描画は両端を投影して 2D 矢印 (本線 + 矢じり)
--- にする (= mplot3d も実質 2D 矢じり)。 depth 統合外の前面 overlay。
+-- | [日本語]: 3D vector field。 各矢印は始点 'q3Starts' → 終点 'q3Ends' (= 正規化済・
+--   autoscale + aspect 適用後の点列)。 描画は両端を投影して 2D 矢印 (本線 + 矢じり)
+--   にする (= mplot3d も実質 2D 矢じり)。 depth 統合外の前面 overlay。
+--   [English]: A 3D vector field. Each arrow runs from a start point
+--   'q3Starts' to an end point 'q3Ends' (already normalized — the point
+--   lists have autoscale and aspect already applied). Rendering projects
+--   both endpoints and draws a 2D arrow (shaft plus arrowhead), the same
+--   way mplot3d effectively draws 2D arrowheads too. Drawn as a front
+--   overlay, outside of depth integration.
 data Quiver3D = Quiver3D
-  { q3Starts :: ![Point3]   -- ^ 矢印の始点 (正規化済)
-  , q3Ends   :: ![Point3]   -- ^ 矢印の終点 (正規化済・始点 + scaled vec)
+  { q3Starts :: ![Point3]   -- ^ [日本語]: 矢印の始点 (正規化済)
+                             --   [English]: The arrow's start point (already normalized).
+  , q3Ends   :: ![Point3]   -- ^ [日本語]: 矢印の終点 (正規化済・始点 + scaled vec)
+                             --   [English]: The arrow's end point (already normalized;
+                             --   start point plus the scaled vector).
   , q3Color  :: !Text
   , q3Width  :: !Double
   } deriving (Show, Eq, Generic)
@@ -115,8 +124,11 @@ renderQuiver3D cam proj vp q =
           Projected ex ey _ = project e
       in arrowHead2D sx sy ex ey style
 
--- | 投影後の 2D 矢印 (本線 + 矢じり 2 本)。 矢じり形状は 2D quiver
--- (core Render.Basic drawArrow2D) と同じ (長さ 9px・開き比 0.5)。
+-- | [日本語]: 投影後の 2D 矢印 (本線 + 矢じり 2 本)。 矢じり形状は 2D quiver
+--   (core Render.Basic drawArrow2D) と同じ (長さ 9px・開き比 0.5)。
+--   [English]: The projected 2D arrow (a shaft plus two arrowhead lines).
+--   The arrowhead shape matches the 2D quiver's (core Render.Basic
+--   drawArrow2D): length 9px, spread ratio 0.5.
 arrowHead2D :: Double -> Double -> Double -> Double -> LineStyle -> [Primitive]
 arrowHead2D px1 py1 px2 py2 ls =
   let dx = px2 - px1; dy = py2 - py1

@@ -30,7 +30,7 @@
 module Graphics.Hgg.Backend.Rasterific
   ( -- * 通常 (Resolver 不要 = inline 列のみの図)
     savePNG
-    -- * Resolver 同伴 (= 'ColByName' を含む図)
+    -- * Resolver 同伴 (= @ColByName@ を含む図)
   , savePNGWith
     -- * Phase 14 系: BoundPlot (df バインド済) を描画する
   , savePNGBound
@@ -119,9 +119,9 @@ defaultPNGConfig = PNGConfig
 savePNG :: FilePath -> VisualSpec -> IO ()
 savePNG path = savePNGWith path emptyResolver
 
--- | [日本語]: 'Resolver' を渡して PNG ファイルに保存。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して PNG ファイルに保存。 @ColByName@ を含む図用。
 --   [English]: Saves to a PNG file given a 'Resolver'. For figures that
---   include 'ColByName'.
+--   include @ColByName@.
 savePNGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 savePNGWith = savePNGConfigured defaultPNGConfig
 
@@ -162,11 +162,11 @@ savePNGConfigured cfg path r spec = do
   savePrimitivesPNGBg bgPx cfg path w h prims
 
 -- | [日本語]: [Primitive] 列を所与のキャンバスサイズで PNG に直接描画する
---   低レベル経路 ('savePrimitivesSVG' の PNG 版)。 2D の 'savePNGConfigured' と
---   3D の 'savePNG3D' が共有。 'pngScale' で Hi-DPI 拡大。
+--   低レベル経路 (@savePrimitivesSVG@ の PNG 版)。 2D の 'savePNGConfigured' と
+--   3D の @savePNG3D@ が共有。 'pngScale' で Hi-DPI 拡大。
 --   [English]: A low-level path that draws a list of Primitives directly to
---   PNG at a given canvas size (the PNG counterpart of 'savePrimitivesSVG').
---   Shared by 2D's 'savePNGConfigured' and 3D's 'savePNG3D'. Hi-DPI scaling
+--   PNG at a given canvas size (the PNG counterpart of @savePrimitivesSVG@).
+--   Shared by 2D's 'savePNGConfigured' and 3D's @savePNG3D@. Hi-DPI scaling
 --   is applied via 'pngScale'.
 savePrimitivesPNG :: PNGConfig -> FilePath -> Int -> Int -> [Primitive] -> IO ()
 savePrimitivesPNG = savePrimitivesPNGBg (PixelRGBA8 255 255 255 255)
@@ -197,11 +197,11 @@ savePrimitivesPNGBg bg cfg path w h prims = do
 -- ===========================================================================
 
 -- | [日本語]: 解釈器に渡すフォント束。 既定 (sans-serif) は regular/bold の 2 face、
---   spec の 'fontFamily' 指定分は 'pfFamilies'
+--   spec の @fontFamily@ 指定分は 'pfFamilies'
 --   (正規化 family 名 → face 対) で解決する。 italic は引き続き regular 代替
 --   (日本語 .ttf で italic が揃う環境は稀のため。 計画 md の設計判断)。
 --   [English]: The font bundle passed to the interpreter. The default
---   (sans-serif) has 2 faces, regular/bold; a spec's 'fontFamily' is
+--   (sans-serif) has 2 faces, regular/bold; a spec's @fontFamily@ is
 --   resolved via 'pfFamilies' (normalized family name to face pair).
 --   Italic still falls back to regular (a design decision, since
 --   environments with an italic Japanese .ttf available are rare).

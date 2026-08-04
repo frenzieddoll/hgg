@@ -1,11 +1,15 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Surface
--- Description : 3D surface plot (grid mesh + painter's algorithm) (Phase 3 A7)
+-- Description : 3D surface plot (grid mesh + painter's algorithm)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 規則 grid (= 2D 配列の z 値) から triangle mesh を作り、 painter's algorithm
--- で奥から塗り潰す。 optional Lambert shading (= flat、 1 directional light)。
+-- [日本語]: 規則 grid (= 2D 配列の z 値) から triangle mesh を作り、
+--   painter's algorithm で奥から塗り潰す。 optional Lambert shading
+--   (= flat、 1 directional light)。
+-- [English]: Builds a triangle mesh from a regular grid (a 2D array of z
+--   values) and fills it back-to-front with the painter's algorithm.
+--   Optional Lambert shading (flat, one directional light).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Surface
@@ -41,17 +45,30 @@ data Surface3D = Surface3D
   , sf3EdgeColor  :: !Text
   , sf3Shaded     :: !Bool
   , sf3Colormap   :: !(Maybe [Text])
-    -- ^ Phase 24 A2: @Just stops@ で面色を z 値の連続色 (gradient stops の
-    --   線形補間・2D 'ColorByContinuous' と同じ 'continuousColor') にする。
+    -- ^ [日本語]: @Just stops@ で面色を z 値の連続色 (gradient stops の
+    --   線形補間・2D 'Graphics.Hgg.Spec.ColorByContinuous' と同じ 'continuousColor') にする。
     --   @Nothing@ = 従来の単色 'sf3Color' (後方互換)。
+    --   [English]: With @Just stops@, face colors follow a continuous z
+    --   colormap (linear interpolation of gradient stops, via the same
+    --   'continuousColor' used by 2D 'Graphics.Hgg.Spec.ColorByContinuous'). @Nothing@ means
+    --   the traditional single color 'sf3Color' (backward compatible).
   , sf3Alpha      :: !Double
-    -- ^ Phase 25 A4: 面の不透明度 (0..1・既定 1)。 @< 1@ で半透明 surface。
-    --   face は depth ソート済 (painter's・A8 で scatter と大域マージ) なので
+    -- ^ [日本語]: 面の不透明度 (0..1・既定 1)。 @< 1@ で半透明 surface。
+    --   face は depth ソート済 (painter's・scatter と大域マージ) なので
     --   back-to-front 合成が正しく重なる。
+    --   [English]: The face opacity (0..1, default 1). @< 1@ gives a
+    --   semi-transparent surface. Faces are already depth-sorted (via the
+    --   painter's algorithm, merged globally with scatter), so
+    --   back-to-front compositing layers correctly.
   , sf3Wire       :: !Bool
-    -- ^ surfaceWire: 面を塗らず grid の行/列を**格子線メッシュ**で描く
+    -- ^ [日本語]: surfaceWire: 面を塗らず grid の行/列を__格子線メッシュ__で描く
     --   (matplotlib @plot_wireframe@ 相当)。 True で fill 三角形の代わりに
     --   隣接 grid 点を結ぶ line segment を depth 統合付きで返す。 colormap/shaded は無効。
+    --   [English]: surfaceWire: rather than filling faces, draws the grid's
+    --   rows/columns as a __gridline mesh__ (equivalent to matplotlib's
+    --   @plot_wireframe@). When True, returns line segments connecting
+    --   adjacent grid points (with depth integration) instead of filled
+    --   triangles. colormap / shaded are disabled.
   } deriving (Show, Eq, Generic)
 instance ToJSON   Surface3D
 instance FromJSON Surface3D
@@ -92,9 +109,13 @@ renderSurface3D
 renderSurface3D cam proj vp sf =
   map snd (sortOn (negate . fst) (surfaceFacesDepth cam proj vp sf))
 
--- | Phase 24 A8 (depth 統合): 各 face を @(投影 depth, poly Primitive)@ として
--- **未ソート**で返す (= 'renderSurface3D' は @sortOn (negate.fst)@ してから
--- @map snd@・ビット同一)。 scatter 点との層横断 depth 統合に使う。
+-- | [日本語]: (depth 統合): 各 face を @(投影 depth, poly Primitive)@ として
+--   __未ソート__で返す (= 'renderSurface3D' は @sortOn (negate.fst)@ してから
+--   @map snd@・ビット同一)。 scatter 点との層横断 depth 統合に使う。
+--   [English]: (depth integration): Returns each face as
+--   @(projected depth, poly Primitive)@, __unsorted__ ('renderSurface3D' is
+--   bit-identical to @sortOn (negate . fst)@ followed by @map snd@ of this).
+--   Used to integrate depth across layers with scatter points.
 surfaceFacesDepth
   :: Camera3D -> Projection3D -> Viewport
   -> Surface3D -> [(Double, Primitive)]
@@ -180,18 +201,30 @@ surfaceFacesDepth cam proj vp sf =
     subAsVec (Point3 bx by bz) (Point3 ax ay az) =
       Vec3 (bx - ax) (by - ay) (bz - az)
 
--- | Phase 26 A5 (trisurf): grid 非依存に **任意の三角形 face 列**を depth +
--- Lambert shading + (任意) colormap で @(投影 depth, PPath)@ 化する
--- ('surfaceFacesDepth' の grid 専用ロジックを triangle 列入力へ一般化した版)。
--- 頂点は正規化済前提。 colormap の z range は全 face 頂点 z から算出。
+-- | [日本語]: (trisurf): grid 非依存に __任意の三角形 face 列__を depth +
+--   Lambert shading + (任意) colormap で @(投影 depth, PPath)@ 化する
+--   ('surfaceFacesDepth' の grid 専用ロジックを triangle 列入力へ一般化した版)。
+--   頂点は正規化済前提。 colormap の z range は全 face 頂点 z から算出。
+--   [English]: (trisurf): Converts an __arbitrary list of triangle faces__
+--   (not tied to a grid) into @(projected depth, PPath)@ using depth,
+--   Lambert shading, and an optional colormap (a generalization of the
+--   grid-specific logic in 'surfaceFacesDepth' to a list-of-triangles
+--   input). Vertices are assumed already normalized. The colormap's z range
+--   is computed from every face vertex's z.
 trianglesFacesDepth
   :: Camera3D -> Projection3D -> Viewport
-  -> Text          -- ^ 基本色 (colormap 無しの単色)
-  -> Text          -- ^ edge 色
-  -> Bool          -- ^ shaded (Lambert)
-  -> Maybe [Text]  -- ^ colormap stops (Just で z 連続色)
-  -> Double        -- ^ alpha
-  -> [(Point3, Point3, Point3)]  -- ^ 三角形 (正規化済)
+  -> Text          -- ^ [日本語]: 基本色 (colormap 無しの単色)
+                    --   [English]: The base color (a single color when no colormap is used).
+  -> Text          -- ^ [日本語]: edge 色
+                    --   [English]: The edge color.
+  -> Bool          -- ^ [日本語]: shaded (Lambert)
+                    --   [English]: Whether to apply Lambert shading.
+  -> Maybe [Text]  -- ^ [日本語]: colormap stops (Just で z 連続色)
+                    --   [English]: The colormap stops (@Just@ gives a continuous z colormap).
+  -> Double        -- ^ [日本語]: alpha
+                    --   [English]: The alpha (opacity).
+  -> [(Point3, Point3, Point3)]  -- ^ [日本語]: 三角形 (正規化済)
+                                  --   [English]: The triangles (already normalized).
   -> [(Double, Primitive)]
 trianglesFacesDepth cam proj vp baseCol edgeCol shaded cmap alpha triangles =
   let project = project3D cam proj vp

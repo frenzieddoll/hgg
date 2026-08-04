@@ -1,6 +1,6 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Browser
--- Description : HS-side browser display driver (Phase 5 A5)
+-- Description : HS-side browser display driver
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
@@ -10,16 +10,32 @@
 -- main = showBrowser $ purePlot3D <> layer3D (scatter3D pts) <> camera (defaultCameraZUp 3)
 -- @
 --
--- 中身: spec を aeson で JSON 化、 PS WebGL bundle (= data-files) と inline 結合した
--- self-contained HTML を tmp に出力、 OS 別 browser-open コマンド (xdg-open / open / start) で起動。
+-- [日本語]: 中身: spec を aeson で JSON 化、 PS WebGL bundle (= data-files) と inline 結合した
+--   self-contained HTML を tmp に出力、 OS 別 browser-open コマンド (xdg-open / open / start) で起動。
 --
--- 設計判断 (= phase-5 計画 md §2.4):
+--   設計判断 (= phase-5 計画 md §2.4):
 --
---   * **bundle embed 方式**: cabal data-files 採用 (= dev iteration 速さ重視、
---     PS 側更新時 HS 再 build 不要)。 将来 TH 'embedFile' 切替時は 'getBundleJS'
---     の中身だけ差替えで済む。 詳細 → @design\/bundle-embed-choice.md@
---   * **3 つの出力経路**: 'showBrowser' (= tmp + open)、 'saveHTML3D' (= 配布用、 単一 HTML)、
---     'Graphics.Hgg.ThreeD.Easy.saveSVG3D' (= 静的 SVG、 Phase 3 CPU projection 経路)
+--     * __bundle embed 方式__: cabal data-files 採用 (= dev iteration 速さ重視、
+--       PS 側更新時 HS 再 build 不要)。 将来 TH @embedFile@ 切替時は 'getBundleJS'
+--       の中身だけ差替えで済む。 詳細 → @design\/bundle-embed-choice.md@
+--     * __3 つの出力経路__: 'showBrowser' (= tmp + open)、 'saveHTML3D' (= 配布用、 単一 HTML)、
+--       'Graphics.Hgg.ThreeD.Easy.saveSVG3D' (= 静的 SVG、 CPU projection 経路)
+-- [English]: Internals: JSON-encodes the spec via aeson, writes a
+--   self-contained HTML file to tmp that inline-embeds the PS WebGL bundle
+--   (from data-files), then launches it with the OS-specific browser-open
+--   command (xdg-open / open / start).
+--
+--   Design decisions (see phase-5 plan md §2.4):
+--
+--     * __The bundle-embed approach__: uses cabal data-files (prioritizing
+--       dev iteration speed — no HS rebuild is needed when the PS side
+--       changes). If this ever switches to TH @embedFile@, only the body of
+--       'getBundleJS' needs to change. Details:
+--       @design\/bundle-embed-choice.md@
+--     * __Three output paths__: 'showBrowser' (tmp file plus open),
+--       'saveHTML3D' (a single distributable HTML file), and
+--       'Graphics.Hgg.ThreeD.Easy.saveSVG3D' (a static SVG, via the CPU
+--       projection path)
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Browser
   ( -- * 主要 API
@@ -45,11 +61,18 @@ import           Graphics.Hgg.ThreeD.Spec     (VisualSpec3D)
 -- bundle 取得 (= 絶縁レイヤ、 後で TH に swap 可能)
 -- ===========================================================================
 
--- | PS WebGL bundle (= data/webgl-spec.js) を ByteString で取得。
+-- | [日本語]: PS WebGL bundle (= data/webgl-spec.js) を ByteString で取得。
 --
--- 現在は @cabal data-files@ 経由 ('Paths_hgg_3d.getDataFileName')。
--- 将来 TH 'embedFile' に切替時はこの 1 関数のみ差替えれば済むよう設計
--- (= 切替手順は @design\/bundle-embed-choice.md@)。
+--   現在は @cabal data-files@ 経由 ('Paths_hgg_3d.getDataFileName')。
+--   将来 TH @embedFile@ に切替時はこの 1 関数のみ差替えれば済むよう設計
+--   (= 切替手順は @design\/bundle-embed-choice.md@)。
+--   [English]: Fetches the PS WebGL bundle (data/webgl-spec.js) as a
+--   ByteString.
+--
+--   Currently goes through @cabal data-files@
+--   ('Paths_hgg_3d.getDataFileName'). Designed so that a future
+--   switch to TH @embedFile@ only requires replacing this one function
+--   (the switch procedure is in @design\/bundle-embed-choice.md@).
 getBundleJS :: IO BS.ByteString
 getBundleJS = do
   path <- getDataFileName "data/webgl-spec.js"
@@ -59,10 +82,15 @@ getBundleJS = do
 -- showBrowser / saveHTML3D
 -- ===========================================================================
 
--- | spec を **ブラウザで interactive 表示**。 tmp HTML 生成 + OS 別 browser-open。
+-- | [日本語]: spec を __ブラウザで interactive 表示__。 tmp HTML 生成 + OS 別 browser-open。
 --
--- WebGL2 backend で描画、 mouse drag で camera orbit、 wheel で zoom、
--- 右 drag で pan。 操作仕様は Phase 4 demo と同一。
+--   WebGL2 backend で描画、 mouse drag で camera orbit、 wheel で zoom、
+--   右 drag で pan。 操作仕様は demo と同一。
+--   [English]: Displays a spec __interactively in the browser__. Generates a
+--   tmp HTML file, then opens it with the OS-specific browser-open command.
+--
+--   Renders via the WebGL2 backend: mouse drag orbits the camera, the wheel
+--   zooms, and right-drag pans. The controls match the demo.
 showBrowser :: VisualSpec3D -> IO ()
 showBrowser spec = do
   tmpDir <- getTemporaryDirectory
@@ -70,9 +98,14 @@ showBrowser spec = do
   saveHTML3D path spec
   openInBrowser path
 
--- | spec を **self-contained HTML として保存** (= 配布用、 bundle inline 埋込)。
+-- | [日本語]: spec を __self-contained HTML として保存__ (= 配布用、 bundle inline 埋込)。
 --
--- 出力ファイルは外部依存無し、 ブラウザで直接開ける。
+--   出力ファイルは外部依存無し、 ブラウザで直接開ける。
+--   [English]: Saves a spec as __self-contained HTML__ (for distribution,
+--   with the bundle inline-embedded).
+--
+--   The output file has no external dependencies and opens directly in a
+--   browser.
 saveHTML3D :: FilePath -> VisualSpec3D -> IO ()
 saveHTML3D path spec = do
   bundleJS <- getBundleJS
@@ -84,9 +117,13 @@ saveHTML3D path spec = do
 -- HTML 生成
 -- ===========================================================================
 
--- | bundle JS + spec JSON を 1 HTML に埋込。 ESM ではなく通常 script 経路
--- (= spago bundle 出力は IIFE、 ESM import すると export named 'main' 不在で失敗、
---    Phase 4 で確認済の罠)。
+-- | [日本語]: bundle JS + spec JSON を 1 HTML に埋込。 ESM ではなく通常 script 経路
+--   (= spago bundle 出力は IIFE、 ESM import すると export named @main@ 不在で失敗、
+--      確認済の罠)。
+--   [English]: Embeds the bundle JS plus spec JSON into a single HTML file.
+--   Uses a plain @<script>@ tag rather than ESM (spago's bundle output is
+--   an IIFE; ESM import fails because there is no named export @main@ — a
+--   confirmed gotcha).
 mkHTML :: BS.ByteString -> LBS.ByteString -> LBS.ByteString
 mkHTML bundleJS specJSON = LBS.concat
   [ "<!DOCTYPE html>\n"
@@ -135,10 +172,16 @@ mkHTML bundleJS specJSON = LBS.concat
 -- OS 別 browser-open
 -- ===========================================================================
 
--- | OS 検出して xdg-open (Linux) / open (macOS) / start (Windows) を呼ぶ。
+-- | [日本語]: OS 検出して xdg-open (Linux) / open (macOS) / start (Windows) を呼ぶ。
 --
--- WSL は @os == \"linux\"@ で xdg-open 経路。 wslview などインストール済なら動作。
--- 失敗時は path を stdout に出すので手動で開ける。
+--   WSL は @os == \"linux\"@ で xdg-open 経路。 wslview などインストール済なら動作。
+--   失敗時は path を stdout に出すので手動で開ける。
+--   [English]: Detects the OS and calls xdg-open (Linux), open (macOS), or
+--   start (Windows).
+--
+--   WSL reports @os == \"linux\"@, so it goes through the xdg-open path;
+--   this works if @wslview@ or similar is installed. On failure, the path
+--   is printed to stdout so it can be opened manually.
 openInBrowser :: FilePath -> IO ()
 openInBrowser path = case os of
   "linux"   -> safeCall ("xdg-open " <> quote path)

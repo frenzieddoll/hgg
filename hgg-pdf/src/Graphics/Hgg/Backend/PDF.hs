@@ -28,7 +28,7 @@
 module Graphics.Hgg.Backend.PDF
   ( -- * 通常 (Resolver 不要 = inline 列のみの図)
     savePDF
-    -- * Resolver 同伴 (= 'ColByName' を含む図)
+    -- * Resolver 同伴 (= @ColByName@ を含む図)
   , savePDFWith
     -- * Phase 14 系: BoundPlot (df バインド済) を描画する
   , savePDFBound
@@ -68,9 +68,9 @@ import           System.IO             (hPutStrLn, stderr)
 savePDF :: FilePath -> VisualSpec -> IO ()
 savePDF path = savePDFWith path emptyResolver
 
--- | [日本語]: 'Resolver' を渡して PDF ファイルに保存。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して PDF ファイルに保存。 @ColByName@ を含む図用。
 --   [English]: Saves to a PDF file given a 'Resolver'. For figures that
---   include 'ColByName'.
+--   include @ColByName@.
 savePDFWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 savePDFWith path r spec = do
   reportFacetInlineWarnings r spec   -- ★ 描画は継続
@@ -83,11 +83,11 @@ savePDFWith path r spec = do
   savePrimitivesPDF path w h prims
 
 -- | [日本語]: [Primitive] 列を所与のキャンバスサイズで PDF に直接描画する
---   低レベル経路 ('savePrimitivesSVG' の PDF 版)。 2D の 'savePDFWith' と 3D の
---   'savePDF3D' が共有。 非 Latin-1 ラベルは警告 + @?@ 置換 (v1 制約)。
+--   低レベル経路 (@savePrimitivesSVG@ の PDF 版)。 2D の 'savePDFWith' と 3D の
+--   @savePDF3D@ が共有。 非 Latin-1 ラベルは警告 + @?@ 置換 (v1 制約)。
 --   [English]: A low-level path that draws a list of Primitives directly to
---   PDF at a given canvas size (the PDF counterpart of 'savePrimitivesSVG').
---   Shared by 2D's 'savePDFWith' and 3D's 'savePDF3D'. Non-Latin-1 labels
+--   PDF at a given canvas size (the PDF counterpart of @savePrimitivesSVG@).
+--   Shared by 2D's 'savePDFWith' and 3D's @savePDF3D@. Non-Latin-1 labels
 --   trigger a warning and are replaced with @?@ (v1 constraint).
 savePrimitivesPDF :: FilePath -> Int -> Int -> [Primitive] -> IO ()
 savePrimitivesPDF path w h prims = do
@@ -325,10 +325,10 @@ setDashOf dash = P.setDash (P.DashPattern dash 0)
 -- テキスト — PDF 標準フォント (Latin のみ・v1 制約)
 -- ===========================================================================
 
--- | [日本語]: 標準フォント束 (3 family × 4 変種)。 'mkStdFont' は AFM parse を伴う IO
+-- | [日本語]: 標準フォント束 (3 family × 4 変種)。 @mkStdFont@ は AFM parse を伴う IO
 --   なので savePDF 入口で 1 回 load して 'P.Draw' 解釈器に渡す。
 --   [English]: The bundle of standard fonts (3 families × 4 variants).
---   Since 'mkStdFont' is an IO action that parses AFM data, it is loaded
+--   Since @mkStdFont@ is an IO action that parses AFM data, it is loaded
 --   once at the savePDF entry point and passed into the 'P.Draw'
 --   interpreter.
 data StdFonts = StdFonts

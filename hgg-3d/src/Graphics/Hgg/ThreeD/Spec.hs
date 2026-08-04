@@ -1,11 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Spec
--- Description : 3D VisualSpec / Layer + Monoid (Phase 5 A3)
+-- Description : 3D VisualSpec / Layer + Monoid
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 2D 同型 (= Graphics.Hgg.Spec の 'VisualSpec' / 'Layer' / Monoid 構成) を踏襲した
--- 3D 用 spec API。 ユーザ視点で 2D と同じ構文で組める:
+-- [日本語]: 2D 同型 (= Graphics.Hgg.Spec の 'Graphics.Hgg.Spec.VisualSpec' / 'Graphics.Hgg.Spec.Layer' / Monoid 構成) を踏襲した
+--   3D 用 spec API。 ユーザ視点で 2D と同じ構文で組める:
 --
 -- @
 -- -- 2D
@@ -16,13 +16,28 @@
 --            <> camera (defaultCameraZUp 3) <> axes3D defaultAxes3D <> title3D "..."
 -- @
 --
--- 値型は分離 (= 'Layer' と 'Layer3D' は別)。 理由は phase-5 計画 md §2.2。
+--   値型は分離 (= 'Graphics.Hgg.Spec.Layer' と 'Layer3D' は別)。 理由は phase-5 計画 md §2.2。
+-- [English]: A 3D spec API that mirrors the 2D one (the
+--   'Graphics.Hgg.Spec.VisualSpec' / 'Graphics.Hgg.Spec.Layer' / Monoid design in Graphics.Hgg.Spec). From a
+--   user's perspective, it's built with the exact same syntax as 2D:
+--
+-- @
+-- -- 2D
+-- purePlot <> layer (scatter x y <> color (fromHex "#ff0000") <> alpha 0.7) <> title "..."
+--
+-- -- 3D (100% syntax-identical)
+-- purePlot3D <> layer3D (scatter3D pts <> color3D (fromHex "#ff0000") <> alpha3D 0.7)
+--            <> camera (defaultCameraZUp 3) <> axes3D defaultAxes3D <> title3D "..."
+-- @
+--
+--   The value types are kept separate ('Graphics.Hgg.Spec.Layer' and 'Layer3D' are distinct
+--   types); see phase-5 plan md §2.2 for why.
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.ThreeD.Spec
   ( -- * MarkKind3D
     Mark3DKind (..)
-    -- * Bar スタイル (Phase 25 A5・Bar module 再 export)
+    -- * Bar スタイル (Bar module 再 export)
   , BarStyle3D (..)
     -- * Layer3D (= 1 layer の per-field Monoid)
   , Layer3D (..)
@@ -30,7 +45,7 @@ module Graphics.Hgg.ThreeD.Spec
   , VisualSpec3D (..)
     -- * 純粋起点
   , purePlot3D
-    -- * Layer 起点 (= 2D 'layer' 同型)
+    -- * Layer 起点 (= 2D 'Graphics.Hgg.Spec.layer' 同型)
   , layer3D
     -- * Mark コンストラクタ (= Layer3D 返却)
   , scatter3D
@@ -97,7 +112,7 @@ module Graphics.Hgg.ThreeD.Spec
   , layerToSurface
   , layerToBar
   , layerToQuiver
-    -- * 列参照の解決 (Phase 24 A6)
+    -- * 列参照の解決
   , resolveLayer3D
   , resolveSpec3D
     -- * Helper: layers から bounding box 自動算出 (= Axes 未指定時の default)
@@ -135,7 +150,9 @@ import           Graphics.Hgg.ThreeD.Types
 -- MarkKind3D
 -- ===========================================================================
 
--- | 3D layer の幾何種別 (= 2D 'MarkKind' の 3D 版)。
+-- | [日本語]: 3D layer の幾何種別 (= 2D 'Graphics.Hgg.Spec.MarkKind' の 3D 版)。
+--   [English]: A 3D layer's geometry kind (the 3D counterpart of 2D
+--   'Graphics.Hgg.Spec.MarkKind').
 data Mark3DKind
   = M3Scatter
   | M3Line
@@ -151,14 +168,21 @@ instance ToJSON   Mark3DKind
 instance FromJSON Mark3DKind
 
 -- ===========================================================================
--- Layer3D (= 2D 'Layer' 同型、 per-field First/Last Monoid)
+-- Layer3D (= 2D 'Graphics.Hgg.Spec.Layer' 同型、 per-field First/Last Monoid)
 -- ===========================================================================
 
--- | 3D 1 layer の rolled-up 表現。 全 field が 'First' or 'Last' なので per-field
---   '(<>)' で自然に合成可能 (= 2D 'Layer' と同じ規律)。
+-- | [日本語]: 3D 1 layer の rolled-up 表現。 全 field が 'First' or 'Last' なので per-field
+--   '(<>)' で自然に合成可能 (= 2D 'Graphics.Hgg.Spec.Layer' と同じ規律)。
 --
---   * 'lyr3Kind' は 'First' (= 最初に設定した kind が勝つ、 2D 'lyKind' と同じ)
---   * その他属性は 'Last' (= 後勝ち、 2D 'lyColor' 等と同じ)
+--   * 'lyr3Kind' は 'First' (= 最初に設定した kind が勝つ、 2D @lyKind@ と同じ)
+--   * その他属性は 'Last' (= 後勝ち、 2D @lyColor@ 等と同じ)
+--   [English]: The rolled-up representation of a single 3D layer. Every
+--   field is 'First' or 'Last', so per-field @(\<\>)@ composes naturally
+--   (the same discipline as 2D 'Graphics.Hgg.Spec.Layer').
+--
+--   * 'lyr3Kind' is 'First' (the first kind set wins, same as 2D @lyKind@)
+--   * every other attribute is 'Last' (last one wins, same as 2D @lyColor@
+--     and friends)
 data Layer3D = Layer3D
   { lyr3Kind      :: !(First Mark3DKind)
   , lyr3Points    :: !(Last [Point3])
@@ -261,10 +285,12 @@ instance Monoid Layer3D where
                    mempty mempty mempty mempty mempty mempty
 
 -- ===========================================================================
--- VisualSpec3D (= 2D 'VisualSpec' 同型、 layers ++ + per-field Last)
+-- VisualSpec3D (= 2D 'Graphics.Hgg.Spec.VisualSpec' 同型、 layers ++ + per-field Last)
 -- ===========================================================================
 
--- | 3D 図全体の spec。 'layers' は append、 その他は 'Last' (= 後勝ち)。
+-- | [日本語]: 3D 図全体の spec。 @layers@ は append、 その他は 'Last' (= 後勝ち)。
+--   [English]: The spec for an entire 3D figure. @layers@ appends; every
+--   other field is 'Last' (last one wins).
 data VisualSpec3D = VisualSpec3D
   { vs3Layers     :: ![Layer3D]
   , vs3Title      :: !(Last Text)
@@ -296,14 +322,18 @@ instance Monoid VisualSpec3D where
                         mempty mempty mempty
 
 -- ===========================================================================
--- 純粋起点 + lift helpers (= 2D 'purePlot' / 'layer' 同型)
+-- 純粋起点 + lift helpers (= 2D 'Graphics.Hgg.Spec.purePlot' / 'Graphics.Hgg.Spec.layer' 同型)
 -- ===========================================================================
 
--- | 'VisualSpec3D' 起点 (= 2D 'purePlot' 同型、 'mempty' alias)。
+-- | [日本語]: 'VisualSpec3D' 起点 (= 2D 'Graphics.Hgg.Spec.purePlot' 同型、 'mempty' alias)。
+--   [English]: The 'VisualSpec3D' starting point (the counterpart of 2D
+--   'Graphics.Hgg.Spec.purePlot'; an alias for 'mempty').
 purePlot3D :: VisualSpec3D
 purePlot3D = mempty
 
--- | 'Layer3D' を 'VisualSpec3D' に lift (= 2D 'layer' 同型)。
+-- | [日本語]: 'Layer3D' を 'VisualSpec3D' に lift (= 2D 'Graphics.Hgg.Spec.layer' 同型)。
+--   [English]: Lifts a 'Layer3D' into a 'VisualSpec3D' (the counterpart of
+--   2D 'Graphics.Hgg.Spec.layer').
 layer3D :: Layer3D -> VisualSpec3D
 layer3D l = mempty { vs3Layers = [l] }
 
@@ -311,37 +341,47 @@ layer3D l = mempty { vs3Layers = [l] }
 -- Mark コンストラクタ (= Layer3D を返却、 後で `<> color3D ...` で属性 append)
 -- ===========================================================================
 
--- | 3D scatter (= M3Scatter)。 Phase 24 A6: 2D 'Graphics.Hgg.Spec.scatter' と
--- 対称の **ColRef 3 つ** (x, y, z)。 列名 (OverloadedStrings) か 'inline' の
--- 生値を渡す。 旧 [Point3] 直入れは 'scatter3DPoints'。
+-- | [日本語]: 3D scatter (= M3Scatter)。 2D 'Graphics.Hgg.Spec.scatter' と
+--   対称の __ColRef 3 つ__ (x, y, z)。 列名 (OverloadedStrings) か 'Graphics.Hgg.Spec.inline' の
+--   生値を渡す。 旧 [Point3] 直入れは 'scatter3DPoints'。
+--   [English]: A 3D scatter (M3Scatter). Symmetric with 2D
+--   'Graphics.Hgg.Spec.scatter': __three ColRefs__ (x, y, z). Pass a column
+--   name (via OverloadedStrings) or raw 'Graphics.Hgg.Spec.inline' values. For the older
+--   direct @[Point3]@ form, use 'scatter3DPoints'.
 scatter3D :: ColRef -> ColRef -> ColRef -> Layer3D
 scatter3D x y z = mempty
   { lyr3Kind = First (Just M3Scatter)
   , lyr3EncX = Last (Just x), lyr3EncY = Last (Just y), lyr3EncZ = Last (Just z)
   }
 
--- | 3D scatter ([Point3] 直入れ・旧 'scatter3D')。
+-- | [日本語]: 3D scatter ([Point3] 直入れ・旧 'scatter3D')。
+--   [English]: A 3D scatter with @[Point3]@ passed directly (the older form
+--   of 'scatter3D').
 scatter3DPoints :: [Point3] -> Layer3D
 scatter3DPoints pts = mempty
   { lyr3Kind   = First (Just M3Scatter)
   , lyr3Points = Last  (Just pts)
   }
 
--- | 3D line (= MLine3D、 連続折れ線)。
+-- | [日本語]: 3D line (= MLine3D、 連続折れ線)。
+--   [English]: A 3D line (MLine3D, a continuous polyline).
 line3D :: ColRef -> ColRef -> ColRef -> Layer3D
 line3D x y z = mempty
   { lyr3Kind = First (Just M3Line)
   , lyr3EncX = Last (Just x), lyr3EncY = Last (Just y), lyr3EncZ = Last (Just z)
   }
 
--- | 3D line ([Point3] 直入れ・旧 'line3D')。
+-- | [日本語]: 3D line ([Point3] 直入れ・旧 'line3D')。
+--   [English]: A 3D line with @[Point3]@ passed directly (the older form of
+--   'line3D').
 line3DPoints :: [Point3] -> Layer3D
 line3DPoints pts = mempty
   { lyr3Kind   = First (Just M3Line)
   , lyr3Points = Last  (Just pts)
   }
 
--- | 3D wireframe (= MWireframe3D、 任意 edge 群)。
+-- | [日本語]: 3D wireframe (= MWireframe3D、 任意 edge 群)。
+--   [English]: A 3D wireframe (MWireframe3D, an arbitrary set of edges).
 wireframe3D :: [Point3] -> [(Int, Int)] -> Layer3D
 wireframe3D pts es = mempty
   { lyr3Kind   = First (Just M3Wireframe)
@@ -349,10 +389,16 @@ wireframe3D pts es = mempty
   , lyr3Edges  = Last  (Just es)
   }
 
--- | Phase 30 A6: 列駆動 3D surface (案C・= 2D 系と対称の ColRef 3 つ x/y/z)。 df の
---   long 形 (各行 = 格子点 (x,y,z)) を受け、 'resolveLayer3D' で **内部 pivot** して
+-- | [日本語]: 列駆動 3D surface (案C・= 2D 系と対称の ColRef 3 つ x/y/z)。 df の
+--   long 形 (各行 = 格子点 (x,y,z)) を受け、 'resolveLayer3D' で __内部 pivot__ して
 --   grid mesh ('lyr3Grid' + xRange/yRange) に落とす。 grid は x/y が規則格子である前提
 --   (= 全 (x_i,y_j) 組が揃う・欠損は NaN 穴)。 既に行列を持っている場合は 'surface3DGrid'。
+--   [English]: A column-driven 3D surface (plan C — symmetric with the 2D
+--   family's 3 ColRefs x/y/z). Takes a dataframe's long form (each row is a
+--   grid point (x,y,z)) and __pivots internally__ via 'resolveLayer3D' into
+--   a grid mesh ('lyr3Grid' plus xRange/yRange). Assumes x/y form a regular
+--   grid (every (x_i,y_j) pair is present; missing cells become NaN holes).
+--   If you already have a matrix, use 'surface3DGrid' instead.
 --
 --   @df |>> layer3D (surface3D \"x\" \"y\" \"z\" <> colormap3D)@
 surface3D :: ColRef -> ColRef -> ColRef -> Layer3D
@@ -361,33 +407,47 @@ surface3D x y z = mempty
   , lyr3EncX = Last (Just x), lyr3EncY = Last (Just y), lyr3EncZ = Last (Just z)
   }
 
--- | 3D surface (= MSurface3D、 grid mesh・行列直入れ・旧 'surface3D')。 z 値の
+-- | [日本語]: 3D surface (= MSurface3D、 grid mesh・行列直入れ・旧 'surface3D')。 z 値の
 --   2 次元配列を受け、 x/y 範囲は 'xRange3D'/'yRange3D' (既定 (-1,1)) で与える。
+--   [English]: A 3D surface (MSurface3D, a grid mesh with the matrix passed
+--   directly; the older form of 'surface3D'). Takes a 2D array of z values;
+--   the x/y range is given via 'xRange3D' / 'yRange3D' (default (-1,1)).
 surface3DGrid :: [[Double]] -> Layer3D
 surface3DGrid grid = mempty
   { lyr3Kind = First (Just M3Surface)
   , lyr3Grid = Last  (Just grid)
   }
 
--- | Phase 25 A5: 3D bar (= M3Bar)。 'scatter3D' と対称の ColRef 3 つ (x, y,
+-- | [日本語]: 3D bar (= M3Bar)。 'scatter3D' と対称の ColRef 3 つ (x, y,
 --   高さ z)。 各 (x,y) に底面 (data z=0) から高さ z までの棒を立てる。 既定は
 --   直方体 ('barStyle3D' で stick へ)。 [Point3] 直入れは 'bar3DPoints'。
+--   [English]: A 3D bar (M3Bar). Symmetric with 'scatter3D': three ColRefs
+--   (x, y, height z). Raises a bar at each (x,y) from the base (data z=0)
+--   to height z. Defaults to a cuboid (use 'barStyle3D' to switch to a
+--   stick). For direct @[Point3]@ input, use 'bar3DPoints'.
 bar3D :: ColRef -> ColRef -> ColRef -> Layer3D
 bar3D x y z = mempty
   { lyr3Kind = First (Just M3Bar)
   , lyr3EncX = Last (Just x), lyr3EncY = Last (Just y), lyr3EncZ = Last (Just z)
   }
 
--- | Phase 25 A5: 3D bar ([Point3] 直入れ・各点の z = 棒の高さ)。
+-- | [日本語]: 3D bar ([Point3] 直入れ・各点の z = 棒の高さ)。
+--   [English]: A 3D bar with @[Point3]@ passed directly (each point's z is
+--   the bar's height).
 bar3DPoints :: [Point3] -> Layer3D
 bar3DPoints tops = mempty
   { lyr3Kind   = First (Just M3Bar)
   , lyr3Points = Last  (Just tops)
   }
 
--- | Phase 26 A4: 3D stem (= M3Stem)。 'bar3D' と対称の ColRef 3 つ (x, y, z)。
+-- | [日本語]: 3D stem (= M3Stem)。 'bar3D' と対称の ColRef 3 つ (x, y, z)。
 --   各 (x,y) に底面 ('stemBaseZ'・既定 0) から z までの細い垂線 + 先端マーカーを
 --   描く (3D lollipop)。 [Point3] 直入れは 'stem3DPoints'。 底面は 'stemBaseZ' で変更。
+--   [English]: A 3D stem (M3Stem). Symmetric with 'bar3D': three ColRefs
+--   (x, y, z). Draws a thin vertical line plus a tip marker (a 3D lollipop)
+--   from the base ('stemBaseZ', default 0) up to z at each (x,y). For
+--   direct @[Point3]@ input, use 'stem3DPoints'. Change the base with
+--   'stemBaseZ'.
 --
 --   @stem3D \"x\" \"y\" \"z\" <> color3D (fromHex \"#d62728\") <> stemBaseZ 0@
 stem3D :: ColRef -> ColRef -> ColRef -> Layer3D
@@ -396,21 +456,31 @@ stem3D x y z = mempty
   , lyr3EncX = Last (Just x), lyr3EncY = Last (Just y), lyr3EncZ = Last (Just z)
   }
 
--- | Phase 26 A4: 3D stem ([Point3] 直入れ・各点の z = stem の先端高さ)。
+-- | [日本語]: 3D stem ([Point3] 直入れ・各点の z = stem の先端高さ)。
+--   [English]: A 3D stem with @[Point3]@ passed directly (each point's z is
+--   the stem's tip height).
 stem3DPoints :: [Point3] -> Layer3D
 stem3DPoints tops = mempty
   { lyr3Kind   = First (Just M3Stem)
   , lyr3Points = Last  (Just tops)
   }
 
--- | Phase 26 A4: stem の底面 z (data 空間・既定 0)。 mplot3d @stem(..., bottom=)@ 相当。
---   'normLayer3D' が axes に基づき正規化して 'lyr3BarBaseZ' へ落とす。
+-- | [日本語]: stem の底面 z (data 空間・既定 0)。 mplot3d @stem(..., bottom=)@ 相当。
+--   'Graphics.Hgg.ThreeD.Easy.normLayer3D' が axes に基づき正規化して 'lyr3BarBaseZ' へ落とす。
+--   [English]: The stem's base z (in data space, default 0). Equivalent to
+--   mplot3d's @stem(..., bottom=)@. 'Graphics.Hgg.ThreeD.Easy.normLayer3D' normalizes it based on
+--   the axes and stores it into 'lyr3BarBaseZ'.
 stemBaseZ :: Double -> Layer3D
 stemBaseZ z = mempty { lyr3StemBaseZ = Last (Just z) }
 
--- | Phase 26 A3: 3D vector field (= M3Quiver)。 各 @(位置, ベクトル)@ に矢印を描く
+-- | [日本語]: 3D vector field (= M3Quiver)。 各 @(位置, ベクトル)@ に矢印を描く
 --   (= mplot3d @quiver@)。 矢印長は autoscale (= 最長矢印が cube の ~35%) に
 --   'vecScale3D' 倍を掛けた長さ。 描画は投影後の 2D 矢印 (本線 + 矢じり)。
+--   [English]: A 3D vector field (M3Quiver). Draws an arrow at each
+--   @(position, vector)@ (equivalent to mplot3d's @quiver@). Arrow length
+--   is autoscaled (the longest arrow becomes ~35% of the cube), multiplied
+--   by 'vecScale3D'. Rendering draws the projected 2D arrow (shaft plus
+--   arrowhead).
 --
 --   @quiver3D [(Point3 0 0 0, Vec3 1 0 0), (Point3 1 1 1, Vec3 0 0 1)]@
 quiver3D :: [(Point3, Vec3)] -> Layer3D
@@ -420,13 +490,20 @@ quiver3D items = mempty
   , lyr3Vectors = Last  (Just (map snd items))
   }
 
--- | Phase 26 A3: quiver3D 矢印長の倍率 (autoscale × この値・既定 1)。
+-- | [日本語]: quiver3D 矢印長の倍率 (autoscale × この値・既定 1)。
+--   [English]: The multiplier on quiver3D's arrow length (autoscale times
+--   this value, default 1).
 vecScale3D :: Double -> Layer3D
 vecScale3D s = mempty { lyr3VecScale = Last (Just s) }
 
--- | Phase 26 A5: trisurf (= M3Trisurf)。 不規則 (非 grid) な 3D 点群を (x,y) 平面で
+-- | [日本語]: trisurf (= M3Trisurf)。 不規則 (非 grid) な 3D 点群を (x,y) 平面で
 --   Delaunay 三角分割して曲面化する (= mplot3d @plot_trisurf@)。 散らばった観測点・
 --   GP 事後点など、 規則 grid でない曲面を描ける。 z 連続色は 'colormap3D' で。
+--   [English]: trisurf (M3Trisurf). Surfaces an irregular (non-grid) 3D
+--   point cloud by Delaunay-triangulating it in the (x,y) plane (equivalent
+--   to mplot3d's @plot_trisurf@). Suited to scattered observations, GP
+--   posterior points, or other surfaces that don't form a regular grid.
+--   Use 'colormap3D' for a continuous z color.
 --
 --   @trisurf pts <> colormap3D viridisStops3D@
 trisurf :: [Point3] -> Layer3D
@@ -435,11 +512,18 @@ trisurf pts = mempty
   , lyr3Points = Last  (Just pts)
   }
 
--- | Phase 30 A6: 列駆動の 3D テキスト注釈 (= 2D 'Graphics.Hgg.Spec.text' と対称・
---   ColRef 4 つ x/y/z + **label 列**)。 df の各行を投影し、 label 列の文字を PText で
+-- | [日本語]: 列駆動の 3D テキスト注釈 (= 2D 'Graphics.Hgg.Spec.text' と対称・
+--   ColRef 4 つ x/y/z + __label 列__)。 df の各行を投影し、 label 列の文字を PText で
 --   置く。 解決は 'resolveLayer3D' (x/y/z → 'lyr3Points'・label → 'lyr3Labels')。
 --   inline 生値版は 'text3DPoints'。 文字色は 'color3D' (既定 @#333333@)、 サイズは
 --   'size3D' (既定 11)。
+--   [English]: A column-driven 3D text annotation (symmetric with 2D
+--   'Graphics.Hgg.Spec.text': 4 ColRefs — x/y/z plus a __label column__).
+--   Projects each row of the dataframe and places the label column's text
+--   via 'Graphics.Hgg.Primitive.PText'. Resolved by 'resolveLayer3D' (x/y/z go to 'lyr3Points',
+--   the label goes to 'lyr3Labels'). For the inline raw-value form, use
+--   'text3DPoints'. Text color comes from 'color3D' (default @#333333@),
+--   size from 'size3D' (default 11).
 --
 --   @text3D \"x\" \"y\" \"z\" \"name\"@
 text3D :: ColRef -> ColRef -> ColRef -> ColRef -> Layer3D
@@ -449,10 +533,16 @@ text3D x y z lab = mempty
   , lyr3TextBy = Last (Just lab)
   }
 
--- | Phase 30 A6: 3D テキスト注釈 (inline・[(点, 文字列)] 直入れ・旧 'text3D')。 各
+-- | [日本語]: 3D テキスト注釈 (inline・[(点, 文字列)] 直入れ・旧 'text3D')。 各
 --   @(点, 文字列)@ を投影して PText を出す (depth 統合外の前面 overlay)。 位置は他
 --   mark と同じ正規化 / z-aspect pipeline を通る。 'lyr3Annots' (concat Monoid) に
 --   積むので 'annotate3D' と @<>@ で畳める。
+--   [English]: A 3D text annotation (inline, taking @[(point, string)]@
+--   directly; the older form of 'text3D'). Projects each
+--   @(point, string)@ pair and emits a 'Graphics.Hgg.Primitive.PText' (a front overlay outside
+--   depth integration). Positions go through the same normalization /
+--   z-aspect pipeline as other marks. Accumulates into 'lyr3Annots' (a
+--   concat Monoid), so it folds together with 'annotate3D' via @\<\>@.
 --
 --   @text3DPoints [(Point3 0 0 1, \"peak\"), (Point3 1 1 0, \"corner\")]@
 text3DPoints :: [(Point3, Text)] -> Layer3D
@@ -461,9 +551,14 @@ text3DPoints items = mempty
   , lyr3Annots = items
   }
 
--- | Phase 25 A7 / 30 A6: 単一ラベルの注釈。 'lyr3Annots' に 1 件積むので
---   @annotate3D a \"A\" <> annotate3D b \"B\"@ のように **畳める** (= 複数注釈が累積。
+-- | [日本語]: 単一ラベルの注釈。 'lyr3Annots' に 1 件積むので
+--   @annotate3D a \"A\" <> annotate3D b \"B\"@ のように __畳める__ (= 複数注釈が累積。
 --   旧実装は 'lyr3Labels' が Last で後勝ち → 畳めなかった)。
+--   [English]: A single-label annotation. Accumulates one entry into
+--   'lyr3Annots', so it __folds together__ like
+--   @annotate3D a \"A\" <> annotate3D b \"B\"@ (multiple annotations
+--   accumulate; the older implementation used a 'Last' 'lyr3Labels' where
+--   the last one won, so it could not fold).
 --
 --   @annotate3D (Point3 0 0 1) \"max\" <> color3D (fromHex \"#d62728\") <> size3D 13@
 annotate3D :: Point3 -> Text -> Layer3D
@@ -473,67 +568,111 @@ annotate3D p t = text3DPoints [(p, t)]
 -- per-layer 属性 (= 2D 'color' / 'size' / 'alpha' 同型、 Layer3D 返却)
 -- ===========================================================================
 
--- | Phase 30 A5: 固定色 (= 2D 'Graphics.Hgg.Spec.color' 同型・型安全な 'Color')。
+-- | [日本語]: 固定色 (= 2D 'Graphics.Hgg.Spec.color' 同型・型安全な 'Color')。
 --   @scatter3D pts <> color3D (fromHex "#56B4E9")@。 ワイヤは従来通り Text なので
 --   入口で 'toCss' 変換して格納する (Render / PS / JSON は無改修)。
+--   [English]: A fixed color (the counterpart of 2D
+--   'Graphics.Hgg.Spec.color'; a type-safe 'Color').
+--   @scatter3D pts <> color3D (fromHex "#56B4E9")@. The wire representation
+--   remains Text as before, so it's converted with 'toCss' at the entry
+--   point (Render / PS / JSON stay unchanged).
 color3D :: Color -> Layer3D
 color3D c = mempty { lyr3Color = Last (Just (toCss c)) }
 
--- | 便利関数 (2D 'Graphics.Hgg.Spec.colorRGBA' の 3D 双子): 8 桁 RGBA hex
+-- | [日本語]: 便利関数 (2D 'Graphics.Hgg.Spec.colorRGBA' の 3D 双子): 8 桁 RGBA hex
 --   (@"#rrggbbaa"@ / 4 桁 @"#rgba"@) を @color3D (fromHex …) <> alpha3D …@ に展開。
 --   不正入力は 'error' (total 版は 'colorRGBA3DMaybe')。
+--   [English]: A convenience function (the 3D twin of 2D
+--   'Graphics.Hgg.Spec.colorRGBA'): expands an 8-digit RGBA hex
+--   (@"#rrggbbaa"@, or 4-digit @"#rgba"@) into
+--   @color3D (fromHex …) <> alpha3D …@. Invalid input calls 'error' (see
+--   'colorRGBA3DMaybe' for a total version).
 colorRGBA3D :: Text -> Layer3D
 colorRGBA3D t = let (c, a) = fromHexA t in color3D c <> alpha3D a
 
--- | 'colorRGBA3D' の total 版。 不正な hex は 'Nothing'。
+-- | [日本語]: 'colorRGBA3D' の total 版。 不正な hex は 'Nothing'。
+--   [English]: The total version of 'colorRGBA3D'. An invalid hex yields
+--   'Nothing'.
 colorRGBA3DMaybe :: Text -> Maybe Layer3D
 colorRGBA3DMaybe t = (\(c, a) -> color3D c <> alpha3D a) <$> fromHexAMaybe t
 
--- | Phase 25 A2: scatter/line を**カテゴリ列**で群色分けする (+ 離散凡例)。
+-- | [日本語]: scatter/line を__カテゴリ列__で群色分けする (+ 離散凡例)。
 --   @scatter3D "x" "y" "z" <> colorBy3D "group"@。 色は 2D 同型の ggplot 既定
 --   palette ('ggplotHue')。 解決は 'resolveLayer3D' で点ごと色 + 凡例 mapping に
 --   落とす (カテゴリは初出順)。
+--   [English]: Colors scatter/line by group using a __category column__
+--   (plus a discrete legend). @scatter3D "x" "y" "z" <> colorBy3D "group"@.
+--   Colors follow the same ggplot default palette as 2D ('ggplotHue').
+--   Resolved by 'resolveLayer3D' into a per-point color plus a legend
+--   mapping (categories in first-occurrence order).
 colorBy3D :: ColRef -> Layer3D
 colorBy3D c = mempty { lyr3ColorBy = Last (Just c) }
 
--- | Phase 25 A3: scatter を**数値列**の連続色 (viridis) でマップする (+ colorbar)。
---   @scatter3D "x" "y" "z" <> colorContinuousBy3D "temp"@。 A2 'colorBy3D' (カテゴリ
+-- | [日本語]: scatter を__数値列__の連続色 (viridis) でマップする (+ colorbar)。
+--   @scatter3D "x" "y" "z" <> colorContinuousBy3D "temp"@。 'colorBy3D' (カテゴリ
 --   →離散凡例) と対。 解決は 'resolveLayer3D' で点ごと色 + colorbar 情報
 --   (stops, min, max) に落とす。 stops は surface と共有の 'viridisStops3D'。
---   (Phase 30 A5: 2D 'colorContinuousBy' と命名対称化。 旧名 @colorByValue3D@。)
+--   (2D 'Graphics.Hgg.Spec.colorContinuousBy' と命名対称化。 旧名 @colorByValue3D@。)
+--   [English]: Maps scatter to a continuous color (viridis) via a
+--   __numeric column__ (plus a colorbar).
+--   @scatter3D "x" "y" "z" <> colorContinuousBy3D "temp"@. The counterpart
+--   to 'colorBy3D' (a category to a discrete legend). Resolved by
+--   'resolveLayer3D' into a per-point color plus colorbar info
+--   (stops, min, max). Shares 'viridisStops3D' with surface. (Named to
+--   match 2D's @colorContinuousBy@; the older name was @colorByValue3D@.)
 colorContinuousBy3D :: ColRef -> Layer3D
 colorContinuousBy3D c = mempty { lyr3ColorByV = Last (Just c) }
 
--- | Phase 25 A3: scatter の点サイズ (= 基本半径 px) を**数値列**でマップする
+-- | [日本語]: scatter の点サイズ (= 基本半径 px) を__数値列__でマップする
 --   (bubble chart)。 @scatter3D "x" "y" "z" <> sizeBy3D "mass"@。 px 範囲は
 --   既定 @(4, 18)@、 変えたい時は 'sizeRange3D'。 値→size は線形 (min→範囲下端、
 --   max→範囲上端)。 depth cue は基本 size に乗算される。
+--   [English]: Maps a scatter's point size (the base radius in px) via a
+--   __numeric column__ (a bubble chart). @scatter3D "x" "y" "z" <>
+--   sizeBy3D "mass"@. The px range defaults to @(4, 18)@; change it with
+--   'sizeRange3D'. Value-to-size is linear (min maps to the range's lower
+--   end, max to the upper end). The depth cue multiplies the base size.
 sizeBy3D :: ColRef -> Layer3D
 sizeBy3D c = mempty { lyr3SizeBy = Last (Just c) }
 
--- | Phase 25 A3: 'sizeBy3D' の出力 px 範囲を明示指定 (下端, 上端)。 単独では
+-- | [日本語]: 'sizeBy3D' の出力 px 範囲を明示指定 (下端, 上端)。 単独では
 --   無効 ('sizeBy3D' と併用)。 未指定時の既定は @(4, 18)@。
+--   [English]: Explicitly sets the output px range (lower, upper) for
+--   'sizeBy3D'. Has no effect on its own (use together with 'sizeBy3D').
+--   Defaults to @(4, 18)@ when unspecified.
 sizeRange3D :: (Double, Double) -> Layer3D
 sizeRange3D r = mempty { lyr3SizeRange = Last (Just r) }
 
--- | Phase 25 A5: bar スタイル (直方体 'BarCuboid' / 縦線 'BarStick')。 既定は
+-- | [日本語]: bar スタイル (直方体 'BarCuboid' / 縦線 'BarStick')。 既定は
 --   'BarCuboid'。 @bar3D "x" "y" "z" <> barStyle3D BarStick@。
+--   [English]: The bar style (cuboid 'BarCuboid' or vertical line
+--   'BarStick'). Defaults to 'BarCuboid'.
+--   @bar3D "x" "y" "z" <> barStyle3D BarStick@.
 barStyle3D :: BarStyle3D -> Layer3D
 barStyle3D s = mempty { lyr3BarStyle = Last (Just s) }
 
--- | Phase 25 A5: bar footprint の半幅 (= 軸 span に対する比・既定 0.04)。
+-- | [日本語]: bar footprint の半幅 (= 軸 span に対する比・既定 0.04)。
 --   正規化空間 ([-1,1]) では x/y 共通でこの値がそのまま半幅になる。
+--   [English]: The bar footprint's half-width (as a ratio of the axis span,
+--   default 0.04). In normalized space (@[-1,1]@), this value directly
+--   becomes the half-width, shared by x/y.
 barWidth3D :: Double -> Layer3D
 barWidth3D w = mempty { lyr3BarWidth = Last (Just w) }
 
--- | Phase 25 A5: 誤差棒 (z 方向 ±err) を**数値列**で付ける。 bar・scatter
+-- | [日本語]: 誤差棒 (z 方向 ±err) を__数値列__で付ける。 bar・scatter
 --   どちらの layer にも付けられる (頂点に縦線 + 端キャップ)。
 --   @bar3D "x" "y" "z" <> errorBar3D "se"@。
+--   [English]: Attaches error bars (z-direction ±err) via a __numeric column__.
+--   Can be attached to either a bar or scatter layer (a vertical line plus
+--   end caps at each vertex). @bar3D "x" "y" "z" <> errorBar3D "se"@.
 errorBar3D :: ColRef -> Layer3D
 errorBar3D c = mempty { lyr3ErrBy = Last (Just c) }
 
--- | Phase 30 A5: surface 等のエッジ線色 (固定色・型安全な 'Color')。
+-- | [日本語]: surface 等のエッジ線色 (固定色・型安全な 'Color')。
 --   ワイヤは Text 維持 ('toCss' 変換して格納)。
+--   [English]: The edge line color for surfaces and similar (a fixed,
+--   type-safe 'Color'). The wire representation stays Text ('toCss' is
+--   applied at the entry point).
 edgeColor3D :: Color -> Layer3D
 edgeColor3D c = mempty { lyr3EdgeColor = Last (Just (toCss c)) }
 
@@ -549,53 +688,93 @@ width3D w = mempty { lyr3Width = Last (Just w) }
 shaded3D :: Bool -> Layer3D
 shaded3D b = mempty { lyr3Shaded = Last (Just b) }
 
--- | Phase 24 A2: surface 面色を z 値の連続色 (viridis) にする。
+-- | [日本語]: surface 面色を z 値の連続色 (viridis) にする。
 --   @layer3D (surface3DGrid grid <> colormap3D)@。 stops を変えたい時は
 --   'colormapWith3D'。
+--   [English]: Colors surface faces by a continuous z color (viridis).
+--   @layer3D (surface3DGrid grid <> colormap3D)@. Use 'colormapWith3D' to
+--   change the stops.
 colormap3D :: Layer3D
 colormap3D = colormapWith3D viridisStops3D
 
--- | Phase 24 A2: 任意 gradient stops の colormap (hex 色の線形補間)。
+-- | [日本語]: 任意 gradient stops の colormap (hex 色の線形補間)。
+--   [English]: A colormap over arbitrary gradient stops (linear
+--   interpolation between hex colors).
 colormapWith3D :: [Text] -> Layer3D
 colormapWith3D stops = mempty { lyr3Colormap = Last (Just stops) }
 
--- | surface を**面なしの格子線メッシュ**で描く (matplotlib @plot_wireframe@ 相当)。
+-- | [日本語]: surface を__面なしの格子線メッシュ__で描く (matplotlib @plot_wireframe@ 相当)。
 --   @surface3D@ に @\<>@ で合成: @layer3D (surface3DGrid grid \<> surfaceWire \<> color3D (fromHex "#2563eb"))@。
 --   面を塗らないので 'colormap3D' / 'shaded3D' は無効 (線色は 'color3D')。 任意エッジの
 --   'wireframe3D' とは別 (こちらは grid から行/列の線メッシュを自動生成)。
+--   [English]: Draws a surface as a __faceless gridline mesh__ (equivalent
+--   to matplotlib's @plot_wireframe@). Compose with @surface3D@ via
+--   @\<\>@: @layer3D (surface3DGrid grid \<\> surfaceWire \<\> color3D
+--   (fromHex "#2563eb"))@. Since no faces are filled, 'colormap3D' /
+--   'shaded3D' have no effect (line color comes from 'color3D'). Distinct
+--   from 'wireframe3D' (arbitrary edges); this one auto-generates the
+--   row/column line mesh from the grid.
 surfaceWire :: Layer3D
 surfaceWire = mempty { lyr3SurfaceWire = Last (Just True) }
 
--- | 投影 contour の軸 (内部表現)。 'contourX' / 'contourY' / 'contourZ' が設定する。
+-- | [日本語]: 投影 contour の軸 (内部表現)。 'contourX' / 'contourY' / 'contourZ' が設定する。
 --   matplotlib @contour(..., zdir=)@ 相当 (= dir に垂直な平面で曲面を切り、 壁へ投影)。
+--   [English]: The axis for a projected contour (internal representation),
+--   set by 'contourX' / 'contourY' / 'contourZ'. Equivalent to matplotlib's
+--   @contour(..., zdir=)@ (slices the surface with a plane perpendicular to
+--   @dir@ and projects it onto the wall).
 data ContourDir = ContourX | ContourY | ContourZ
   deriving (Show, Eq, Generic)
 instance ToJSON   ContourDir
 instance FromJSON ContourDir
 
--- | surface の **x 断面** @n@ 本を左右の壁 (yz 平面) へ投影する (matplotlib
---   @contour(..., zdir='x')@ / plotly @contours.x.project@ 相当)。 x 軸を等分した
+-- | [日本語]: surface の __x 断面__ @n@ 本を左右の壁 (yz 平面) へ投影する (matplotlib
+--   @contour(..., zdir="x")@ / plotly @contours.x.project@ 相当)。 x 軸を等分した
 --   @n@ 位置で曲面を切り、 各断面プロファイル @z = f(x_k, y)@ を壁に描く。 投影壁は
---   **カメラから遠い面に自動固定**。 同じ surface に 'contourY' / 'contourZ' を @\<>@ で
+--   __カメラから遠い面に自動固定__。 同じ surface に 'contourY' / 'contourZ' を @\<>@ で
 --   合成可。 線色は colormap (既定 viridis) の x 連続色。
 --   @surface3DGrid grid \<> colormap3D \<> contourX 8 \<> contourY 8 \<> contourZ 8@。
+--   [English]: Projects @n@ __x cross-sections__ of a surface onto the
+--   left/right walls (yz plane) (equivalent to matplotlib's
+--   @contour(..., zdir="x")@ / plotly's @contours.x.project@). Slices the
+--   surface at @n@ evenly spaced x positions and draws each cross-section
+--   profile @z = f(x_k, y)@ on the wall. The projection wall
+--   __auto-pins to the face farthest from the camera__. Composable with
+--   'contourY' / 'contourZ' on the same surface via @\<\>@. Line color
+--   follows the colormap's (default viridis) continuous x color.
+--   @surface3DGrid grid \<\> colormap3D \<\> contourX 8 \<\> contourY 8
+--   \<\> contourZ 8@.
 contourX :: Int -> Layer3D
 contourX n = mempty { lyr3Contours = [(ContourX, n)] }
 
--- | surface の **y 断面** @n@ 本を前後の壁 (xz 平面) へ投影する (matplotlib
---   @contour(..., zdir='y')@ 相当)。 各断面プロファイル @z = f(x, y_k)@ を壁に描く。
+-- | [日本語]: surface の __y 断面__ @n@ 本を前後の壁 (xz 平面) へ投影する (matplotlib
+--   @contour(..., zdir="y")@ 相当)。 各断面プロファイル @z = f(x, y_k)@ を壁に描く。
 --   投影壁はカメラから遠い面に自動固定。 'contourX' / 'contourZ' と合成可。
+--   [English]: Projects @n@ __y cross-sections__ of a surface onto the
+--   front/back walls (xz plane) (equivalent to matplotlib's
+--   @contour(..., zdir="y")@). Draws each cross-section profile
+--   @z = f(x, y_k)@ on the wall. The projection wall auto-pins to the face
+--   farthest from the camera. Composable with 'contourX' / 'contourZ'.
 contourY :: Int -> Layer3D
 contourY n = mempty { lyr3Contours = [(ContourY, n)] }
 
--- | surface の **等高線 (z 等値面)** @n@ 本を床 (xy 平面) へ投影する (matplotlib
---   @contour(..., zdir='z')@ / plotly @contours_z@ 相当)。 z 軸を等分した @n@ 値で
+-- | [日本語]: surface の __等高線 (z 等値面)__ @n@ 本を床 (xy 平面) へ投影する (matplotlib
+--   @contour(..., zdir="z")@ / plotly @contours_z@ 相当)。 z 軸を等分した @n@ 値で
 --   level set @{f = z_k}@ を抽出し床へ落とす (topographic map)。 投影面はカメラから
 --   遠い面 (通常は床) に自動固定。 'contourX' / 'contourY' と合成可。
+--   [English]: Projects @n@ __contour lines (z level sets)__ of a surface
+--   onto the floor (xy plane) (equivalent to matplotlib's
+--   @contour(..., zdir="z")@ / plotly's @contours_z@). Extracts the level
+--   set @{f = z_k}@ at @n@ evenly spaced z values and drops it onto the
+--   floor (a topographic map). The projection face auto-pins to the face
+--   farthest from the camera (usually the floor). Composable with
+--   'contourX' / 'contourY'.
 contourZ :: Int -> Layer3D
 contourZ n = mempty { lyr3Contours = [(ContourZ, n)] }
 
--- | 2D 'ColorByContinuous' と同じ viridis 5-stop (palette 共有)。
+-- | [日本語]: 2D 'Graphics.Hgg.Spec.ColorByContinuous' と同じ viridis 5-stop (palette 共有)。
+--   [English]: The same viridis 5-stop palette as 2D 'Graphics.Hgg.Spec.ColorByContinuous'
+--   (shared).
 viridisStops3D :: [Text]
 viridisStops3D = ["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"]
 
@@ -609,59 +788,87 @@ yRange3D r = mempty { lyr3YRange = Last (Just r) }
 -- VisualSpec3D 属性
 -- ===========================================================================
 
--- | camera 設定 (= 後勝ち、 'Last')。
+-- | [日本語]: camera 設定 (= 後勝ち、 'Last')。
+--   [English]: The camera setting (last one wins, 'Last').
 camera :: Camera3D -> VisualSpec3D
 camera c = mempty { vs3Camera = Last (Just c) }
 
--- | projection 設定。
+-- | [日本語]: projection 設定。
+--   [English]: The projection setting.
 projection :: Projection3D -> VisualSpec3D
 projection p = mempty { vs3Proj = Last (Just p) }
 
--- | axes 設定。 名前は 'axes3D' で 2D 'theme' / 'facet' と同型語感。
+-- | [日本語]: axes 設定。 名前は 'axes3D' で 2D 'Graphics.Hgg.Spec.theme' / 'Graphics.Hgg.Spec.facet' と同型語感。
+--   [English]: The axes setting. Named 'axes3D' to echo the feel of 2D
+--   'Graphics.Hgg.Spec.theme' / 'Graphics.Hgg.Spec.facet'.
 axes3D :: Axes3D -> VisualSpec3D
 axes3D a = mempty { vs3Axes = Last (Just a) }
 
--- | title (= 2D 'title' 同型、 ただし `3D` suffix で衝突回避)。
+-- | [日本語]: title (= 2D 'Graphics.Hgg.Spec.title' 同型、 ただし `3D` suffix で衝突回避)。
+--   [English]: The title (the counterpart of 2D 'Graphics.Hgg.Spec.title', with a @3D@ suffix
+--   to avoid a name clash).
 title3D :: Text -> VisualSpec3D
 title3D t = mempty { vs3Title = Last (Just t) }
 
--- | Phase 24 A8: 軸名 (x, y, z) を任意指定 (既定 "x"/"y"/"z")。
+-- | [日本語]: 軸名 (x, y, z) を任意指定 (既定 "x"/"y"/"z")。
+--   [English]: Sets arbitrary axis names (x, y, z), defaulting to
+--   "x"/"y"/"z".
 axisTitles3D :: Text -> Text -> Text -> VisualSpec3D
 axisTitles3D x y z = mempty { vs3AxisTitles = Last (Just (x, y, z)) }
 
--- | Phase 24 A8: z 軸の box 縦横比 (正規化後の z スケール係数・既定 1)。
+-- | [日本語]: z 軸の box 縦横比 (正規化後の z スケール係数・既定 1)。
 --   @< 1@ で扁平、 @> 1@ で縦長。 軸 box・surface・scatter・床面 contour すべてに
 --   一貫適用される。
+--   [English]: The z axis's box aspect ratio (the post-normalization z
+--   scale factor, default 1). @< 1@ flattens, @> 1@ elongates. Applied
+--   consistently to the axis box, surface, scatter, and floor contour.
 zAspect3D :: Double -> VisualSpec3D
 zAspect3D a = mempty { vs3ZAspect = Last (Just a) }
 
--- | Phase 25 A6: 壁面 pane + gridline の on/off (mplot3d 標準の薄灰 3 壁・既定 ON)。
+-- | [日本語]: 壁面 pane + gridline の on/off (mplot3d 標準の薄灰 3 壁・既定 ON)。
 --   @pane3D False@ で従来の cube wireframe + tick のみに戻す。
+--   [English]: Toggles the wall pane plus gridlines (mplot3d's standard
+--   light-gray 3-wall style; default ON). @pane3D False@ reverts to the
+--   original cube wireframe plus ticks only.
 pane3D :: Bool -> VisualSpec3D
 pane3D b = mempty { vs3Pane = Last (Just b) }
 
--- | Phase 25 A8: x 軸の box 縦横比 (正規化後 x スケール係数・既定 1。 'zAspect3D' の x 版)。
+-- | [日本語]: x 軸の box 縦横比 (正規化後 x スケール係数・既定 1。 'zAspect3D' の x 版)。
+--   [English]: The x axis's box aspect ratio (the post-normalization x
+--   scale factor, default 1; the x counterpart of 'zAspect3D').
 xAspect3D :: Double -> VisualSpec3D
 xAspect3D a = mempty { vs3XAspect = Last (Just a) }
 
--- | Phase 25 A8: y 軸の box 縦横比 (正規化後 y スケール係数・既定 1。 'zAspect3D' の y 版)。
+-- | [日本語]: y 軸の box 縦横比 (正規化後 y スケール係数・既定 1。 'zAspect3D' の y 版)。
+--   [English]: The y axis's box aspect ratio (the post-normalization y
+--   scale factor, default 1; the y counterpart of 'zAspect3D').
 yAspect3D :: Double -> VisualSpec3D
 yAspect3D a = mempty { vs3YAspect = Last (Just a) }
 
--- | Phase 25 A8: 軸を log scale に (x, y, z の順で flag 指定・既定 全 False)。
+-- | [日本語]: 軸を log scale に (x, y, z の順で flag 指定・既定 全 False)。
 --   log 軸はデータが正の前提 (非正は 1e-12 に clamp)。 tick は 10 の冪 (decade)、
 --   ラベルは元の値のまま。 surface の log-z は対応、 surface の log-x/y は現状未対応
 --   (point 系 mark = scatter/line/bar は全軸 log 可)。
 --
 --   @logScale3D False False True@  -- z だけ log (片対数)
+--   [English]: Switches axes to a log scale (flags given in x, y, z order,
+--   default all False). A log axis assumes positive data (non-positive
+--   values are clamped to 1e-12). Ticks are powers of 10 (decades); labels
+--   still show the original value. surface's log-z is supported, but
+--   surface's log-x/y is not currently (point-style marks — scatter/line/
+--   bar — support log on every axis).
+--
+--   @logScale3D False False True@  -- only z is log (semi-log)
 logScale3D :: Bool -> Bool -> Bool -> VisualSpec3D
 logScale3D x y z = mempty { vs3Log = Last (Just (x, y, z)) }
 
--- | width (= canvas 幅 px、 2D 'vsWidth' 同型)。
+-- | [日本語]: width (= canvas 幅 px、 2D 'Graphics.Hgg.Spec.vsWidth' 同型)。
+--   [English]: The canvas width in px (the counterpart of 2D 'Graphics.Hgg.Spec.vsWidth').
 width3DV :: Int -> VisualSpec3D
 width3DV w = mempty { vs3Width = Last (Just w) }
 
--- | height (= canvas 高さ px、 2D 'vsHeight' 同型)。
+-- | [日本語]: height (= canvas 高さ px、 2D 'Graphics.Hgg.Spec.vsHeight' 同型)。
+--   [English]: The canvas height in px (the counterpart of 2D 'Graphics.Hgg.Spec.vsHeight').
 height3DV :: Int -> VisualSpec3D
 height3DV h = mempty { vs3Height = Last (Just h) }
 
@@ -670,8 +877,11 @@ height3DV h = mempty { vs3Height = Last (Just h) }
 -- (= render 経路で使う。 defaults は existing default*3D 関数を経由)
 -- ===========================================================================
 
--- | Layer3D (= rolled-up) を 'Scatter3D' に変換。 'lyr3Kind' が 'M3Scatter' か
+-- | [日本語]: Layer3D (= rolled-up) を 'Scatter3D' に変換。 'lyr3Kind' が 'M3Scatter' か
 --   未指定の時に意味あり。 必須項目 ('lyr3Points') 未指定なら空 points で。
+--   [English]: Converts a rolled-up Layer3D into a 'Scatter3D'. Meaningful
+--   when 'lyr3Kind' is 'M3Scatter' or unspecified. If the required
+--   'lyr3Points' is unset, uses an empty points list.
 layerToScatter :: Layer3D -> Scatter3D
 layerToScatter l =
   let pts = fromMaybe [] (getLast (lyr3Points l))
@@ -718,9 +928,14 @@ layerToSurface l =
        , sf3Wire      = fromMaybe (sf3Wire      base) (getLast (lyr3SurfaceWire l))
        }
 
--- | Phase 25 A5: Layer3D を 'Bar3D' に変換 (render 経路で使う)。 点・base・half-width
---   は正規化済前提 ('normLayer3D' / 'scaleZLayer' が事前に処理)。 base は
+-- | [日本語]: Layer3D を 'Bar3D' に変換 (render 経路で使う)。 点・base・half-width
+--   は正規化済前提 ('Graphics.Hgg.ThreeD.Easy.normLayer3D' / @scaleZLayer@ が事前に処理)。 base は
 --   'lyr3BarBaseZ' (未設定なら 0)、 半幅は 'lyr3BarWidth' (既定 0.04)。
+--   [English]: Converts a Layer3D into a 'Bar3D' (used on the render path).
+--   Points, base, and half-width are assumed already normalized
+--   ('Graphics.Hgg.ThreeD.Easy.normLayer3D' / @scaleZLayer@ handle this beforehand). base comes from
+--   'lyr3BarBaseZ' (0 if unset); half-width from 'lyr3BarWidth' (default
+--   0.04).
 layerToBar :: Layer3D -> Bar3D
 layerToBar l =
   let tops = fromMaybe [] (getLast (lyr3Points l))
@@ -734,10 +949,16 @@ layerToBar l =
        , br3Width = fromMaybe (br3Width base) (getLast (lyr3Width    l))
        }
 
--- | Phase 26 A3: Layer3D を 'Quiver3D' に変換 (render 経路で使う)。 点・ベクトルは
---   正規化済前提 ('normLayer3D' / 'scaleAspectLayer' が事前に処理)。 autoscale =
+-- | [日本語]: Layer3D を 'Quiver3D' に変換 (render 経路で使う)。 点・ベクトルは
+--   正規化済前提 ('Graphics.Hgg.ThreeD.Easy.normLayer3D' / 'Graphics.Hgg.ThreeD.Easy.scaleAspectLayer' が事前に処理)。 autoscale =
 --   最長矢印が cube の 35% になるよう正規化ベクトル長で割り、 'lyr3VecScale' を掛ける。
 --   終点 = 始点 + scale × vec。
+--   [English]: Converts a Layer3D into a 'Quiver3D' (used on the render
+--   path). Points and vectors are assumed already normalized
+--   ('Graphics.Hgg.ThreeD.Easy.normLayer3D' / 'Graphics.Hgg.ThreeD.Easy.scaleAspectLayer' handle this beforehand). autoscale
+--   divides by the normalized vector length so the longest arrow becomes
+--   35% of the cube, then multiplies by 'lyr3VecScale'. End point = start
+--   point + scale × vec.
 layerToQuiver :: Layer3D -> Quiver3D
 layerToQuiver l =
   let starts = fromMaybe [] (getLast (lyr3Points  l))
@@ -759,14 +980,23 @@ layerToQuiver l =
 -- autoAxes3D: layers から bounding box を自動算出 (= Axes 未指定時の default)
 -- ===========================================================================
 
--- | 全 layer の Point3 集合から min/max を取って 'Axes3D' を生成。
+-- | [日本語]: 全 layer の Point3 集合から min/max を取って 'Axes3D' を生成。
 --   surface3D は xRange/yRange + grid 高さで Point3 集合を構成。
 --   layer が無い / 全 Point3 が空なら 'defaultAxes3D' (= 単位 cube)。
--- Phase 24 A6: 列参照 (Enc) の解決 — Resolver で [Point3] に落とす
+--   [English]: Generates an 'Axes3D' by taking min/max over every layer's
+--   Point3 set. For surface3D, the Point3 set is built from xRange/yRange
+--   plus the grid heights. With no layers, or every Point3 set empty, falls
+--   back to 'defaultAxes3D' (the unit cube).
+-- 列参照 (Enc) の解決 — Resolver で [Point3] に落とす
 
--- | 層の列参照 (x,y,z) を 'Resolver' で解決して 'lyr3Points' に格納する。
---   3 列が全部解決できた時だけ上書き ('inline' 生値は resolver 不要で解決)。
+-- | [日本語]: 層の列参照 (x,y,z) を 'Resolver' で解決して 'lyr3Points' に格納する。
+--   3 列が全部解決できた時だけ上書き ('Graphics.Hgg.Spec.inline' 生値は resolver 不要で解決)。
 --   Enc が無い層 (旧 [Point3] 直入れ・surface 等) は素通し。
+--   [English]: Resolves a layer's column references (x,y,z) via a
+--   'Resolver' and stores the result into 'lyr3Points'. Only overwrites
+--   when all three columns resolve successfully ('Graphics.Hgg.Spec.inline' raw values need
+--   no resolver and are already resolved). Layers with no Enc (older direct
+--   @[Point3]@ input, surface, etc.) pass through unchanged.
 resolveLayer3D :: Resolver -> Layer3D -> Layer3D
 resolveLayer3D r l0 =
   let -- まず x/y/z 列参照 → 点列 (Phase 24 A6)
@@ -799,9 +1029,13 @@ resolveLayer3D r l0 =
         _ -> l1
   in resolveTextBy3D r (resolveErrBy3D r (resolveSizeBy3D r (resolveColorByValue3D r (resolveColorBy3D r l2))))
 
--- | Phase 30 A6: 列駆動 'text3D' の label 列 ('lyr3TextBy') を解決して 'lyr3Labels' に
+-- | [日本語]: 列駆動 'text3D' の label 列 ('lyr3TextBy') を解決して 'lyr3Labels' に
 --   落とす (x/y/z は 'resolveLayer3D' 先頭で既に 'lyr3Points' へ解決済)。 数値列は
 --   'numLabel' で文字化。 未指定なら素通し。
+--   [English]: Resolves the label column ('lyr3TextBy') of a column-driven
+--   'text3D' into 'lyr3Labels' (x/y/z were already resolved into
+--   'lyr3Points' earlier in 'resolveLayer3D'). A numeric column is
+--   stringified via 'numLabel'. Passes through unchanged when unset.
 resolveTextBy3D :: Resolver -> Layer3D -> Layer3D
 resolveTextBy3D r l = case getLast (lyr3TextBy l) of
   Nothing -> l
@@ -812,10 +1046,17 @@ resolveTextBy3D r l = case getLast (lyr3TextBy l) of
           Nothing          -> []
     in if null labels then l else l { lyr3Labels = Last (Just labels) }
 
--- | Phase 30 A6: surface 案C の pivot。 long 形の (xs, ys, zs) を規則格子の z 行列に
+-- | [日本語]: surface 案C の pivot。 long 形の (xs, ys, zs) を規則格子の z 行列に
 --   畳む。 列 = x の昇順 unique・行 = y の昇順 unique。 grid[i][j] = (uxs[j], uys[i]) の z。
 --   欠損 (組が無い) セルは NaN (= 描画穴)。 重複 (同一 (x,y)) は後勝ち。 xRange/yRange は
 --   実データの min/max (空なら (-1,1))。
+--   [English]: The pivot for surface plan C. Folds the long-form
+--   (xs, ys, zs) into a regular-grid z matrix. Columns are x's ascending
+--   uniques, rows are y's ascending uniques; @grid[i][j]@ is the z at
+--   @(uxs[j], uys[i])@. Missing cells (no matching pair) become NaN
+--   (rendering holes). Duplicates (same (x,y)) let the last one win.
+--   xRange/yRange come from the actual data's min/max (defaulting to
+--   (-1,1) when empty).
 pivotSurface3D :: [Double] -> [Double] -> [Double]
                -> ([[Double]], (Double, Double), (Double, Double))
 pivotSurface3D xs ys zs =
@@ -827,8 +1068,12 @@ pivotSurface3D xs ys zs =
       rng vs = if null vs then (-1, 1) else (minimum vs, maximum vs)
   in (grid, rng xs, rng ys)
 
--- | Phase 25 A2: カテゴリ列 ('lyr3ColorBy') を解決して点ごと色 + 凡例 mapping に
+-- | [日本語]: カテゴリ列 ('lyr3ColorBy') を解決して点ごと色 + 凡例 mapping に
 --   落とす。 カテゴリは初出順、 色は 'ggplotHue'。 未指定なら素通し。
+--   [English]: Resolves the category column ('lyr3ColorBy') into a
+--   per-point color plus a legend mapping. Categories are in
+--   first-occurrence order; colors come from 'ggplotHue'. Passes through
+--   unchanged when unset.
 resolveColorBy3D :: Resolver -> Layer3D -> Layer3D
 resolveColorBy3D r l = case getLast (lyr3ColorBy l) of
   Nothing -> l
@@ -845,10 +1090,16 @@ resolveColorBy3D r l = case getLast (lyr3ColorBy l) of
        else l { lyr3PtColors = Last (Just (map colOf labels))
               , lyr3Legend   = Last (Just catColor) }
 
--- | Phase 25 A3: 数値列 ('lyr3ColorByV') を解決して点ごと連続色 (viridis) +
+-- | [日本語]: 数値列 ('lyr3ColorByV') を解決して点ごと連続色 (viridis) +
 --   colorbar 情報 (stops, min, max) に落とす。 値→色は線形正規化 + 'continuousColor'
 --   (= 2D gradient 凡例 / surface colormap と同じ補間)。 未指定 / 非数値なら素通し。
 --   全値同一なら中央色 (t=0.5)。
+--   [English]: Resolves the numeric column ('lyr3ColorByV') into a
+--   per-point continuous color (viridis) plus colorbar info
+--   (stops, min, max). Value-to-color is a linear normalization followed
+--   by 'continuousColor' (the same interpolation as the 2D gradient legend
+--   / surface colormap). Passes through unchanged when unset or
+--   non-numeric. Uses the middle color (t=0.5) when every value is equal.
 resolveColorByValue3D :: Resolver -> Layer3D -> Layer3D
 resolveColorByValue3D r l = case getLast (lyr3ColorByV l) of
   Nothing -> l
@@ -865,10 +1116,15 @@ resolveColorByValue3D r l = case getLast (lyr3ColorByV l) of
         in l { lyr3PtColors = Last (Just cols)
              , lyr3Colorbar = Last (Just (stops, vMin, vMax)) }
 
--- | Phase 25 A3: 数値列 ('lyr3SizeBy') を解決して点ごと基本 size (px) に落とす
+-- | [日本語]: 数値列 ('lyr3SizeBy') を解決して点ごと基本 size (px) に落とす
 --   (bubble)。 値→size は線形 (min→範囲下端、 max→範囲上端)。 範囲は
 --   'lyr3SizeRange' (既定 (4, 18))。 未指定 / 非数値なら素通し。 全値同一なら
 --   範囲の中点。
+--   [English]: Resolves the numeric column ('lyr3SizeBy') into a per-point
+--   base size in px (a bubble chart). Value-to-size is linear (min maps to
+--   the range's lower end, max to the upper end). The range comes from
+--   'lyr3SizeRange' (default (4, 18)). Passes through unchanged when unset
+--   or non-numeric. Uses the range's midpoint when every value is equal.
 resolveSizeBy3D :: Resolver -> Layer3D -> Layer3D
 resolveSizeBy3D r l = case getLast (lyr3SizeBy l) of
   Nothing -> l
@@ -884,9 +1140,13 @@ resolveSizeBy3D r l = case getLast (lyr3SizeBy l) of
                        else sLo + (sHi - sLo) * (x - vMin) / (vMax - vMin)
         in l { lyr3PtSizes = Last (Just (map sizeOf vals)) }
 
--- | Phase 25 A5: 誤差棒の err 列 ('lyr3ErrBy') を解決して点ごと err (data 単位)
+-- | [日本語]: 誤差棒の err 列 ('lyr3ErrBy') を解決して点ごと err (data 単位)
 --   に落とす。 正規化 (data z → [-1,1]) は 'Easy.normLayer3D' が行う。 未指定 /
 --   非数値なら素通し。
+--   [English]: Resolves the error-bar err column ('lyr3ErrBy') into a
+--   per-point err (in data units). Normalization (data z to @[-1,1]@) is
+--   handled by 'Easy.normLayer3D'. Passes through unchanged when unset or
+--   non-numeric.
 resolveErrBy3D :: Resolver -> Layer3D -> Layer3D
 resolveErrBy3D r l = case getLast (lyr3ErrBy l) of
   Nothing -> l
@@ -896,13 +1156,17 @@ resolveErrBy3D r l = case getLast (lyr3ErrBy l) of
                in if null vals then l
                   else l { lyr3PtErrs = Last (Just vals) }
 
--- | 数値カテゴリのラベル整形 (整数なら末尾 .0 を落とす)。
+-- | [日本語]: 数値カテゴリのラベル整形 (整数なら末尾 .0 を落とす)。
+--   [English]: Formats a numeric category label (strips a trailing .0 for
+--   integers).
 numLabel :: Double -> Text
 numLabel x =
   let r = fromIntegral (round x :: Int) :: Double
   in if r == x then T.pack (show (round x :: Int)) else T.pack (show x)
 
--- | spec 内の全層の列参照を解決する ('saveSVG3DBound' / bind 経路の正本)。
+-- | [日本語]: spec 内の全層の列参照を解決する (@saveSVG3DBound@ / bind 経路の正本)。
+--   [English]: Resolves the column references in every layer of a spec (the
+--   canonical implementation for @saveSVG3DBound@ / bind path).
 resolveSpec3D :: Resolver -> VisualSpec3D -> VisualSpec3D
 resolveSpec3D r spec = spec { vs3Layers = map (resolveLayer3D r) (vs3Layers spec) }
 
@@ -926,9 +1190,13 @@ autoAxes3D ls =
               , axesXLog = False, axesYLog = False, axesZLog = False
               }
 
--- | Layer から Point3 集合を抽出 (= Surface は grid を Point3 に展開)。
--- Phase 25 A5: bar は底面 (z=0) を、 誤差棒のある層は z±err 端を含めて axis box が
--- 棒の根本 / whisker を覆うようにする。
+-- | [日本語]: Layer から Point3 集合を抽出 (= Surface は grid を Point3 に展開)。
+--   bar は底面 (z=0) を、 誤差棒のある層は z±err 端を含めて axis box が
+--   棒の根本 / whisker を覆うようにする。
+--   [English]: Extracts a layer's Point3 set (for Surface, expands the grid
+--   into points). For a bar, includes the base (z=0); for a layer with
+--   error bars, includes the z±err endpoints, so the axis box covers the
+--   bar's foot / whiskers too.
 layerPoints :: Layer3D -> [Point3]
 layerPoints l = case getFirst (lyr3Kind l) of
   Just M3Surface ->
@@ -966,7 +1234,9 @@ layerPoints l = case getFirst (lyr3Kind l) of
   _ -> let pts = fromMaybe [] (getLast (lyr3Points l))
        in pts ++ errPoints l pts
 
--- | Phase 25 A5: 誤差棒のある層で、 各点の z±err 端点を返す (axis box 拡張用)。
+-- | [日本語]: 誤差棒のある層で、 各点の z±err 端点を返す (axis box 拡張用)。
+--   [English]: For a layer with error bars, returns each point's z±err
+--   endpoints (used to extend the axis box).
 errPoints :: Layer3D -> [Point3] -> [Point3]
 errPoints l pts = case getLast (lyr3PtErrs l) of
   Nothing -> []

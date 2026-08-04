@@ -8,7 +8,7 @@ module Graphics.Hgg.Backend.SVG
   ( -- * 通常 (Resolver 不要 = inline 列のみの図)
     renderSVG
   , saveSVG
-    -- * Resolver 同伴 (= 'ColByName' を含む図)
+    -- * Resolver 同伴 (= @ColByName@ を含む図)
   , renderSVGWith
   , saveSVGWith
   , renderSVGInteractive
@@ -41,9 +41,9 @@ import qualified Data.Text             as T
 import qualified Data.Text.IO          as TIO
 import           System.IO             (hPutStrLn, stderr)
 
--- | [日本語]: 'Resolver' を渡して 'VisualSpec' を SVG text に。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して 'VisualSpec' を SVG text に。 @ColByName@ を含む図用。
 --   [English]: Renders a 'VisualSpec' to SVG text given a 'Resolver'. For
---   figures that include 'ColByName'.
+--   figures that include @ColByName@.
 renderSVGWith :: Resolver -> VisualSpec -> Text
 renderSVGWith r spec =
   let layout     = computeLayout r spec
@@ -63,17 +63,17 @@ renderSVGWith r spec =
   in T.concat (header : primsToSvg primitives : ["</svg>"])
 
 -- | [日本語]: render 'VisualSpec' to SVG text。 Resolver 不要 (= 全 ColRef が inline、
---   'ColByName' が無い図で使う、 = 通常)。 列名参照を含む図は 'renderSVGWith'。
+--   @ColByName@ が無い図で使う、 = 通常)。 列名参照を含む図は 'renderSVGWith'。
 --   [English]: Renders a 'VisualSpec' to SVG text. No 'Resolver' needed (used
---   for figures where every 'ColRef' is inline and there is no 'ColByName' —
+--   for figures where every @ColRef@ is inline and there is no @ColByName@ —
 --   the usual case). For figures with column-name references, use
 --   'renderSVGWith'.
 renderSVG :: VisualSpec -> Text
 renderSVG = renderSVGWith emptyResolver
 
--- | [日本語]: 'Resolver' を渡して SVG ファイルに保存。 'ColByName' を含む図用。
+-- | [日本語]: 'Resolver' を渡して SVG ファイルに保存。 @ColByName@ を含む図用。
 --   [English]: Saves to an SVG file given a 'Resolver'. For figures that
---   include 'ColByName'.
+--   include @ColByName@.
 saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveSVGWith path r spec = do
   reportFacetInlineWarnings r spec   -- ★ 描画は継続
@@ -88,10 +88,10 @@ saveSVGWith path r spec = do
 saveSVG :: FilePath -> VisualSpec -> IO ()
 saveSVG path = saveSVGWith path emptyResolver
 
--- | [日本語]: 'purePlot' (= 純粋値) と対をなす副作用関数。 中身は 'saveSVG' の alias、
+-- | [日本語]: @purePlot@ (= 純粋値) と対をなす副作用関数。 中身は 'saveSVG' の alias、
 --   SVG backend が default。 他 backend (PDF / PNG) を使う場合はそれぞれの
 --   module の `plot` を import する。
---   [English]: The effectful counterpart of 'purePlot' (the pure value).
+--   [English]: The effectful counterpart of @purePlot@ (the pure value).
 --   Internally just an alias of 'saveSVG', with the SVG backend as default.
 --   To use another backend (PDF / PNG), import `plot` from the corresponding
 --   module instead.
@@ -114,12 +114,12 @@ renderBound (BoundPlot r spec _) = renderSVGWith r spec
 
 -- | [日本語]: 'BoundPlot' を SVG ファイルに保存。
 --   'bpDiagnostics' に Error severity があれば __stderr に報告__してから書き出す
---   (描画自体は止めない = 純値 '(|>>)' の lenient 既定。 無検証で通したい場合は
---   'unBound' → 'saveSVGWith' を直接使う)。
+--   (描画自体は止めない = 純値 @(|>>)@ の lenient 既定。 無検証で通したい場合は
+--   @unBound@ → 'saveSVGWith' を直接使う)。
 --   [English]: Saves a 'BoundPlot' to an SVG file. If 'bpDiagnostics'
 --   contains an error-severity entry, __reports it to stderr__ before
 --   writing the file (rendering itself is not stopped — the lenient default
---   of the pure '(|>>)'. To skip validation entirely, use 'unBound' followed
+--   of the pure @(|>>)@. To skip validation entirely, use @unBound@ followed
 --   by 'saveSVGWith' directly).
 saveSVGBound :: FilePath -> BoundPlot -> IO ()
 saveSVGBound path bp@(BoundPlot _ spec diags) = do

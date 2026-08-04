@@ -1,18 +1,28 @@
 -- |
 -- Module      : Graphics.Hgg.ThreeD.Projection
--- Description : 3D → 2D 投影 (Phase 3 A3)
+-- Description : 3D → 2D 投影
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 標準 3D グラフィックス pipeline:
+-- [日本語]: 標準 3D グラフィックス pipeline:
 --
 --   world space → (view 行列、 lookAt) → camera space
 --               → (projection 行列、 ortho or persp) → clip space
 --               → (perspective divide) → NDC (= [-1, 1]^3)
 --               → (viewport 変換) → 2D screen 座標
 --
--- 'project3D' が全 step をまとめて (Point3 world → Point2D screen + zClip) を返す。
--- z は depth cue (= painter's algorithm の sort key) に使う。
+--   'project3D' が全 step をまとめて (Point3 world → Point2D screen + zClip) を返す。
+--   z は depth cue (= painter's algorithm の sort key) に使う。
+-- [English]: The standard 3D graphics pipeline:
+--
+--   world space → (view matrix, lookAt) → camera space
+--               → (projection matrix, ortho or persp) → clip space
+--               → (perspective divide) → NDC (@[-1, 1]^3@)
+--               → (viewport transform) → 2D screen coordinates
+--
+--   'project3D' bundles every step and returns (Point3 world to Point2D
+--   screen + zClip). z is used as a depth cue (the sort key for the
+--   painter's algorithm).
 {-# LANGUAGE BangPatterns #-}
 module Graphics.Hgg.ThreeD.Projection
   ( -- * Matrix 演算
@@ -36,11 +46,13 @@ import           Graphics.Hgg.ThreeD.Types
 -- Matrix 基本演算 (= 4x4)
 -- ===========================================================================
 
--- | 単位行列。
+-- | [日本語]: 単位行列。
+--   [English]: The identity matrix.
 identityM :: Mat4
 identityM = Mat4 1 0 0 0  0 1 0 0  0 0 1 0  0 0 0 1
 
--- | 行列積 (= row-major、 自分 × 引数)。
+-- | [日本語]: 行列積 (= row-major、 自分 × 引数)。
+--   [English]: Matrix multiplication (row-major, @self × argument@).
 multM :: Mat4 -> Mat4 -> Mat4
 multM
   (Mat4 a11 a12 a13 a14
@@ -72,8 +84,11 @@ multM
     (a41*b13 + a42*b23 + a43*b33 + a44*b43)
     (a41*b14 + a42*b24 + a43*b34 + a44*b44)
 
--- | Point3 を 4x4 行列で変換 (= 同次座標で w=1 として扱い、 結果も Point3 返す)。
--- w 成分は別途扱うので 'project3D' を経由するのが通常。
+-- | [日本語]: Point3 を 4x4 行列で変換 (= 同次座標で w=1 として扱い、 結果も Point3 返す)。
+--   w 成分は別途扱うので 'project3D' を経由するのが通常。
+--   [English]: Transforms a 'Point3' by a 4x4 matrix (treats the homogeneous
+--   w component as 1 and returns a 'Point3' too). Since the w component
+--   needs separate handling, going through 'project3D' is the usual path.
 transformPoint :: Mat4 -> Point3 -> Point3
 transformPoint
   (Mat4 m11 m12 m13 m14
@@ -90,10 +105,16 @@ transformPoint
 -- View 行列 (= lookAt) / Projection 行列
 -- ===========================================================================
 
--- | lookAt: camera の view 行列を生成。 右手系、 OpenGL 流。
+-- | [日本語]: lookAt: camera の view 行列を生成。 右手系、 OpenGL 流。
 --
--- 結果: world space の点 P に対し viewMatrix * P が camera space の P' を返す。
--- camera space では camera が原点、 -z 方向を向く (= 右手系 OpenGL 慣例)。
+--   結果: world space の点 P に対し viewMatrix * P が camera space の P' を返す。
+--   camera space では camera が原点、 -z 方向を向く (= 右手系 OpenGL 慣例)。
+--   [English]: lookAt: builds the camera's view matrix. Right-handed,
+--   OpenGL-style.
+--
+--   Result: for a point P in world space, @viewMatrix * P@ gives P' in
+--   camera space. In camera space, the camera sits at the origin and looks
+--   down -z (the right-handed OpenGL convention).
 viewMatrix :: Camera3D -> Mat4
 viewMatrix (Camera3D (Point3 ex ey ez) (Point3 tx ty tz) up) =
   let -- forward = normalize(target - eye)、 ただし camera は -z を向くので f は実は反転して使う
@@ -112,10 +133,16 @@ viewMatrix (Camera3D (Point3 ex ey ez) (Point3 tx ty tz) up) =
        (-fx)    (-fy)    (-fz)    tz'
        0        0        0        1
 
--- | Projection 行列を生成。 'Orthographic' / 'Perspective' どちらも対応。
+-- | [日本語]: Projection 行列を生成。 'Orthographic' / 'Perspective' どちらも対応。
 --
--- 出力: camera space の点 P → clip space の P' (= w 成分も含む)。
--- 'project3D' で perspective divide (= x,y,z を w で割る) を続けて NDC へ。
+--   出力: camera space の点 P → clip space の P' (= w 成分も含む)。
+--   'project3D' で perspective divide (= x,y,z を w で割る) を続けて NDC へ。
+--   [English]: Builds the projection matrix. Handles both 'Orthographic' and
+--   'Perspective'.
+--
+--   Output: for a point P in camera space, produces P' in clip space
+--   (including the w component). 'project3D' follows up with the
+--   perspective divide (dividing x, y, z by w) to reach NDC.
 projectionMatrix :: Projection3D -> Mat4
 projectionMatrix (Orthographic xH yH n f) =
   let !sx = 1 / xH
@@ -135,8 +162,11 @@ projectionMatrix (Perspective fov aspect n f) =
 -- Projection 一発
 -- ===========================================================================
 
--- | Viewport: NDC (= [-1, 1]^2) → screen pixel への変換パラメタ。
--- 通常 Layout 領域に合わせて (xMin, yMin, width, height) で指定。
+-- | [日本語]: Viewport: NDC (= [-1, 1]^2) → screen pixel への変換パラメタ。
+--   通常 Layout 領域に合わせて (xMin, yMin, width, height) で指定。
+--   [English]: Viewport: the parameters for converting NDC (@[-1, 1]^2@) to
+--   screen pixels. Usually specified as (xMin, yMin, width, height) to match
+--   the layout region.
 data Viewport = Viewport
   { vpX :: !Double
   , vpY :: !Double
@@ -144,23 +174,34 @@ data Viewport = Viewport
   , vpH :: !Double
   } deriving (Show, Eq)
 
--- | NDC [-1,1] の (x, y) → screen pixel への変換。 y は反転 (= SVG 慣例で y 下方向)。
+-- | [日本語]: NDC [-1,1] の (x, y) → screen pixel への変換。 y は反転 (= SVG 慣例で y 下方向)。
+--   [English]: Converts NDC @[-1,1]@ (x, y) to screen pixels. y is flipped
+--   (following the SVG convention where y points down).
 viewportTransform :: Viewport -> Double -> Double -> (Double, Double)
 viewportTransform (Viewport vx vy vw vh) ndcX ndcY =
   let sx = vx + (ndcX + 1) / 2 * vw
       sy = vy + (1 - (ndcY + 1) / 2) * vh
   in (sx, sy)
 
--- | 投影結果。 screen 座標 (= viewport 変換後) + z (= depth cue / sort 用、 NDC z)。
+-- | [日本語]: 投影結果。 screen 座標 (= viewport 変換後) + z (= depth cue / sort 用、 NDC z)。
+--   [English]: The projection result: screen coordinates (after the
+--   viewport transform) plus z (the NDC z, used as a depth cue / sort key).
 data Projected = Projected
-  { projX     :: !Double  -- ^ screen pixel x
-  , projY     :: !Double  -- ^ screen pixel y
-  , projDepth :: !Double  -- ^ NDC z ∈ [-1, 1]、 -1 が手前、 +1 が奥
+  { projX     :: !Double  -- ^ [日本語]: screen pixel x
+                           --   [English]: The screen pixel x coordinate.
+  , projY     :: !Double  -- ^ [日本語]: screen pixel y
+                           --   [English]: The screen pixel y coordinate.
+  , projDepth :: !Double  -- ^ [日本語]: NDC z ∈ [-1, 1]、 -1 が手前、 +1 が奥
+                           --   [English]: The NDC z ∈ [-1, 1]; -1 is nearest, +1 is farthest.
   } deriving (Show, Eq)
 
--- | World point → Projected (screen + depth)。
+-- | [日本語]: World point → Projected (screen + depth)。
 --
--- pipeline: world → view → projection → perspective divide → viewport。
+--   pipeline: world → view → projection → perspective divide → viewport。
+--   [English]: Converts a world point to 'Projected' (screen + depth).
+--
+--   Pipeline: world to view to projection to perspective divide to
+--   viewport.
 project3D :: Camera3D -> Projection3D -> Viewport -> Point3 -> Projected
 project3D cam proj vp p =
   let view = viewMatrix cam
