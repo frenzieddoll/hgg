@@ -214,27 +214,21 @@ renderViolinDodge r layout _ ly =
       catPal = lpCategoricalPalette layout
       colorFor cix = if null catPal then "#3E6A6F" else catPal !! (cix `mod` length catPal)
       a = doubleOr (lyAlpha ly) 0.5
-      coord  = flipOnly (lpCoord layout)
-      sy     = scaleApply (lpYScale layout)
-      valPxF = scaleApply (lpYScaleFlipped layout)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint に集約 (flipOnly / crossScale 撤去)。
+      --   violin 幅は視覚 px 量のまま (polar では接線方向の px nudge = 半径不問の等幅)。
+      coord  = lpCoord layout
       unit   = catUnitPx (lpCoord layout) layout
       subW   = unit * 0.9 / fromIntegral nColor
       halfWidth = subW * 0.4
-      crossScale d = case coord of
-        CoordFlip -> scaleApply (lpXScaleFlipped layout) d
-        _         -> scaleApply (lpXScale layout) d
-      mkPt cx off y = case coord of
-        CoordCartesian -> Point (cx + off) (sy y)
-        CoordFlip      -> Point (valPxF y) (cx + off)
-        _              -> Point (cx + off) (sy y)
       mkViolin (pix, cix, vals) =
-        let cx = crossScale (dodgeCenterD pix cix nColor)
+        let loc = CrossAt (dodgeCenterD pix cix nColor)
+            mkPt off y = projectCrossPoint coord layout loc off y
             color = colorFor cix
             ds = kdeGrid 30 vals
             maxD = if null ds then 1 else max 1e-9 (maximum (map snd ds))
             wScale d = halfWidth * d / maxD
-            rightPath = [ mkPt cx (wScale d) y | (y, d) <- ds ]
-            leftPath  = [ mkPt cx (negate (wScale d)) y | (y, d) <- reverse ds ]
+            rightPath = [ mkPt (wScale d) y | (y, d) <- ds ]
+            leftPath  = [ mkPt (negate (wScale d)) y | (y, d) <- reverse ds ]
         in case rightPath ++ leftPath of
              []     -> PRect (Rect 0 0 0 0) (FillStyle color a) Nothing
              (h':t) -> PPath (MoveTo h' : map LineTo t ++ [ClosePath])
@@ -252,8 +246,6 @@ renderViolin r layout _ ly =
       pal = lpCategoricalPalette layout
       area = lpPlotArea layout
       nG = length groups
-      sx = scaleApply (lpXScale layout)
-      sy = scaleApply (lpYScale layout)
       -- ★ Phase 36 B1c: 群なし (= 単一 violin) は categorical 軸が無いので renderBox と
       --   同じく plotArea 中央に 1 本・幅も plotArea 基準にする (= 左寄り回帰の防止)。
       hasCats = not (null (lpXCategoryLabels layout))
@@ -267,16 +259,11 @@ renderViolin r layout _ ly =
       nudgePx = doubleOr (lyNudge ly) 0 * (if hasCats then catUnitPx coord layout else rW area)
       sideV   = maybe SideBoth id (getLast (lySide ly))
       halfWidth = (if hasCats then catUnitPx coord layout else rW area) * mwV / 2
-      -- Phase 10 A4: value 軸 = y (Cartesian は縦・flip は横)、 cross = category i ± 幅 px。
-      coord  = flipOnly (lpCoord layout)   -- A7-c: violin は polar 非対象
-      valPxF = scaleApply (lpYScaleFlipped layout)
-      crossPx i = nudgePx + case coord of
-        CoordCartesian -> if hasCats then sx (fromIntegral i) else rX area + rW area / 2
-        CoordFlip      -> if hasCats then scaleApply (lpXScaleFlipped layout) (fromIntegral i)
-                                     else rY area + rH area / 2
-      mkPt i off y = case coord of
-        CoordCartesian -> Point (crossPx i + off) (sy y)
-        CoordFlip      -> Point (valPxF y) (crossPx i + off)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint に集約 (flipOnly 撤去)。 violin 幅は
+      --   視覚 px 量のまま (polar では接線方向 px nudge = 半径不問の等幅、 spine は radial)。
+      coord = lpCoord layout
+      locFor i = if hasCats then CrossAt (fromIntegral i) else CrossMid
+      mkPt i off y = projectCrossPoint coord layout (locFor i) (nudgePx + off) y
       -- 各 group の violin shape (= 縦並び KDE、 共通 kdeGrid を左右対称展開)
       mkViolin i (_label, vals) =
         let color = pal !! (i `mod` length pal)
