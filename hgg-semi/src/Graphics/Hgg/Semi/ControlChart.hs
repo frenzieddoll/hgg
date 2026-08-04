@@ -4,7 +4,7 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 1 つの管理図を「プロット系列 + 中心線 (CL) + 管理限界 (UCL/LCL) +
+-- [日本語]: 1 つの管理図を「プロット系列 + 中心線 (CL) + 管理限界 (UCL/LCL) +
 -- プロット統計量の 1σ + ルール違反点」 という共通表現 'ControlChart' に
 -- まとめ、 各種チャート (X̄-R / I-MR / CUSUM / EWMA) の constructor と
 -- Western Electric / Nelson ルール検出、 backend 非依存 'Primitive' 出力を
@@ -12,6 +12,16 @@
 --
 -- ルールは「位置チャート (X̄ / I)」 に適用するのが標準。 σ は
 -- @(UCL - CL) / 3@ で推定する (3σ 管理限界前提)。
+--
+-- [English]: Bundles a single control chart into the common representation
+-- 'ControlChart' — "plotted series + center line (CL) + control limits
+-- (UCL/LCL) + 1σ of the plotted statistic + rule-violation points" —
+-- providing constructors for the various chart types (X̄-R / I-MR / CUSUM /
+-- EWMA), Western Electric / Nelson rule detection, and backend-agnostic
+-- 'Primitive' output.
+--
+-- Rules are standardly applied to "location charts" (X̄ / I). σ is
+-- estimated as @(UCL - CL) / 3@ (assuming 3σ control limits).
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Semi.ControlChart
   ( -- * 共通表現
@@ -51,7 +61,9 @@ import           Graphics.Hgg.Render (FillStyle (..), LineStyle (..),
 -- 共通表現
 -- ===========================================================================
 
--- | 1 つの管理図。 'ccSigma' はプロット統計量の 1σ (= @(UCL-CL)/3@)。
+-- | [日本語]: 1 つの管理図。 'ccSigma' はプロット統計量の 1σ (= @(UCL-CL)/3@)。
+--   [English]: A single control chart. 'ccSigma' is 1σ of the plotted
+--   statistic (= @(UCL-CL)/3@).
 data ControlChart = ControlChart
   { ccTitle      :: !Text
   , ccPoints     :: ![Double]
@@ -59,10 +71,12 @@ data ControlChart = ControlChart
   , ccUCL        :: !Double
   , ccLCL        :: !Double
   , ccSigma      :: !Double
-  , ccViolations :: ![(Int, [Rule])]   -- ^ 点 index → 発火ルール (index 昇順)
+  , ccViolations :: ![(Int, [Rule])]   -- ^ [日本語]: 点 index → 発火ルール (index 昇順)。
+                                        --   [English]: Point index to the rules it fires (ascending index order).
   } deriving (Show, Eq)
 
--- | ルール識別 (Western Electric 1-4 / Nelson 1-8)。
+-- | [日本語]: ルール識別 (Western Electric 1-4 / Nelson 1-8)。
+--   [English]: Rule identifiers (Western Electric 1-4 / Nelson 1-8).
 data Rule = WE !Int | Nelson !Int
   deriving (Show, Eq, Ord)
 
@@ -78,8 +92,11 @@ rangeOf :: [Double] -> Double
 rangeOf [] = 0
 rangeOf xs = maximum xs - minimum xs
 
--- | X̄-R 用の管理図定数 (A2, D3, D4)。 部分群サイズ 2..10 を table 参照、
+-- | [日本語]: X̄-R 用の管理図定数 (A2, D3, D4)。 部分群サイズ 2..10 を table 参照、
 -- 範囲外は近端にクランプ。
+--   [English]: Control-chart constants for X̄-R (A2, D3, D4). Looks up
+--   subgroup sizes 2..10 in the table, clamping out-of-range sizes to the
+--   nearest end.
 xbarConstants :: Int -> (Double, Double, Double)
 xbarConstants n =
   let tbl = [ (2,  (1.880, 0.000, 3.267))
@@ -94,11 +111,13 @@ xbarConstants n =
       nn = max 2 (min 10 n)
   in maybe (0.577, 0.000, 2.114) id (lookup nn tbl)
 
--- | d2(n=2) = 移動範囲 (n=2) の bias 補正係数。
+-- | [日本語]: d2(n=2) = 移動範囲 (n=2) の bias 補正係数。
+--   [English]: d2(n=2), the bias-correction factor for the moving range (n=2).
 d2_2 :: Double
 d2_2 = 1.128
 
--- | (UCL-CL)/3 を 1σ とみなす。
+-- | [日本語]: (UCL-CL)/3 を 1σ とみなす。
+--   [English]: Treats (UCL-CL)/3 as 1σ.
 sigmaFromLimits :: Double -> Double -> Double
 sigmaFromLimits center ucl = (ucl - center) / 3
 
@@ -106,8 +125,11 @@ sigmaFromLimits center ucl = (ucl - center) / 3
 -- Chart constructors
 -- ===========================================================================
 
--- | X̄-R 管理図。 部分群リストから (X̄ チャート, R チャート) を返す。
+-- | [日本語]: X̄-R 管理図。 部分群リストから (X̄ チャート, R チャート) を返す。
 -- 部分群サイズは先頭群の長さを使う。
+--   [English]: The X̄-R control chart. Returns (the X̄ chart, the R chart)
+--   from a list of subgroups. The subgroup size is taken from the first
+--   group's length.
 xbarRChart :: [[Double]] -> (ControlChart, ControlChart)
 xbarRChart subs =
   let n      = case subs of { (g:_) -> length g; [] -> 2 }
@@ -130,7 +152,9 @@ xbarRChart subs =
                  , ccSigma = sigmaFromLimits rbar rUCL, ccViolations = [] }
   in (xbar, rchart)
 
--- | I-MR 管理図。 個別値から (I チャート, MR チャート) を返す。
+-- | [日本語]: I-MR 管理図。 個別値から (I チャート, MR チャート) を返す。
+--   [English]: The I-MR control chart. Returns (the I chart, the MR chart)
+--   from individual values.
 imrChart :: [Double] -> (ControlChart, ControlChart)
 imrChart xs =
   let mrs   = zipWith (\a b -> abs (b - a)) xs (drop 1 xs)
@@ -150,19 +174,24 @@ imrChart xs =
                  , ccSigma = sigmaFromLimits mrbar mrUCL, ccViolations = [] }
   in (ichart, mrchart)
 
--- | CUSUM パラメータ (K / H は σ 単位)。 既定 K=0.5σ / H=4σ。
+-- | [日本語]: CUSUM パラメータ (K / H は σ 単位)。 既定 K=0.5σ / H=4σ。
+--   [English]: CUSUM parameters (K / H in σ units). Defaults to K=0.5σ / H=4σ.
 data CusumParams = CusumParams
   { cpTarget :: !Double
   , cpSigma  :: !Double
-  , cpK      :: !Double   -- ^ slack (σ 単位)
-  , cpH      :: !Double   -- ^ decision interval (σ 単位)
+  , cpK      :: !Double   -- ^ [日本語]: slack (σ 単位)。
+                           --   [English]: The slack, in σ units.
+  , cpH      :: !Double   -- ^ [日本語]: decision interval (σ 単位)。
+                           --   [English]: The decision interval, in σ units.
   } deriving (Show, Eq)
 
 defaultCusumParams :: Double -> Double -> CusumParams
 defaultCusumParams target sigma = CusumParams target sigma 0.5 4
 
--- | 表形式 CUSUM。 (上側 C+, 下側 C-) を返す。 両者とも 0 から累積し、
+-- | [日本語]: 表形式 CUSUM。 (上側 C+, 下側 C-) を返す。 両者とも 0 から累積し、
 -- 限界は H (= cpH·σ)。
+--   [English]: Tabular CUSUM. Returns (the upper C+, the lower C-). Both
+--   accumulate from 0, with the limit H (= cpH·σ).
 cusumChart :: CusumParams -> [Double] -> (ControlChart, ControlChart)
 cusumChart (CusumParams target sigma k h) xs =
   let kk = k * sigma
@@ -177,7 +206,8 @@ cusumChart (CusumParams target sigma k h) xs =
         , ccViolations = [] }
   in (mk "CUSUM (upper C+)" cplus, mk "CUSUM (lower C-)" cminus)
 
--- | EWMA パラメータ。 既定 λ=0.2 / L=3。
+-- | [日本語]: EWMA パラメータ。 既定 λ=0.2 / L=3。
+--   [English]: EWMA parameters. Defaults to λ=0.2 / L=3.
 data EwmaParams = EwmaParams
   { ewTarget :: !Double
   , ewSigma  :: !Double
@@ -188,8 +218,10 @@ data EwmaParams = EwmaParams
 defaultEwmaParams :: Double -> Double -> EwmaParams
 defaultEwmaParams target sigma = EwmaParams target sigma 0.2 3
 
--- | EWMA 管理図。 限界は定常状態 (asymptotic) の値を用いる:
+-- | [日本語]: EWMA 管理図。 限界は定常状態 (asymptotic) の値を用いる:
 -- @target ± L·σ·sqrt(λ/(2-λ))@。
+--   [English]: The EWMA control chart. Limits use the steady-state
+--   (asymptotic) value: @target ± L·σ·sqrt(λ/(2-λ))@.
 ewmaChart :: EwmaParams -> [Double] -> ControlChart
 ewmaChart (EwmaParams target sigma lam l) xs =
   let step prev x = lam * x + (1 - lam) * prev
@@ -206,28 +238,36 @@ ewmaChart (EwmaParams target sigma lam l) xs =
 -- ルール検出
 -- ===========================================================================
 
--- | サイズ m の終端 index 付き窓 (endIndex, window)。
+-- | [日本語]: サイズ m の終端 index 付き窓 (endIndex, window)。
+--   [English]: A size-m window with its end index: (endIndex, window).
 windows :: Int -> [a] -> [(Int, [a])]
 windows m xs
   | m <= 0    = []
   | otherwise = [ (i + m - 1, take m (drop i xs)) | i <- [0 .. length xs - m] ]
 
--- | (rule, 発火 index 群) のリストを (index, [rule]) に反転 (index 昇順、
+-- | [日本語]: (rule, 発火 index 群) のリストを (index, [rule]) に反転 (index 昇順、
 -- rule もソート)。
+--   [English]: Inverts a list of (rule, firing indices) into (index,
+--   [rule]) pairs (ascending index order, rules sorted too).
 collectRules :: [(Rule, [Int])] -> [(Int, [Rule])]
 collectRules hits =
   let m = Map.fromListWith (++) [ (i, [r]) | (r, is) <- hits, i <- is ]
   in [ (i, sort rs) | (i, rs) <- Map.toAscList m ]
 
--- | 点 v の中心からの符号付きサイド (上=GT / 下=LT / 中心=EQ)。
+-- | [日本語]: 点 v の中心からの符号付きサイド (上=GT / 下=LT / 中心=EQ)。
+--   [English]: The signed side of point v relative to the center (above=GT
+--   / below=LT / on center=EQ).
 side :: Double -> Double -> Ordering
 side center v = compare v center
 
--- | 中心からの距離 (σ 単位)。
+-- | [日本語]: 中心からの距離 (σ 単位)。
+--   [English]: The distance from the center, in σ units.
 zoneSigma :: Double -> Double -> Double -> Double
 zoneSigma center s v = if s <= 0 then 0 else abs (v - center) / s
 
--- | 「m 窓のうち k 点が同じ側で t·σ 超」 が成立する終端 index 群。
+-- | [日本語]: 「m 窓のうち k 点が同じ側で t·σ 超」 が成立する終端 index 群。
+--   [English]: The end indices where "k of the m points in the window are
+--   on the same side, beyond t·σ" holds.
 kOfMBeyond :: ControlChart -> Int -> Int -> Double -> [Int]
 kOfMBeyond cc k m t =
   let c = ccCenter cc; s = ccSigma cc
@@ -235,23 +275,28 @@ kOfMBeyond cc k m t =
   in [ ei | (ei, w) <- windows m (ccPoints cc)
           , cntSide GT w >= k || cntSide LT w >= k ]
 
--- | 「r 点連続で中心の同じ側」 の終端 index 群。
+-- | [日本語]: 「r 点連続で中心の同じ側」 の終端 index 群。
+--   [English]: The end indices where "r consecutive points are on the same
+--   side of the center" holds.
 runSameSide :: ControlChart -> Int -> [Int]
 runSameSide cc r =
   let c = ccCenter cc
   in [ ei | (ei, w) <- windows r (ccPoints cc), all (> c) w || all (< c) w ]
 
--- | 単調増加 / 減少 (狭義)。
+-- | [日本語]: 単調増加 / 減少 (狭義)。
+--   [English]: Strictly monotonic increasing / decreasing.
 monotonic :: [Double] -> Bool
 monotonic w = and (zipWith (<) w (drop 1 w)) || and (zipWith (>) w (drop 1 w))
 
--- | 上下交互。
+-- | [日本語]: 上下交互。
+--   [English]: Alternating up / down.
 alternating :: [Double] -> Bool
 alternating w =
   let ds = zipWith compare (drop 1 w) w
   in EQ `notElem` ds && and (zipWith (/=) ds (drop 1 ds))
 
--- | Western Electric ルール (1-4)。
+-- | [日本語]: Western Electric ルール (1-4)。
+--   [English]: The Western Electric rules (1-4).
 westernElectric :: ControlChart -> [(Int, [Rule])]
 westernElectric cc = collectRules
   [ (WE 1, [ ei | (ei, w) <- windows 1 (ccPoints cc)
@@ -262,7 +307,8 @@ westernElectric cc = collectRules
   , (WE 4, runSameSide cc 8)
   ]
 
--- | Nelson ルール (1-8)。
+-- | [日本語]: Nelson ルール (1-8)。
+--   [English]: The Nelson rules (1-8).
 nelson :: ControlChart -> [(Int, [Rule])]
 nelson cc =
   let c = ccCenter cc; s = ccSigma cc
@@ -279,7 +325,8 @@ nelson cc =
     , (Nelson 8, [ ei | (ei, w) <- windows 8 (ccPoints cc), all beyond1 w ])
     ]
 
--- | ルール検出結果を chart に取り付ける。
+-- | [日本語]: ルール検出結果を chart に取り付ける。
+--   [English]: Attaches a rule-detection result to the chart.
 attachViolations :: (ControlChart -> [(Int, [Rule])]) -> ControlChart -> ControlChart
 attachViolations f cc = cc { ccViolations = f cc }
 
@@ -295,7 +342,8 @@ marginB = 28
 plotH   = 200
 dx      = 30
 
--- | SVG / PNG 出力に渡す viewport 寸法。
+-- | [日本語]: SVG / PNG 出力に渡す viewport 寸法。
+--   [English]: The viewport dimensions passed to SVG / PNG output.
 controlChartViewport :: ControlChart -> (Int, Int)
 controlChartViewport cc =
   let n = length (ccPoints cc)
@@ -303,7 +351,8 @@ controlChartViewport cc =
       h = marginT + plotH + marginB
   in (ceiling w, ceiling h)
 
--- | 管理図の backend 非依存 'Primitive' 列。
+-- | [日本語]: 管理図の backend 非依存 'Primitive' 列。
+--   [English]: The backend-agnostic 'Primitive' list for the control chart.
 controlChartPrimitives :: ControlChart -> [Primitive]
 controlChartPrimitives cc =
   let pts   = ccPoints cc

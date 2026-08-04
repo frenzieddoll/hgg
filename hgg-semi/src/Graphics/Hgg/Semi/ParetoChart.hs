@@ -4,11 +4,19 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- カテゴリを件数の降順に並べ、 左 Y 軸に件数バー、 右 Y 軸 (0-100%) に
+-- [日本語]: カテゴリを件数の降順に並べ、 左 Y 軸に件数バー、 右 Y 軸 (0-100%) に
 -- 累積百分率の折れ線を重ねる。 左軸の上端 = 総件数 にすることで「累積% が
 -- 100% = バー総和」 が画素上で一致する (古典的パレート図の整列)。
 --
 -- backend 非依存 'Primitive' 列を返す。
+--
+-- [English]: Sorts categories in descending order of count, overlaying a bar
+-- of counts on the left Y axis with a cumulative-percentage line on the
+-- right Y axis (0-100%). Setting the top of the left axis to the grand
+-- total makes "cumulative % = 100%" align pixel-for-pixel with "bar sum"
+-- (the classic Pareto-chart alignment).
+--
+-- Returns a backend-agnostic list of 'Primitive's.
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Semi.ParetoChart
   ( ParetoChartSpec(..)
@@ -36,22 +44,26 @@ import           Graphics.Hgg.Render (FillStyle (..), LineStyle (..),
 -- ===========================================================================
 
 data ParetoChartSpec = ParetoChartSpec
-  { pcCategories :: ![(Text, Double)]   -- ^ (ラベル, 件数)。 内部で降順ソート
-  , pcThreshold  :: !(Maybe Double)     -- ^ 累積% 参照線 (例 Just 80)。 Nothing = なし
+  { pcCategories :: ![(Text, Double)]   -- ^ [日本語]: (ラベル, 件数)。 内部で降順ソート。
+                                         --   [English]: (label, count) pairs. Sorted descending internally.
+  , pcThreshold  :: !(Maybe Double)     -- ^ [日本語]: 累積% 参照線 (例 Just 80)。 Nothing = なし。
+                                         --   [English]: The cumulative-% reference line (e.g. @Just 80@). @Nothing@ = none.
   , pcTitle      :: !Text
   } deriving (Show, Eq)
 
 defaultParetoChartSpec :: [(Text, Double)] -> ParetoChartSpec
 defaultParetoChartSpec cats = ParetoChartSpec cats (Just 80) "Pareto chart"
 
--- | 降順ソート済の 1 バー (ラベル / 件数 / 累積%)。
+-- | [日本語]: 降順ソート済の 1 バー (ラベル / 件数 / 累積%)。
+--   [English]: One bar after descending sort (label / count / cumulative %).
 data ParetoBar = ParetoBar
   { pbLabel  :: !Text
   , pbCount  :: !Double
   , pbCumPct :: !Double
   } deriving (Show, Eq)
 
--- | カテゴリを降順ソートし累積% を付与。
+-- | [日本語]: カテゴリを降順ソートし累積% を付与。
+--   [English]: Sorts categories in descending order and attaches cumulative %.
 paretoData :: ParetoChartSpec -> [ParetoBar]
 paretoData spec =
   let sorted = sortBy (comparing (Down . snd)) (pcCategories spec)
@@ -75,7 +87,8 @@ marginB = 48
 plotH   = 240
 slotW   = 46
 
--- | SVG / PNG 出力に渡す viewport 寸法。
+-- | [日本語]: SVG / PNG 出力に渡す viewport 寸法。
+--   [English]: The viewport dimensions passed to SVG / PNG output.
 paretoChartViewport :: ParetoChartSpec -> (Int, Int)
 paretoChartViewport spec =
   let n = length (pcCategories spec)
@@ -83,7 +96,8 @@ paretoChartViewport spec =
       h = marginT + plotH + marginB
   in (ceiling w, ceiling h)
 
--- | パレート図の backend 非依存 'Primitive' 列。
+-- | [日本語]: パレート図の backend 非依存 'Primitive' 列。
+--   [English]: The backend-agnostic 'Primitive' list for the Pareto chart.
 paretoChartPrimitives :: ParetoChartSpec -> [Primitive]
 paretoChartPrimitives spec =
   let bars  = paretoData spec

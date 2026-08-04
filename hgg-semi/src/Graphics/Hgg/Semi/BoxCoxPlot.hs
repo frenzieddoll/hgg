@@ -4,7 +4,7 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Box-Cox 変換 y(λ) = (y^λ-1)/λ (λ≠0) / log y (λ=0) のパラメータ λ を、
+-- [日本語]: Box-Cox 変換 y(λ) = (y^λ-1)/λ (λ≠0) / log y (λ=0) のパラメータ λ を、
 -- プロファイル対数尤度
 --
 --   L(λ) = -(n/2)·ln( (1/n)Σ(z_i - z̄)² ) + (λ-1)Σ ln y_i
@@ -13,6 +13,17 @@
 -- 95% CI (= L が L_max - 1.92 を上回る λ 区間) も算出する。
 --
 -- backend 非依存 'Primitive' 列を返す。
+--
+-- [English]: Estimates the Box-Cox transform parameter λ for y(λ) =
+-- (y^λ-1)/λ (λ≠0) / log y (λ=0) by evaluating the profile log-likelihood
+--
+--   L(λ) = -(n/2)·ln( (1/n)Σ(z_i - z̄)² ) + (λ-1)Σ ln y_i
+--
+-- (z_i = boxcox(y_i,λ)), and finds λ̂ = argmax L. Also computes the 95%
+-- confidence interval from the likelihood ratio (the λ range over which L
+-- stays above L_max - 1.92).
+--
+-- Returns a backend-agnostic list of 'Primitive's.
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Semi.BoxCoxPlot
   ( BoxCoxSpec(..)
@@ -42,22 +53,27 @@ import           Graphics.Hgg.Render (FillStyle (..), LineStyle (..),
 -- ===========================================================================
 
 data BoxCoxSpec = BoxCoxSpec
-  { bcData        :: ![Double]            -- ^ 正値データ (非正は除外)
-  , bcLambdaRange :: !(Double, Double)    -- ^ λ グリッド範囲
-  , bcSteps       :: !Int                 -- ^ グリッド分割点数
+  { bcData        :: ![Double]            -- ^ [日本語]: 正値データ (非正は除外)。
+                                           --   [English]: Positive-valued data (non-positive values are excluded).
+  , bcLambdaRange :: !(Double, Double)    -- ^ [日本語]: λ グリッド範囲。
+                                           --   [English]: The λ grid range.
+  , bcSteps       :: !Int                 -- ^ [日本語]: グリッド分割点数。
+                                           --   [English]: Number of grid points.
   , bcTitle       :: !Text
   } deriving (Show, Eq)
 
 defaultBoxCoxSpec :: [Double] -> BoxCoxSpec
 defaultBoxCoxSpec xs = BoxCoxSpec xs (-2, 2) 81 "Box-Cox plot"
 
--- | Box-Cox 変換。 λ=0 (|λ|<1e-8) は log。
+-- | [日本語]: Box-Cox 変換。 λ=0 (|λ|<1e-8) は log。
+--   [English]: The Box-Cox transform. λ=0 (|λ|<1e-8) uses log.
 boxCoxTransform :: Double -> Double -> Double
 boxCoxTransform lam y
   | abs lam < 1e-8 = log y
   | otherwise      = (y ** lam - 1) / lam
 
--- | プロファイル対数尤度 L(λ)。
+-- | [日本語]: プロファイル対数尤度 L(λ)。
+--   [English]: The profile log-likelihood L(λ).
 profileLogLik :: [Double] -> Double -> Double
 profileLogLik ys lam =
   let n    = fromIntegral (length ys)
@@ -67,15 +83,19 @@ profileLogLik ys lam =
       jac  = (lam - 1) * sum (map log ys)
   in if s2 <= 0 then -1 / 0 else negate (n / 2) * log s2 + jac
 
--- | Box-Cox プロファイルの結果。
+-- | [日本語]: Box-Cox プロファイルの結果。
+--   [English]: The result of the Box-Cox profile.
 data BoxCoxResult = BoxCoxResult
-  { brCurve     :: ![(Double, Double)]      -- ^ (λ, logLik) グリッド
+  { brCurve     :: ![(Double, Double)]      -- ^ [日本語]: (λ, logLik) グリッド。
+                                             --   [English]: The (λ, logLik) grid.
   , brOptLambda :: !Double
   , brOptLL     :: !Double
   , brCI        :: !(Maybe (Double, Double)) -- ^ 95% CI (λ_lo, λ_hi)
   } deriving (Show, Eq)
 
--- | グリッド上でプロファイル尤度を評価し λ̂ と CI を求める。
+-- | [日本語]: グリッド上でプロファイル尤度を評価し λ̂ と CI を求める。
+--   [English]: Evaluates the profile likelihood over the grid and finds λ̂
+--   and its confidence interval.
 boxCoxProfile :: BoxCoxSpec -> BoxCoxResult
 boxCoxProfile spec =
   let ys      = filter (> 0) (bcData spec)
@@ -89,7 +109,9 @@ boxCoxProfile spec =
       ci      = ciFromCurve curve thr
   in BoxCoxResult curve optL optLL ci
 
--- | 尤度比閾値 thr を超える λ 区間を、 交差点の線形補間で求める。
+-- | [日本語]: 尤度比閾値 thr を超える λ 区間を、 交差点の線形補間で求める。
+--   [English]: Finds the λ range above the likelihood-ratio threshold thr,
+--   by linearly interpolating the crossing points.
 ciFromCurve :: [(Double, Double)] -> Double -> Maybe (Double, Double)
 ciFromCurve curve thr =
   let segs = zip curve (drop 1 curve)
@@ -115,12 +137,14 @@ marginB = 40
 plotW   = 320
 plotH   = 220
 
--- | SVG / PNG 出力に渡す viewport 寸法。
+-- | [日本語]: SVG / PNG 出力に渡す viewport 寸法。
+--   [English]: The viewport dimensions passed to SVG / PNG output.
 boxCoxViewport :: BoxCoxSpec -> (Int, Int)
 boxCoxViewport _ =
   (ceiling (marginL + plotW + marginR), ceiling (marginT + plotH + marginB))
 
--- | Box-Cox プロットの backend 非依存 'Primitive' 列。
+-- | [日本語]: Box-Cox プロットの backend 非依存 'Primitive' 列。
+--   [English]: The backend-agnostic 'Primitive' list for the Box-Cox plot.
 boxCoxPrimitives :: BoxCoxSpec -> [Primitive]
 boxCoxPrimitives spec =
   let res   = boxCoxProfile spec

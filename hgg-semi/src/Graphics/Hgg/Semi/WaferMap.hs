@@ -4,7 +4,7 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- ウェハ上の die を 2D グリッドで可視化する。 1 die = 1 セルで、 bin
+-- [日本語]: ウェハ上の die を 2D グリッドで可視化する。 1 die = 1 セルで、 bin
 -- (良品 / 不良カテゴリ / 測定対象外) ごとに色を塗る。 ウェハ外周は円で表し、
 -- エッジ除外幅の内側だけを「on-wafer」 として扱う。 reticle (露光ショット)
 -- 境界を太線で、 notch / flat 方向をマーカーで示し、 yield と zone
@@ -13,6 +13,17 @@
 -- backend には依存せず、 'waferMapPrimitives' が hgg-core の
 -- backend 非依存 'Primitive' 列を返す。 出力は SVG / PDF / PNG / Canvas
 -- backend がそのまま consume する。
+--
+-- [English]: Visualizes the dies on a wafer as a 2D grid. Each die is one
+-- cell, colored by its bin (pass / a fail category / untested). The wafer
+-- outline is drawn as a circle, and only the area inside the edge-exclusion
+-- width is treated as "on-wafer". Reticle (exposure-shot) boundaries are
+-- drawn as thick lines, the notch / flat direction is shown with a marker,
+-- and a yield and zone (center / mid / edge) summary is computed.
+--
+-- Independent of any backend; 'waferMapPrimitives' returns
+-- hgg-core's backend-agnostic 'Primitive' list. The output is
+-- consumed as-is by the SVG / PDF / PNG / Canvas backends.
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Semi.WaferMap
   ( -- * Spec
@@ -46,43 +57,64 @@ import           Graphics.Hgg.Render (FillStyle (..), LineStyle (..),
 -- Spec
 -- ===========================================================================
 
--- | 1 つの die の bin (= 検査カテゴリ)。
+-- | [日本語]: 1 つの die の bin (= 検査カテゴリ)。
 --
 --   * 'BinPass' = 良品
 --   * 'BinFail' = 不良 (fail カテゴリ名を保持。 ビン別の色分けに使う)
 --   * 'BinSkip' = placed だが測定対象外 (yield 分母に含めない)
+--   [English]: The bin (inspection category) of a single die.
+--
+--   * 'BinPass' = pass
+--   * 'BinFail' = fail (holds the fail category name, used for per-bin coloring)
+--   * 'BinSkip' = placed but untested (excluded from the yield denominator)
 data DieBin
   = BinPass
   | BinFail !Text
   | BinSkip
   deriving (Show, Eq, Ord)
 
--- | グリッド上の 1 die (0-based の列 / 行と bin)。
+-- | [日本語]: グリッド上の 1 die (0-based の列 / 行と bin)。
+--   [English]: A single die on the grid (0-based column / row and its bin).
 data Die = Die
   { dieCol :: !Int
   , dieRow :: !Int
   , dieBin :: !DieBin
   } deriving (Show, Eq)
 
--- | notch / flat の向き (ウェハ方位の基準点)。
+-- | [日本語]: notch / flat の向き (ウェハ方位の基準点)。
+--   [English]: The notch / flat direction (the wafer's orientation reference point).
 data Notch = NotchN | NotchE | NotchS | NotchW
   deriving (Show, Eq)
 
--- | WaferMap の入力一式。 px 寸法はすべて 'wmCellSize' / 'wmMargin' から導く。
+-- | [日本語]: WaferMap の入力一式。 px 寸法はすべて 'wmCellSize' / 'wmMargin' から導く。
+--   [English]: The full set of inputs to a WaferMap. All px dimensions are
+--   derived from 'wmCellSize' / 'wmMargin'.
 data WaferMapSpec = WaferMapSpec
-  { wmCols          :: !Int               -- ^ グリッド列数
-  , wmRows          :: !Int               -- ^ グリッド行数
-  , wmDies          :: ![Die]             -- ^ placed die (位置 + bin)
-  , wmEdgeExclusion :: !Double            -- ^ エッジ除外幅 (die 単位)。 半径から内側に控える量
-  , wmReticleCols   :: !(Maybe Int)       -- ^ reticle 境界 (n 列ごとに太線)。 Nothing = 描かない
-  , wmReticleRows   :: !(Maybe Int)       -- ^ reticle 境界 (n 行ごとに太線)
-  , wmNotch         :: !Notch             -- ^ notch / flat 方向
-  , wmBinColors     :: ![(DieBin, Text)]  -- ^ bin → 色の上書き (無ければ 'defaultBinColor')
-  , wmCellSize      :: !Double            -- ^ die 1 個の px サイズ
-  , wmMargin        :: !Double            -- ^ 余白 px
+  { wmCols          :: !Int               -- ^ [日本語]: グリッド列数。
+                                           --   [English]: Number of grid columns.
+  , wmRows          :: !Int               -- ^ [日本語]: グリッド行数。
+                                           --   [English]: Number of grid rows.
+  , wmDies          :: ![Die]             -- ^ [日本語]: placed die (位置 + bin)。
+                                           --   [English]: The placed dies (position + bin).
+  , wmEdgeExclusion :: !Double            -- ^ [日本語]: エッジ除外幅 (die 単位)。 半径から内側に控える量。
+                                           --   [English]: The edge-exclusion width, in die units — how far to pull in from the radius.
+  , wmReticleCols   :: !(Maybe Int)       -- ^ [日本語]: reticle 境界 (n 列ごとに太線)。 Nothing = 描かない。
+                                           --   [English]: The reticle boundary (a thick line every n columns). @Nothing@ = not drawn.
+  , wmReticleRows   :: !(Maybe Int)       -- ^ [日本語]: reticle 境界 (n 行ごとに太線)。
+                                           --   [English]: The reticle boundary (a thick line every n rows).
+  , wmNotch         :: !Notch             -- ^ [日本語]: notch / flat 方向。
+                                           --   [English]: The notch / flat direction.
+  , wmBinColors     :: ![(DieBin, Text)]  -- ^ [日本語]: bin → 色の上書き (無ければ 'defaultBinColor')。
+                                           --   [English]: Bin to color overrides (falls back to 'defaultBinColor' when absent).
+  , wmCellSize      :: !Double            -- ^ [日本語]: die 1 個の px サイズ。
+                                           --   [English]: The px size of a single die.
+  , wmMargin        :: !Double            -- ^ [日本語]: 余白 px。
+                                           --   [English]: The margin, in px.
   } deriving (Show, Eq)
 
--- | 典型値で 'WaferMapSpec' を作る。 列数 / 行数 / die 列を渡すだけ。
+-- | [日本語]: 典型値で 'WaferMapSpec' を作る。 列数 / 行数 / die 列を渡すだけ。
+--   [English]: Builds a 'WaferMapSpec' with typical values. Just pass the
+--   column count / row count / die list.
 defaultWaferMapSpec :: Int -> Int -> [Die] -> WaferMapSpec
 defaultWaferMapSpec cols rows dies = WaferMapSpec
   { wmCols          = cols
@@ -101,17 +133,21 @@ defaultWaferMapSpec cols rows dies = WaferMapSpec
 -- 幾何 (内部)
 -- ===========================================================================
 
--- | グリッド原点 (左上の die の左上角) の px 座標。
+-- | [日本語]: グリッド原点 (左上の die の左上角) の px 座標。
+--   [English]: The grid origin (the top-left corner of the top-left die), in px.
 gridOrigin :: WaferMapSpec -> Point
 gridOrigin s = Point (wmMargin s) (wmMargin s)
 
--- | グリッド全体の px 幅・高さ。
+-- | [日本語]: グリッド全体の px 幅・高さ。
+--   [English]: The overall grid width / height, in px.
 gridSize :: WaferMapSpec -> (Double, Double)
 gridSize s =
   ( fromIntegral (wmCols s) * wmCellSize s
   , fromIntegral (wmRows s) * wmCellSize s )
 
--- | ウェハ円の中心と半径 (px)。 半径はグリッド短辺に内接。
+-- | [日本語]: ウェハ円の中心と半径 (px)。 半径はグリッド短辺に内接。
+--   [English]: The wafer circle's center and radius, in px. The radius is
+--   inscribed within the grid's shorter side.
 waferGeometry :: WaferMapSpec -> (Point, Double)
 waferGeometry s =
   let Point ox oy = gridOrigin s
@@ -120,7 +156,8 @@ waferGeometry s =
       radius      = min gw gh / 2
   in (center, radius)
 
--- | die セルの px 矩形。
+-- | [日本語]: die セルの px 矩形。
+--   [English]: The die cell's px rectangle.
 dieRect :: WaferMapSpec -> Die -> Rect
 dieRect s d =
   let Point ox oy = gridOrigin s
@@ -129,26 +166,31 @@ dieRect s d =
           (oy + fromIntegral (dieRow d) * cs)
           cs cs
 
--- | die セル中心の px 座標。
+-- | [日本語]: die セル中心の px 座標。
+--   [English]: The die cell's center, in px.
 dieCenter :: WaferMapSpec -> Die -> Point
 dieCenter s d =
   let Rect rx ry rw rh = dieRect s d
   in Point (rx + rw / 2) (ry + rh / 2)
 
--- | die 中心からウェハ中心までの距離 (px)。
+-- | [日本語]: die 中心からウェハ中心までの距離 (px)。
+--   [English]: The distance from the die's center to the wafer's center, in px.
 distFromCenter :: WaferMapSpec -> Die -> Double
 distFromCenter s d =
   let (Point cx cy, _) = waferGeometry s
       Point dx dy      = dieCenter s d
   in sqrt ((dx - cx) ** 2 + (dy - cy) ** 2)
 
--- | エッジ除外を効かせた有効半径 (px)。
+-- | [日本語]: エッジ除外を効かせた有効半径 (px)。
+--   [English]: The effective radius after applying edge exclusion, in px.
 effectiveRadius :: WaferMapSpec -> Double
 effectiveRadius s =
   let (_, r) = waferGeometry s
   in r - wmEdgeExclusion s * wmCellSize s
 
--- | die がエッジ除外内 (= 測定対象) か。 中心が有効半径内なら on-wafer。
+-- | [日本語]: die がエッジ除外内 (= 測定対象) か。 中心が有効半径内なら on-wafer。
+--   [English]: Whether the die is inside the edge exclusion (= tested). A
+--   die is on-wafer when its center is within the effective radius.
 onWafer :: WaferMapSpec -> Die -> Bool
 onWafer s d = distFromCenter s d <= effectiveRadius s
 
@@ -156,11 +198,15 @@ onWafer s d = distFromCenter s d <= effectiveRadius s
 -- Yield / zone
 -- ===========================================================================
 
--- | ウェハ径方向の領域区分 (中心 / 中間 / 外周)。 有効半径を 3 等分。
+-- | [日本語]: ウェハ径方向の領域区分 (中心 / 中間 / 外周)。 有効半径を 3 等分。
+--   [English]: The wafer's radial zone classification (center / mid /
+--   edge). Divides the effective radius into three equal parts.
 data Zone = ZoneCenter | ZoneMid | ZoneEdge
   deriving (Show, Eq, Ord, Enum, Bounded)
 
--- | die が属する zone。 有効半径に対する正規化距離で 1/3 ・ 2/3 で区切る。
+-- | [日本語]: die が属する zone。 有効半径に対する正規化距離で 1/3 ・ 2/3 で区切る。
+--   [English]: The zone a die belongs to, split at 1/3 and 2/3 of the
+--   distance normalized to the effective radius.
 zoneOf :: WaferMapSpec -> Die -> Zone
 zoneOf s d =
   let r = effectiveRadius s
@@ -169,16 +215,21 @@ zoneOf s d =
      else if t < 2 / 3 then ZoneMid
      else ZoneEdge
 
--- | yield と zone 別内訳。
+-- | [日本語]: yield と zone 別内訳。
+--   [English]: The yield and its per-zone breakdown.
 data YieldSummary = YieldSummary
-  { ysTotal  :: !Int                  -- ^ on-wafer かつ測定済 (Pass + Fail)
+  { ysTotal  :: !Int                  -- ^ [日本語]: on-wafer かつ測定済 (Pass + Fail)。
+                                       --   [English]: On-wafer and tested (Pass + Fail).
   , ysPass   :: !Int
   , ysFail   :: !Int
-  , ysYield  :: !Double               -- ^ Pass / (Pass + Fail) [%]、 分母 0 なら 0
+  , ysYield  :: !Double               -- ^ [日本語]: Pass / (Pass + Fail) [%]、 分母 0 なら 0。
+                                       --   [English]: Pass / (Pass + Fail) [%]; 0 when the denominator is 0.
   , ysByZone :: ![(Zone, Int, Int)]   -- ^ (zone, pass, fail)
   } deriving (Show, Eq)
 
--- | bin が「測定済」 (Pass / Fail) かどうか。 'BinSkip' は分母に入れない。
+-- | [日本語]: bin が「測定済」 (Pass / Fail) かどうか。 'BinSkip' は分母に入れない。
+--   [English]: Whether the bin is "tested" (Pass / Fail). 'BinSkip' is
+--   excluded from the denominator.
 isTested :: DieBin -> Bool
 isTested BinPass     = True
 isTested (BinFail _) = True
@@ -188,7 +239,8 @@ isPass :: DieBin -> Bool
 isPass BinPass = True
 isPass _       = False
 
--- | on-wafer die から yield と zone サマリを算出。
+-- | [日本語]: on-wafer die から yield と zone サマリを算出。
+--   [English]: Computes the yield and zone summary from the on-wafer dies.
 computeYield :: WaferMapSpec -> YieldSummary
 computeYield s =
   let tested = [ d | d <- wmDies s, onWafer s d, isTested (dieBin d) ]
@@ -212,13 +264,15 @@ computeYield s =
 -- 色
 -- ===========================================================================
 
--- | bin の既定色。 Pass = 緑、 Fail = 赤、 Skip = 薄灰。
+-- | [日本語]: bin の既定色。 Pass = 緑、 Fail = 赤、 Skip = 薄灰。
+--   [English]: The bin's default color. Pass = green, Fail = red, Skip = light gray.
 defaultBinColor :: DieBin -> Text
 defaultBinColor BinPass     = "#22c55e"
 defaultBinColor (BinFail _) = "#ef4444"
 defaultBinColor BinSkip     = "#e5e7eb"
 
--- | 上書きマップを優先した bin 色解決。
+-- | [日本語]: 上書きマップを優先した bin 色解決。
+--   [English]: Resolves the bin color, preferring the override map.
 binColor :: WaferMapSpec -> DieBin -> Text
 binColor s b = maybe (defaultBinColor b) id (lookup b (wmBinColors s))
 
@@ -226,11 +280,13 @@ binColor s b = maybe (defaultBinColor b) id (lookup b (wmBinColors s))
 -- Render
 -- ===========================================================================
 
--- | サマリ表示の高さ (px、 2 行分)。
+-- | [日本語]: サマリ表示の高さ (px、 2 行分)。
+--   [English]: The summary display's height, in px (for 2 lines).
 summaryHeight :: Double
 summaryHeight = 44
 
--- | SVG / PNG 出力に渡す viewport 寸法 (幅, 高さ)。
+-- | [日本語]: SVG / PNG 出力に渡す viewport 寸法 (幅, 高さ)。
+--   [English]: The viewport dimensions (width, height) passed to SVG / PNG output.
 waferMapViewport :: WaferMapSpec -> (Int, Int)
 waferMapViewport s =
   let (gw, gh) = gridSize s
@@ -238,10 +294,14 @@ waferMapViewport s =
       h = gh + 2 * wmMargin s + summaryHeight
   in (ceiling w, ceiling h)
 
--- | wafer map の backend 非依存 'Primitive' 列。
+-- | [日本語]: wafer map の backend 非依存 'Primitive' 列。
 --
 -- 描画順: ウェハ円 → on-wafer die セル → reticle 境界 → notch マーカー →
 -- yield / zone サマリ text。
+--   [English]: The backend-agnostic 'Primitive' list for the wafer map.
+--
+-- Draw order: wafer circle to on-wafer die cells to reticle boundary to
+-- notch marker to yield / zone summary text.
 waferMapPrimitives :: WaferMapSpec -> [Primitive]
 waferMapPrimitives s =
   concat
@@ -252,7 +312,8 @@ waferMapPrimitives s =
     , summaryText s
     ]
 
--- | ウェハ外周の円 (薄塗り + 細枠)。
+-- | [日本語]: ウェハ外周の円 (薄塗り + 細枠)。
+--   [English]: The wafer's outer circle (light fill + thin stroke).
 waferOutline :: WaferMapSpec -> Primitive
 waferOutline s =
   let (center, radius) = waferGeometry s
@@ -261,7 +322,9 @@ waferOutline s =
        (Just (StrokeStyle "#94a3b8" 1.5))
        Nothing
 
--- | on-wafer die のセル矩形 (bin 色 + 白い細い区切り枠)。
+-- | [日本語]: on-wafer die のセル矩形 (bin 色 + 白い細い区切り枠)。
+--   [English]: The cell rectangles of the on-wafer dies (bin color + thin
+--   white divider stroke).
 dieCells :: WaferMapSpec -> [Primitive]
 dieCells s =
   [ PRect (dieRect s d)
@@ -269,8 +332,11 @@ dieCells s =
           (Just (StrokeStyle "#ffffff" 0.5))
   | d <- wmDies s, onWafer s d ]
 
--- | reticle (露光ショット) 境界線。 'wmReticleCols' / 'wmReticleRows' が
+-- | [日本語]: reticle (露光ショット) 境界線。 'wmReticleCols' / 'wmReticleRows' が
 -- 指定されていれば、 その倍数の格子位置にグリッド全幅 / 全高の太線を引く。
+--   [English]: The reticle (exposure-shot) boundary lines. When
+--   'wmReticleCols' / 'wmReticleRows' are specified, draws a thick line
+--   spanning the grid's full width / height at each multiple of the grid position.
 reticleLines :: WaferMapSpec -> [Primitive]
 reticleLines s =
   let Point ox oy = gridOrigin s
@@ -289,7 +355,9 @@ reticleLines s =
              _              -> []
   in vs ++ hs
 
--- | notch / flat マーカー。 ウェハ外周の該当方位に内向きの小三角形を置く。
+-- | [日本語]: notch / flat マーカー。 ウェハ外周の該当方位に内向きの小三角形を置く。
+--   [English]: The notch / flat marker. Places a small inward-pointing
+--   triangle at the corresponding direction on the wafer's outer edge.
 notchMarker :: WaferMapSpec -> Primitive
 notchMarker s =
   let (Point cx cy, r) = waferGeometry s
@@ -303,7 +371,8 @@ notchMarker s =
            (FillStyle "#1e293b" 1.0)
            Nothing
 
--- | yield / zone サマリの text 2 行 (グリッド下)。
+-- | [日本語]: yield / zone サマリの text 2 行 (グリッド下)。
+--   [English]: The yield / zone summary's two text lines (below the grid).
 summaryText :: WaferMapSpec -> [Primitive]
 summaryText s =
   let ys          = computeYield s
