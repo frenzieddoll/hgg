@@ -1,26 +1,49 @@
 -- |
 -- Module      : Graphics.Hgg.Validate
--- Description : Layer 3.5 ─ compile / validate / 診断 (Phase 11 A1 core hardening)
+-- Description : Layer 3.5 — compile / validate / diagnostics (core hardening)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 設計方針:
+-- [日本語]: 設計方針:
 --
---   * 「'VisualSpec' は直接描画しない」 を型で固定する。 backend に渡す前に
---     'compilePlot' を通し、 必須 aesthetic 欠落 / 列解決失敗 / 型不一致 を検出。
---   * 診断は **actionable** であること (= 「Missing y」 ではなく
---     「scatter は x と y が必要。 y 列が未指定。 `y "yield"` を足してください」)。
---   * 列名解決失敗には **編集距離 suggestion** を添える ('validatePlotWith' に
---     既知列名を渡したとき)。
---   * 'BackendCapability' で backend 非対応機能を compile 時に検出する。
+--     * 「'VisualSpec' は直接描画しない」 を型で固定する。 backend に渡す前に
+--       'compilePlot' を通し、 必須 aesthetic 欠落 / 列解決失敗 / 型不一致 を検出。
+--     * 診断は __actionable__ であること (= 「Missing y」 ではなく
+--       「scatter は x と y が必要。 y 列が未指定。 `y "yield"` を足してください」)。
+--     * 列名解決失敗には __編集距離 suggestion__ を添える ('validatePlotWith' に
+--       既知列名を渡したとき)。
+--     * 'BackendCapability' で backend 非対応機能を compile 時に検出する。
 --
--- 本 module は render を一切呼ばない (= 出力中立)。 既存 backend は当面そのまま
--- 動き、 段階的に 'compilePlot' 経由へ寄せる。
+--   本 module は render を一切呼ばない (= 出力中立)。 既存 backend は当面そのまま
+--   動き、 段階的に 'compilePlot' 経由へ寄せる。
 --
--- 既知の制約: 「1 layer に mark 2 個 (`scatter x y <> line x y`) を合成して 2 個目が
--- 黙って消える」 footgun は、 'Layer' の `lyKind :: First MarkKind` が合成時点で
--- 不可逆に潰れるため **post-hoc には検出できない**。 検出には Layer に診断用
--- フィールドを足す必要があり、 Phase 11 A2 (Monoid 明文化) で扱う。
+--   既知の制約: 「1 layer に mark 2 個 (`scatter x y <> line x y`) を合成して 2
+--   個目が黙って消える」 footgun は、 'Layer' の `lyKind :: First MarkKind` が
+--   合成時点で不可逆に潰れるため __post-hoc には検出できない__。 検出には Layer
+--   に診断用フィールドを足す必要があり、 別途扱う (Monoid 明文化)。
+-- [English]: Design policy:
+--
+--     * Fixes "'VisualSpec' does not render directly" at the type level.
+--       Before handing off to a backend, it passes through 'compilePlot',
+--       which detects missing required aesthetics, column-resolution
+--       failures, and type mismatches.
+--     * Diagnostics must be __actionable__ (not "Missing y" but "scatter
+--       requires x and y. The y column is unset. Add \`y \"yield\"\`.").
+--     * Column-resolution failures come with an __edit-distance suggestion__
+--       (when known column names are passed to 'validatePlotWith').
+--     * 'BackendCapability' detects backend-unsupported features at compile
+--       time.
+--
+--   This module never calls render (it is output-neutral). Existing
+--   backends keep working unchanged for now, and are migrated to go through
+--   'compilePlot' incrementally.
+--
+--   A known limitation: the footgun where composing two marks into one
+--   layer (\`scatter x y <> line x y\`) silently drops the second one
+--   __cannot be detected post-hoc__, because the \`lyKind :: First MarkKind\`
+--   field of 'Layer' collapses irreversibly at composition time. Detecting
+--   it would require adding a diagnostic field to Layer, which is handled
+--   separately (as part of making the Monoid semantics explicit).
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Validate
   ( -- * Aesthetic / 型
@@ -49,7 +72,7 @@ module Graphics.Hgg.Validate
   , compiledSpec
   , compilePlot
   , compilePlotWith
-    -- * Backend capability matrix (= §5.5)
+    -- * Backend capability matrix
   , BackendName(..)
   , FeatureName(..)
   , BackendCapability(..)
@@ -75,14 +98,18 @@ import           Graphics.Hgg.Spec
 -- Aesthetic / 型
 -- ===========================================================================
 
--- | mark が要求しうる aesthetic 種別 (= 診断メッセージ用)。
+-- | [日本語]: mark が要求しうる aesthetic 種別 (= 診断メッセージ用)。
+--   [English]: The kinds of aesthetic a mark may require (for diagnostic
+--   messages).
 data Aesthetic
   = AesX | AesY | AesY2 | AesColor | AesErrorX | AesErrorY
   | AesSize | AesShape | AesDAG | AesCols
   | AesU | AesV   -- Phase 26 A2: vector field (quiver) の成分
   deriving (Show, Eq)
 
--- | 診断文に出す aesthetic 名 (= setter 名に寄せる)。
+-- | [日本語]: 診断文に出す aesthetic 名 (= setter 名に寄せる)。
+--   [English]: The aesthetic name shown in diagnostic text (matches the
+--   setter name).
 aesName :: Aesthetic -> Text
 aesName a = case a of
   AesX      -> "x"
@@ -111,9 +138,12 @@ data ActualType = ActNumeric | ActCategorical | ActUnresolved
 data Severity = SevError | SevWarning | SevInfo
   deriving (Show, Eq, Ord)
 
--- | どの layer / mark で起きたか (= メッセージの文脈)。
+-- | [日本語]: どの layer / mark で起きたか (= メッセージの文脈)。
+--   [English]: Which layer / mark the diagnostic occurred in (message
+--   context).
 data DiagnosticContext = DiagnosticContext
-  { dcLayer :: Maybe Int        -- ^ 0 始まりの layer index (Nothing = 図全体)
+  { dcLayer :: Maybe Int        -- ^ [日本語]: 0 始まりの layer index (Nothing = 図全体)。
+                                 --   [English]: The 0-based layer index (Nothing means the whole figure).
   , dcMark  :: Maybe MarkKind
   } deriving (Show, Eq)
 
@@ -122,18 +152,30 @@ topCtx = DiagnosticContext Nothing Nothing
 
 data PlotErrorKind
   = MissingAesthetic MarkKind Aesthetic
-  | ColumnNotFound Text [Text]          -- ^ 見つからない列名 + 候補 (編集距離)
+  | ColumnNotFound Text [Text]
+    -- ^ [日本語]: 見つからない列名 + 候補 (編集距離)。
+    --   [English]: The column name that could not be found, plus candidates (by edit distance).
   | ColumnTypeMismatch Text Aesthetic ExpectedType ActualType
-  | EmptyPlot                           -- ^ layer が 1 つも無い
-  | DistColsNonDistribution MarkKind    -- ^ ★ Phase 36 D3: distCols のレーンが分布 mark でない
+  | EmptyPlot
+    -- ^ [日本語]: layer が 1 つも無い。
+    --   [English]: There is not a single layer.
+  | DistColsNonDistribution MarkKind
+    -- ^ [日本語]: ★ distCols のレーンが分布 mark でない。
+    --   [English]: ★ A distCols lane whose mark is not a distribution mark.
   deriving (Show, Eq)
 
 data PlotWarningKind
   = BackendUnsupported BackendName FeatureName
-  | TooFewColumns Aesthetic Int Int     -- ^ 必要数 / 実数 (parallel 等)
+  | TooFewColumns Aesthetic Int Int
+    -- ^ [日本語]: 必要数 / 実数 (parallel 等)。
+    --   [English]: The required count vs. the actual count (for e.g. parallel coordinates).
   | FacetInlineLengthMismatch Aesthetic Int Int
-    -- ^ ★ Phase 62 A4 (§3): facet 列と長さの異なる inline 列 (inline 長 / facet 長)。
+    -- ^ [日本語]: ★ facet 列と長さの異なる inline 列 (inline 長 / facet 長)。
     --   facet 分割がこの列に効かず全 panel に同一データが描かれる。 描画は継続する。
+    --   [English]: ★ An inline column whose length differs from the facet
+    --   column (inline length / facet length). Facet splitting has no
+    --   effect on this column, so the same data is drawn on every panel.
+    --   Rendering continues regardless.
   deriving (Show, Eq)
 
 data PlotDiagnostic
@@ -147,7 +189,9 @@ diagnosticSeverity PlotError{}   = SevError
 diagnosticSeverity PlotWarning{} = SevWarning
 diagnosticSeverity PlotInfo{}    = SevInfo
 
--- | 人間が読める actionable メッセージ (= §5.4 Diagnostics Policy)。
+-- | [日本語]: 人間が読める actionable メッセージ (= §5.4 Diagnostics Policy)。
+--   [English]: A human-readable, actionable message (§5.4 Diagnostics
+--   Policy).
 renderDiagnostic :: PlotDiagnostic -> Text
 renderDiagnostic d = case d of
   PlotError k ctx   -> sev "error"   <> ctxStr ctx <> errMsg k
@@ -206,8 +250,12 @@ markName = T.pack . drop 1 . show   -- "MScatter" -> "Scatter"
 -- 必須 aesthetic (= constructor 定義から導出した事実、 Spec.hs L673-993)
 -- ===========================================================================
 
--- | mark が描画に最低限要求する aesthetic。 これが欠けると 'validatePlot' が
--- 'MissingAesthetic' を返す。 categorical/numeric の別は型チェックで別途見る。
+-- | [日本語]: mark が描画に最低限要求する aesthetic。 これが欠けると
+--   'validatePlot' が 'MissingAesthetic' を返す。 categorical/numeric の別は
+--   型チェックで別途見る。
+--   [English]: The minimum aesthetics a mark requires to render. Missing one
+--   causes 'validatePlot' to return 'MissingAesthetic'. Whether a value is
+--   categorical or numeric is checked separately, by type checking.
 requiredAes :: MarkKind -> [Aesthetic]
 requiredAes m = case m of
   MScatter    -> [AesX, AesY]
@@ -276,12 +324,16 @@ requiredAes m = case m of
 -- validate
 -- ===========================================================================
 
--- | 既知列名なしの検証 (= 列解決の成否のみ、 suggestion 無し)。
+-- | [日本語]: 既知列名なしの検証 (= 列解決の成否のみ、 suggestion 無し)。
+--   [English]: Validates without known column names (only whether columns
+--   resolve; no suggestions).
 validatePlot :: Resolver -> VisualSpec -> [PlotDiagnostic]
 validatePlot = validatePlotWith []
 
--- | 既知列名 (= Resolver が供給できる列の一覧) を渡すと 'ColumnNotFound' に
--- 編集距離 suggestion が付く。
+-- | [日本語]: 既知列名 (= Resolver が供給できる列の一覧) を渡すと
+--   'ColumnNotFound' に編集距離 suggestion が付く。
+--   [English]: Passing known column names (the columns the Resolver can
+--   supply) attaches an edit-distance suggestion to 'ColumnNotFound'.
 validatePlotWith :: [Text] -> Resolver -> VisualSpec -> [PlotDiagnostic]
 validatePlotWith known r spec =
   emptyCheck ++ layerDiags ++ subDiags
@@ -294,7 +346,9 @@ validatePlotWith known r spec =
   -- subplots は独立 spec なので再帰 (layer index は各 sub で 0 始まり)
   subDiags = concatMap (validatePlotWith known r) (vsSubplots spec)
 
--- | 1 layer の検証: 必須 aesthetic 欠落 + 列解決 + 型チェック。
+-- | [日本語]: 1 layer の検証: 必須 aesthetic 欠落 + 列解決 + 型チェック。
+--   [English]: Validates a single layer: missing required aesthetics,
+--   column resolution, and type checking.
 validateLayer :: [Text] -> Resolver -> Int -> Layer -> [PlotDiagnostic]
 validateLayer known r i ly =
   case getFirst (lyKind ly) of
@@ -327,7 +381,9 @@ validateLayer known r i ly =
             | otherwise = []
       in missing ++ dagMiss ++ colsMiss ++ resolveDiags ++ distColsDiags
 
--- | layer に実際に設定済みの (aesthetic, 列) 組を取り出す。
+-- | [日本語]: layer に実際に設定済みの (aesthetic, 列) 組を取り出す。
+--   [English]: Extracts the (aesthetic, column) pairs actually set on a
+--   layer.
 layerCols :: Layer -> [(Aesthetic, ColRef)]
 layerCols ly = mapMaybe pick
   [ (AesX,      getLast (lyEncX ly))
@@ -346,14 +402,26 @@ layerCols ly = mapMaybe pick
     Just (ColorByContinuous c) -> [(AesColor, c)]
     _                          -> []
 
--- | ★ Phase 62 A4 (§3): facet 列と長さの異なる inline encoding の検出。
--- inline 列は Resolver を通らないため、 facet の行分割 ('subsetInlineSpec') は
--- **facet 列と同じ長さの inline のみ**に効く。 長さが違う inline が encoding に
--- 残っていると、 その列は分割されず全 panel に同一データが描かれる — それを
--- 明示検出する (検出しても描画は継続 = 非破壊、 2026-07-31 user 決定)。
--- 判定は 'applyDiscreteLimits' 適用後の姿で行う (= 経路 2 の bake / limits に
--- よる行 drop の後、 実際に render が見る spec と同条件。 limits の行 drop で
--- facet 列と layer が desync するケースもこれで捕まる)。
+-- | [日本語]: ★ facet 列と長さの異なる inline encoding の検出。
+--   inline 列は Resolver を通らないため、 facet の行分割 (@subsetInlineSpec@) は
+--   __facet 列と同じ長さの inline のみ__に効く。 長さが違う inline が encoding
+--   に残っていると、 その列は分割されず全 panel に同一データが描かれる —
+--   それを明示検出する (検出しても描画は継続 = 非破壊、 user 決定)。
+--   判定は 'applyDiscreteLimits' 適用後の姿で行う (= 経路 2 の bake / limits に
+--   よる行 drop の後、 実際に render が見る spec と同条件。 limits の行 drop で
+--   facet 列と layer が desync するケースもこれで捕まる)。
+--   [English]: ★ Detects inline encodings whose length differs from the
+--   facet column. Since inline columns bypass the Resolver, facet row
+--   splitting (@subsetInlineSpec@) applies __only to inline columns whose length matches the facet column__.
+--   If a mismatched-length inline
+--   remains in the encoding, that column is not split and the same data is
+--   drawn on every panel — this function explicitly detects that case
+--   (detection does not stop rendering: it is non-destructive, per user
+--   decision). The check is performed on the spec after
+--   'applyDiscreteLimits' has been applied (that is, after row drops from
+--   path-2 baking / limits — the same condition the actual renderer sees.
+--   This also catches cases where limits' row drops desync the facet column
+--   from a layer).
 facetInlineDiagnostics :: Resolver -> VisualSpec -> [PlotDiagnostic]
 facetInlineDiagnostics r spec0 = go (applyDiscreteLimits r spec0) ++ subDiags
  where
@@ -383,15 +451,22 @@ facetInlineDiagnostics r spec0 = go (applyDiscreteLimits r spec0) ++ subDiags
     ++ [ (AesSize,  c) | Just c <- [getLast (lySizeBy ly)] ]
     ++ [ (AesShape, c) | Just c <- [getLast (lyShapeBy ly)] ]
 
--- | ★ Phase 62 A4: 'facetInlineDiagnostics' を stderr へ報告する backend 共用
--- helper (SVG / PNG / PDF / TeX の save 系入口から呼ぶ)。 診断ゼロなら無音。
--- 描画は止めない (§3 = 描画継続 + 警告)。
+-- | [日本語]: ★ 'facetInlineDiagnostics' を stderr へ報告する backend 共用
+--   helper (SVG / PNG / PDF / TeX の save 系入口から呼ぶ)。 診断ゼロなら無音。
+--   描画は止めない (= 描画継続 + 警告)。
+--   [English]: ★ A backend-shared helper that reports
+--   'facetInlineDiagnostics' to stderr (called from the SVG / PNG / PDF /
+--   TeX save entry points). Silent when there are no diagnostics. Does not
+--   stop rendering (rendering continues, with a warning).
 reportFacetInlineWarnings :: Resolver -> VisualSpec -> IO ()
 reportFacetInlineWarnings r spec =
   mapM_ (hPutStrLn stderr . T.unpack . renderDiagnostic)
         (facetInlineDiagnostics r spec)
 
--- | 列の解決可否 + 型チェック。 数値要求 aesthetic に文字列列が来たら型不一致。
+-- | [日本語]: 列の解決可否 + 型チェック。 数値要求 aesthetic に文字列列が来たら
+--   型不一致。
+--   [English]: Checks column resolvability plus type. A textual column
+--   supplied to a numeric-required aesthetic is a type mismatch.
 checkCol :: [Text] -> Resolver -> DiagnosticContext -> Aesthetic -> ColRef -> [PlotDiagnostic]
 checkCol known r ctx aes cr = case cr of
   ColByName n
@@ -405,8 +480,13 @@ checkCol known r ctx aes cr = case cr of
       [PlotError (ColumnTypeMismatch n aes ExpNumeric ActCategorical) ctx]
     _ -> []
 
--- | aesthetic が数値を要求するか。 x/y は mark により categorical 可なので緩く ExpAny。
--- color (continuous 経路で来たもの) と error bar は数値必須。
+-- | [日本語]: aesthetic が数値を要求するか。 x/y は mark により categorical
+--   可なので緩く ExpAny。 color (continuous 経路で来たもの) と error bar は
+--   数値必須。
+--   [English]: Whether an aesthetic requires a numeric value. x/y are left
+--   loose as ExpAny since they may be categorical depending on the mark.
+--   color (when it arrives via the continuous path) and error bars require
+--   numeric values.
 expectedFor :: Aesthetic -> ExpectedType
 expectedFor AesErrorX = ExpNumeric
 expectedFor AesErrorY = ExpNumeric
@@ -442,13 +522,19 @@ levenshtein a b = last (foldl' transform [0 .. length s1] s2)
 -- compile (= VisualSpec を「検証済」 でラップ)
 -- ===========================================================================
 
--- | 検証を通過した 'VisualSpec'。 backend はこれを受け取る形に寄せられる
--- (現状は 'compiledSpec' で素の VisualSpec を取り出して既存 backend に渡せる)。
+-- | [日本語]: 検証を通過した 'VisualSpec'。 backend はこれを受け取る形に寄せ
+--   られる (現状は 'compiledSpec' で素の VisualSpec を取り出して既存 backend
+--   に渡せる)。
+--   [English]: A 'VisualSpec' that has passed validation. Backends can be
+--   migrated to accept this type (currently, 'compiledSpec' extracts the
+--   plain VisualSpec to pass to existing backends).
 newtype CompiledPlot = CompiledPlot { compiledSpec :: VisualSpec }
   deriving (Show)
 
--- | error が無ければ 'CompiledPlot'、 あれば error 一覧を返す
--- (warning は通過させる)。
+-- | [日本語]: error が無ければ 'CompiledPlot'、 あれば error 一覧を返す
+--   (warning は通過させる)。
+--   [English]: Returns a 'CompiledPlot' if there are no errors, or the list
+--   of errors otherwise (warnings are allowed through).
 compilePlot :: Resolver -> VisualSpec -> Either [PlotDiagnostic] CompiledPlot
 compilePlot = compilePlotWith []
 
@@ -485,7 +571,8 @@ featureName f = case f of
   FeatInteractive3D -> "interactive 3D"
   FeatProjected3D   -> "3D (CPU projection)"
 
--- | backend ごとの対応機能 (= §5.5)。
+-- | [日本語]: backend ごとの対応機能 (= §5.5)。
+--   [English]: The features each backend supports (§5.5).
 data BackendCapability = BackendCapability
   { capName          :: BackendName
   , capTransparency  :: Bool
@@ -502,7 +589,9 @@ pdfCapability    = BackendCapability BackendPDF    True  False True  False
 canvasCapability = BackendCapability BackendCanvas True  True  True  False
 webglCapability  = BackendCapability BackendWebGL  True  True  True  True
 
--- | spec が使う機能のうち backend 非対応なものを warning 化。
+-- | [日本語]: spec が使う機能のうち backend 非対応なものを warning 化。
+--   [English]: Turns any feature used by the spec that the backend does not
+--   support into a warning.
 checkCapability :: BackendCapability -> VisualSpec -> [PlotDiagnostic]
 checkCapability cap spec = concatMap layerCap (vsLayers spec)
                         ++ concatMap (checkCapability cap) (vsSubplots spec)

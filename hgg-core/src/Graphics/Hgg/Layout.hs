@@ -1,11 +1,14 @@
 -- |
 -- Module      : Graphics.Hgg.Layout
--- Description : Layer 2 ─ Layout 計算 (Phase 26 §A-4 ColRef 対応版)
+-- Description : Layer 2 — layout computation (viewport / scale / axis tick)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 'VisualSpec' から viewport / scale / axis tick を計算する純粋関数群。
--- col 名参照は 'Resolver' で Vector に解決した上で extent を求める。
+-- [日本語]: 'VisualSpec' から viewport / scale / axis tick を計算する純粋関数群。
+--   col 名参照は 'Resolver' で Vector に解決した上で extent を求める。
+-- [English]: A set of pure functions that compute viewport / scale / axis
+--   ticks from a 'VisualSpec'. Column-name references are resolved to
+--   vectors via 'Resolver' before their extents are computed.
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Layout
@@ -148,18 +151,28 @@ instance FromJSON ViewportSize
 -- Phase 51: 'Rect' は 'Graphics.Hgg.Primitive' (leaf) へ移設。 本 module は
 -- import + export list で re-export し、 既存の @import Layout (Rect(..))@ を不変に保つ。
 
--- | Phase 26 §A-4: Linear のみ。 Log / Sqrt / Time / Ordinal / Band は後続。
--- | Phase 26 §C-2 #1: PlotConfig.xLog / yLog 等価。 LinearScale に加えて
--- LogScale を追加 (= 自然対数 ln で線形化、 描画は底 10 で tick 表示)。
+-- | [日本語]: 当初は Linear のみだったが、 PlotConfig.xLog / yLog 等価の
+--   LogScale を追加 (= 自然対数 ln で線形化、 描画は底 10 で tick 表示)。
+--   [English]: Originally Linear-only; LogScale was added to match
+--   PlotConfig.xLog / yLog (linearized via the natural log ln, rendered
+--   with base-10 ticks).
 data Scale
   = LinearScale { lsDomainLo, lsDomainHi, lsRangeLo, lsRangeHi :: !Double }
   | LogScale    { lsDomainLo, lsDomainHi, lsRangeLo, lsRangeHi :: !Double }
-  -- | Sqrt scale (P15、 Phase 6 A6): forward = sqrt v (= 数値が非負の domain 限定、
+  -- | [日本語]: Sqrt scale: forward = sqrt v (= 数値が非負の domain 限定、
   --   負値は range 下端 clip)。 inverse は描画側で不要 (= tick は値域、 表示は元値)。
+  --   [English]: The Sqrt scale: forward = sqrt v (restricted to a
+  --   non-negative domain; negative values clip to the range's lower
+  --   bound). No inverse is needed on the render side (ticks are in value
+  --   space, and displayed values are the originals).
   | SqrtScale   { lsDomainLo, lsDomainHi, lsRangeLo, lsRangeHi :: !Double }
-  -- | Time scale (P7、 Phase 6 A7): unix epoch (Double seconds) を Linear で扱う。
+  -- | [日本語]: Time scale: unix epoch (Double seconds) を Linear で扱う。
   --   tick は niceTimeTicks (= 1m / 1h / 1d / 1w / 1M / 1y candidates)。
   --   表示 format は AxisFormat の AxisTimeFmt 経由 (= Render 側)。
+  --   [English]: The Time scale: treats a unix epoch (Double seconds)
+  --   linearly. Ticks come from niceTimeTicks (1m / 1h / 1d / 1w / 1M / 1y
+  --   candidates). Display formatting goes through AxisFormat's AxisTimeFmt
+  --   (on the Render side).
   | TimeScale   { lsDomainLo, lsDomainHi, lsRangeLo, lsRangeHi :: !Double }
   deriving (Show, Eq)
 
@@ -229,8 +242,12 @@ data Layout = Layout
   , lpLegendNCol :: !Int
   } deriving (Show, Eq)
 
--- | 'VisualSpec' の全 layer から 'Resolver' で encX/encY を解決、 全 layer
--- 横断で extent を計算。 viewport は spec の width/height、 余白は固定 margin。
+-- | [日本語]: 'VisualSpec' の全 layer から 'Resolver' で encX/encY を解決、
+--   全 layer横断で extent を計算。 viewport は spec の width/height、 余白は
+--   固定 margin。
+--   [English]: Resolves encX/encY across every layer of a 'VisualSpec' via
+--   'Resolver', computing the extent across all layers. The viewport comes
+--   from the spec's width/height; margins are fixed.
 computeLayout :: Resolver -> VisualSpec -> Layout
 computeLayout r spec0 =
   -- ★ Phase 18 A2: 離散 limits (scale{X,Y}DiscreteLimits) を先に解決 (冪等・
@@ -717,11 +734,20 @@ computeLayout r spec0 =
        , lpLegendNCol = legNCol
        }
 
--- | Phase 8 C (ggplot 準拠): margin 縮小係数を撤廃 (常に 1)。 ggplot は文字・余白を
--- 固定 pt で扱い viewport サイズで縮めない (パネルが残りを埋めるだけ)。 旧実装は小
--- viewport で sc<1 に縮小していたが、 grid は軸帯確保 (renderSubplots) で対応し、 単一
--- 小 viewport (inset) も固定 pt で ggplot と同挙動にする。 panel が潰れないよう
--- computeLayout 側で availW/availH に下限を設ける。 シグネチャは互換のため温存。
+-- | [日本語]: ggplot 準拠: margin 縮小係数を撤廃 (常に 1)。 ggplot は文字・余白を
+--   固定 pt で扱い viewport サイズで縮めない (パネルが残りを埋めるだけ)。 旧実装は
+--   小 viewport で sc<1 に縮小していたが、 grid は軸帯確保 (renderSubplots) で対応し、
+--   単一小 viewport (inset) も固定 pt で ggplot と同挙動にする。 panel が潰れないよう
+--   computeLayout 側で availW/availH に下限を設ける。 シグネチャは互換のため温存。
+--   [English]: Following ggplot: the margin-shrink factor has been removed
+--   (always 1). ggplot treats text and whitespace as fixed pt and does not
+--   shrink them with viewport size (the panel simply fills whatever
+--   remains). The previous implementation shrank by sc<1 for small
+--   viewports; grid now handles this via axis-band reservation
+--   (renderSubplots), and a single small viewport (inset) also behaves like
+--   ggplot with fixed pt. computeLayout sets a lower bound on availW/availH
+--   to keep the panel from collapsing. The signature is kept for
+--   compatibility.
 ggMarginScale :: Double -> Double -> Double
 ggMarginScale _ _ = 1
 
@@ -729,16 +755,30 @@ ggMarginScale _ _ = 1
 -- Phase 8 C (gtable §E): 汎用 1 次元トラック割付
 -- ===========================================================================
 
--- | gtable のトラック (行 or 列) サイズ種別。 ggplot の grid::unit に対応:
---   Fixed v = 固定 pt (= 軸テキスト/タイトル/strip/plot.margin の grob 実寸)、
---   Null  w = 伸縮トラック (= unit(w,"null")、 残りスペースを重み比で分配 = パネル本体)。
+-- | [日本語]: gtable のトラック (行 or 列) サイズ種別。 ggplot の grid::unit に
+--   対応: Fixed v = 固定 pt (= 軸テキスト/タイトル/strip/plot.margin の grob
+--   実寸)、 Null  w = 伸縮トラック (= unit(w,"null")、 残りスペースを重み比で
+--   分配 = パネル本体)。
+--   [English]: The size kind of a gtable track (row or column), matching
+--   ggplot's grid::unit: Fixed v is a fixed pt size (the grob's actual size
+--   for axis text/title/strip/plot.margin); Null w is an elastic track
+--   (unit(w,"null"), distributing remaining space by weight — the panel
+--   body).
 data Track = Fixed !Double | Null !Double
   deriving (Show, Eq)
 
--- | Phase 8 C (§E-1): 1 次元トラック割付。 利用可能長 avail から Fixed 合計を先取りし、
--- 残りを Null トラックに重み比で配分する (= ggplot gtable の「固定先取り → null 残り均等」)。
--- 残りが負なら Null=0 (= パネルが潰れる、 ggplot と同挙動)。 パネル間 spacing は呼び出し側が
--- Fixed トラックとして明示挿入する。 戻り = 各トラックの (start, length) (start は absolute)。
+-- | [日本語]: 1 次元トラック割付。 利用可能長 avail から Fixed 合計を先取りし、
+--   残りを Null トラックに重み比で配分する (= ggplot gtable の「固定先取り →
+--   null 残り均等」)。 残りが負なら Null=0 (= パネルが潰れる、 ggplot と同挙動)。
+--   パネル間 spacing は呼び出し側が Fixed トラックとして明示挿入する。 戻り =
+--   各トラックの (start, length) (start は absolute)。
+--   [English]: 1D track allocation. Claims the sum of Fixed sizes from the
+--   available length avail first, then distributes the remainder to Null
+--   tracks by weight (matching ggplot gtable's "claim fixed first, then
+--   split the null remainder"). If the remainder is negative, Null=0 (the
+--   panel collapses, matching ggplot's behaviour). Inter-panel spacing must
+--   be inserted explicitly by the caller as a Fixed track. Returns each
+--   track's (start, length), where start is absolute.
 solveTracks :: Double -> Double -> [Track] -> [(Double, Double)]
 solveTracks origin avail tracks =
   let fixedSum  = sum [ v | Fixed v <- tracks ]
@@ -751,10 +791,17 @@ solveTracks origin avail tracks =
       go pos (t : ts) = let sz = sizeOf t in (pos, sz) : go (pos + sz) ts
   in go origin tracks
 
--- | Phase 8 A2 Step1 (design §D): ggplot half_line マージン定数 (pt, sc 適用前)。
--- ★ Phase 33 B4: layout が純 pt 空間になり、これらは ggplot 由来の pt 値 (half_line=
--- base_size/2=5.5pt) そのものとして正しく pt 意味になる (値は不変・k は backend)。
--- computeLayout の margin 計算と Render の描画オフセットで共有 (単一情報源)。
+-- | [日本語]: ggplot half_line マージン定数 (pt, sc 適用前)。 layout が純 pt
+--   空間になったことで、 これらは ggplot 由来の pt 値 (half_line=
+--   base_size/2=5.5pt) そのものとして正しく pt 意味になる (値は不変・k は
+--   backend)。 computeLayout の margin 計算と Render の描画オフセットで共有
+--   (単一情報源)。
+--   [English]: ggplot's half_line margin constants (pt, before sc is
+--   applied). Now that layout is a pure pt space, these are correctly
+--   interpreted as pt values straight from ggplot (half_line =
+--   base_size/2 = 5.5pt; the values are unchanged, and k belongs to the
+--   backend). Shared between computeLayout's margin computation and
+--   Render's drawing offsets (a single source of truth).
 ggHalfLine, ggTickLen, ggAxTextMar, ggAxTitleMar :: Double
 ggHalfLine   = 5.5    -- plot.margin 四辺 + title 下 margin
 ggTickLen    = 2.75   -- Phase 8 C: axis.ticks.length = half_line/2 (ggplot 忠実、 旧 5)
@@ -767,17 +814,29 @@ ggAxTitleMar = 2.75   -- axis.title margin (halfLine/2)
 --   Render/Layer は本モジュールから import する (旧: Render/Layer 内ローカル定義)。
 -- ===========================================================================
 
--- | 凡例のベースフォント (pt)。 ggplot @base_size@ = 2 × half_line = 11pt。
+-- | [日本語]: 凡例のベースフォント (pt)。 ggplot @base_size@ = 2 × half_line =
+--   11pt。
+--   [English]: The legend's base font size (pt). ggplot's @base_size@ is
+--   2 × half_line = 11pt.
 legendBaseSize :: Double
 legendBaseSize = 2 * ggHalfLine
 
--- | 凡例キーの 1 辺 (pt) = ggplot @legend.key.size = unit(1.2,"lines")@。
---   ★R gtable トレース実測 = 17.34pt (base 11pt 時)。 grid の "lines" は行高 (= 1.2 ×
---   base × lineheight) なので 1.2×base(=13.2) ではなくこの値。 = 1.2 × base × 1.3133。
+-- | [日本語]: 凡例キーの 1 辺 (pt) = ggplot @legend.key.size =
+--   unit(1.2,"lines")@。 ★R gtable トレース実測 = 17.34pt (base 11pt 時)。
+--   grid の "lines" は行高 (= 1.2 × base × lineheight) なので 1.2×base(=13.2)
+--   ではなくこの値。 = 1.2 × base × 1.3133。
+--   [English]: The side length of a legend key (pt), matching ggplot's
+--   @legend.key.size = unit(1.2,"lines")@. ★Measured from an R gtable trace
+--   as 17.34pt (at base 11pt). Since grid's "lines" is a line height
+--   (1.2 × base × lineheight), the value is not 1.2×base(=13.2) but this
+--   one: 1.2 × base × 1.3133.
 legendKeyW :: Double
 legendKeyW = 1.2 * legendBaseSize * 1.3133
 
--- | 凡例キーの行ピッチ = keyW (= ggplot gtable のキー間 spacing 行 = 0pt = キーセル隣接)。
+-- | [日本語]: 凡例キーの行ピッチ = keyW (= ggplot gtable のキー間 spacing 行 =
+--   0pt = キーセル隣接)。
+--   [English]: The legend key's row pitch, equal to keyW (ggplot gtable's
+--   inter-key spacing row is 0pt, so key cells are adjacent).
 legendKeyPitch :: Double
 legendKeyPitch = legendKeyW
 
@@ -790,9 +849,15 @@ legendKeyPitch = legendKeyW
 --   過小評価=はみ出しを防ぐ・大小/はみ出し挙動を ggplot と整合)。
 -- ---------------------------------------------------------------------------
 
--- | East Asian Width が全角 (F=Fullwidth / W=Wide) の文字か。 CJK 統合漢字・かな・
---   全角記号・ハングル等を 1.0em 扱いにする。 範囲は Unicode EAW (UAX #11) の W/F に対応する
---   代表ブロックを網羅 (厳密 table でなく実用的な近似・凡例幅にのみ使用)。
+-- | [日本語]: East Asian Width が全角 (F=Fullwidth / W=Wide) の文字か。 CJK
+--   統合漢字・かな・全角記号・ハングル等を 1.0em 扱いにする。 範囲は Unicode
+--   EAW (UAX #11) の W/F に対応する代表ブロックを網羅 (厳密 table でなく実用的な
+--   近似・凡例幅にのみ使用)。
+--   [English]: Whether a character has East Asian Width Fullwidth (F) or
+--   Wide (W), treated as 1.0em (CJK unified ideographs, kana, fullwidth
+--   punctuation, Hangul, etc.). The ranges cover representative blocks
+--   corresponding to Unicode EAW (UAX #11) W/F (a practical approximation
+--   rather than an exact table; used only for legend width).
 isWideChar :: Char -> Bool
 isWideChar c =
   let o = fromEnum c
@@ -810,11 +875,22 @@ isWideChar c =
   || (o >= 0x1F300 && o <= 0x1FAFF)  -- 絵文字 (W)
   || (o >= 0x20000 && o <= 0x3FFFD)  -- CJK Ext B 以降
 
--- | 1 文字の advance を em 単位で近似。 ★既定 sans (DejaVu) の実 advance を計測して
---   字種別にバケット化 (2026-06-23・rsvg trim 実測。 例 i/l≈0.25・a/e≈0.56・M/W≈0.9)。
---   旧 flat 0.6 は細字主体ラベル (小文字+ハイフン等) で平均 ~0.49em/字を 0.6 と過大予約し
---   右余白を生んでいた。 値は実測平均をやや上回る安全側に丸め 「切れない方向」 を維持。
---   全角は 'isWideChar' で 1.0em。 ★この表は HS=PS で完全一致させること (PS canvas も同値)。
+-- | [日本語]: 1 文字の advance を em 単位で近似。 ★既定 sans (DejaVu) の実
+--   advance を計測して字種別にバケット化 (rsvg trim 実測。 例 i/l≈0.25・
+--   a/e≈0.56・M/W≈0.9)。 旧 flat 0.6 は細字主体ラベル (小文字+ハイフン等) で
+--   平均 ~0.49em/字を 0.6 と過大予約し右余白を生んでいた。 値は実測平均をやや
+--   上回る安全側に丸め 「切れない方向」 を維持。 全角は 'isWideChar' で 1.0em。
+--   ★この表は HS=PS で完全一致させること (PS canvas も同値)。
+--   [English]: Approximates a single character's advance in em units.
+--   ★Measured from the actual advance of the default sans font (DejaVu) and
+--   bucketed by character class (measured via rsvg trim; e.g. i/l≈0.25,
+--   a/e≈0.56, M/W≈0.9). The previous flat 0.6 over-reserved space for
+--   labels dominated by narrow glyphs (lowercase, hyphens, etc.), whose
+--   true average is ~0.49em/char, producing excess right padding. Values
+--   are rounded slightly above the measured average, on the safe side of
+--   "never truncate". Fullwidth characters are 1.0em via 'isWideChar'.
+--   ★This table must match exactly between Haskell and PureScript (the
+--   PureScript canvas uses the same values).
 charWidthEm :: Char -> Double
 charWidthEm c
   | isWideChar c                              = 1.0
@@ -824,23 +900,41 @@ charWidthEm c
   | c >= 'A' && c <= 'Z'                       = 0.70  -- 大文字 (M/W は上で処理済)
   | otherwise                                 = 0.58  -- 小文字・数字・その他
 
--- | 文字列の幅を em 単位で見積もる (字種別 'charWidthEm' の総和)。 実 pt 幅 = fontSize × この値。
+-- | [日本語]: 文字列の幅を em 単位で見積もる (字種別 'charWidthEm' の総和)。
+--   実 pt 幅 = fontSize × この値。
+--   [English]: Estimates a string's width in em units (the sum of per-glyph
+--   'charWidthEm'). The actual pt width is fontSize × this value.
 textWidthEm :: Text -> Double
 textWidthEm = T.foldl' (\acc ch -> acc + charWidthEm ch) 0
 
--- | DAG node ラベルのフォントサイズ (pt)。 layout (Sugiyama の size-aware 横幅
---   見積り) と render ('nodeExtent') で共有する単一定義。 旧 Render.EdgeRoute から移管。
+-- | [日本語]: DAG node ラベルのフォントサイズ (pt)。 layout (Sugiyama の
+--   size-aware 横幅見積り) と render (@nodeExtent@) で共有する単一定義。 旧
+--   Render.EdgeRoute から移管。
+--   [English]: The font size of a DAG node label (pt). A single definition
+--   shared by layout (Sugiyama's size-aware width estimation) and render
+--   (@nodeExtent@). Migrated from the previous Render.EdgeRoute.
 dagLabelFs :: Double
 dagLabelFs = 11
 
--- | DAG node の **radius 非依存** な横半幅 (px)。 = 'nodeExtent' の rx から
---   @max baseR@ の floor を除いた本体 (ラベル名 / 分布 sublabel 幅に由来)。
+-- | [日本語]: DAG node の __radius 非依存__な横半幅 (px)。 = @nodeExtent@ の
+--   rx から @max baseR@ の floor を除いた本体 (ラベル名 / 分布 sublabel 幅に
+--   由来)。
 --
---   Phase 39 P8 A4-2: layout の size-aware simplex (Sugiyama 'auxSepOf' /
---   'clusterAuxEdges') と render の 'nodeExtent' が **同一式**を共有することで、
---   simplex が確保する node 間隔と描画箱の幅を整合させる (= 兄弟 plate の box
---   重なりを根治)。 radius は layout 時に未知 (= render-time の lySize) ゆえ
---   floor 部分は render 側 ('nodeExtent') で適用する。
+--   layout の size-aware simplex (Sugiyama @auxSepOf@ / @clusterAuxEdges@)
+--   と render の @nodeExtent@ が __同一式__を共有することで、 simplex が
+--   確保する node 間隔と描画箱の幅を整合させる (= 兄弟 plate の box 重なりを
+--   根治)。 radius は layout 時に未知 (= render-time の lySize) ゆえ floor
+--   部分は render 側 (@nodeExtent@) で適用する。
+--   [English]: The __radius-independent__ half-width (px) of a DAG node —
+--   the body of @nodeExtent@\'s rx with the @max baseR@ floor removed
+--   (derived from the label name / distribution sublabel width).
+--
+--   Layout's size-aware simplex (Sugiyama's @auxSepOf@ / @clusterAuxEdges@)
+--   and render's @nodeExtent@ share __the same formula__, keeping the node
+--   spacing the simplex reserves consistent with the drawn box width (fixing
+--   overlapping boxes between sibling plates at the root). Since the radius
+--   is unknown at layout time (it is render-time's lySize), the floor part
+--   is applied on the render side (@nodeExtent@).
 dagNodeBaseHalfWidth :: DAGNode -> Double
 dagNodeBaseHalfWidth n =
   let showDist = case dnKind n of
@@ -851,11 +945,21 @@ dagNodeBaseHalfWidth n =
       maxEm  = max 0.5 (max nameEm distEm)
   in dagLabelFs * maxEm / 2 + 8
 
--- | 単一 guide (右凡例・縦1列) の必要幅 (pt)。 renderGuideBlock の描画式に厳密一致:
---   列幅 = (key 1辺) + (key→label gap = half_line/2) + (最長ラベル幅) + (右パディング = half_line)。
---   タイトルがそれより広ければタイトル幅。 引数: spec (★A13: key 幅/gap を base 派生の
---   実効値で引くため) / item フォント pt / title フォント pt / タイトル文字列 / ラベル群。
---   ★「最長」は文字数でなく 'textWidthEm' 最大 (全角混在で逆転し得るため幅で選ぶ)。
+-- | [日本語]: 単一 guide (右凡例・縦1列) の必要幅 (pt)。 renderGuideBlock の
+--   描画式に厳密一致: 列幅 = (key 1辺) + (key→label gap = half_line/2) +
+--   (最長ラベル幅) + (右パディング = half_line)。 タイトルがそれより広ければ
+--   タイトル幅。 引数: spec (★key 幅/gap を base 派生の実効値で引くため) /
+--   item フォント pt / title フォント pt / タイトル文字列 / ラベル群。 ★「最長」
+--   は文字数でなく 'textWidthEm' 最大 (全角混在で逆転し得るため幅で選ぶ)。
+--   [English]: The required width (pt) of a single guide (a right-side,
+--   single-column legend). Matches renderGuideBlock's drawing formula
+--   exactly: column width = (key side) + (key-to-label gap = half_line/2) +
+--   (longest label width) + (right padding = half_line). If the title is
+--   wider, the title width wins instead. Arguments: spec (★so key
+--   width/gap are drawn from base-derived effective values), item font pt,
+--   title font pt, title string, and labels. ★"Longest" is measured by
+--   maximum 'textWidthEm', not character count (since fullwidth mixing can
+--   reverse the ordering, width is used).
 legendGuideWidth :: VisualSpec -> Double -> Double -> Text -> [Text] -> Double
 legendGuideWidth spec fItem fTitle title labels = max titleW colW
   where
@@ -870,8 +974,13 @@ legendGuideWidth spec fItem fTitle title labels = max titleW colW
 --   得るための単一情報源。 別実装だとラベル文字列がズレ予約幅≠描画幅になる。
 -- ===========================================================================
 
--- | 数値 → 表示文字列。 浮動小数点アーチファクト (0.1+0.2=0.300…04 等) を 12 桁 round で
---   回避。 整数なら trailing zero / decimal point を除去。 (旧 Render.Common.numToText)
+-- | [日本語]: 数値 → 表示文字列。 浮動小数点アーチファクト (0.1+0.2=0.300…04
+--   等) を 12 桁 round で回避。 整数なら trailing zero / decimal point を
+--   除去。 (旧 Render.Common.numToText)
+--   [English]: Converts a number to a display string. Avoids
+--   floating-point artifacts (0.1+0.2=0.300…04, etc.) by rounding to 12
+--   digits. Trailing zeros and the decimal point are stripped for integer
+--   values. (Migrated from the previous Render.Common.numToText.)
 numToText :: Double -> Text
 numToText v =
   let rounded = fromIntegral (round (v * 1e12) :: Integer) / 1e12
@@ -885,11 +994,18 @@ numToText v =
                 Just t' -> t'
                 Nothing -> t
 
--- | 順序保存 nub (初出順)。 glyph 色 ('colorVector' の nub) / PS (Array.nub) と揃える。
+-- | [日本語]: 順序保存 nub (初出順)。 glyph 色 (@colorVector@ の nub) / PS
+--   (Array.nub) と揃える。
+--   [English]: An order-preserving nub (first-occurrence order), matching
+--   the nub used by glyph color (@colorVector@) and PureScript's
+--   (Array.nub) behaviour.
 nubKeep :: [Text] -> [Text]
 nubKeep = nub
 
--- | 色 aesthetic を持つ最初のレイヤの ColorEnc (categorical / continuous)。
+-- | [日本語]: 色 aesthetic を持つ最初のレイヤの ColorEnc (categorical /
+--   continuous)。
+--   [English]: The ColorEnc (categorical or continuous) of the first layer
+--   that has a color aesthetic.
 findColorEnc :: [Layer] -> Maybe ColorEnc
 findColorEnc ls = case [ ce | l <- ls
                             , Just ce <- [getLast (lyColor l)]
@@ -901,21 +1017,36 @@ findColorEnc ls = case [ ce | l <- ls
     isColorMap (ColorByContinuous _) = True
     isColorMap _                     = False
 
--- | 明示凡例タイトル (vsLegendTitle = scale name / labs(color=))。 未指定なら ""。
+-- | [日本語]: 明示凡例タイトル (vsLegendTitle = scale name / labs(color=))。
+--   未指定なら ""。
+--   [English]: The explicit legend title (vsLegendTitle: a scale name or
+--   labs(color=)). Empty string "" when unset.
 effectiveLegendTitle :: VisualSpec -> Text
 effectiveLegendTitle spec = maybe "" id (getLast (vsLegendTitle spec))
 
--- | Phase 11 A5-c: 凡例キーの表示順。 (originalIndex, label) を返し、 色は originalIndex で
---   引く (= reverse しても各キーの色は固定)。 vsLegendReverse=True で逆順。
---   ★ Phase 63 A17: Render/Layer から移設 (auto-wrap の列幅計算が表示順に依存するため
---   予約 computeLayout と描画で共有 = 単一情報源)。
+-- | [日本語]: 凡例キーの表示順。 (originalIndex, label) を返し、 色は
+--   originalIndex で引く (= reverse しても各キーの色は固定)。
+--   vsLegendReverse=True で逆順。 ★Render/Layer から移設 (auto-wrap の列幅
+--   計算が表示順に依存するため予約 computeLayout と描画で共有 = 単一情報源)。
+--   [English]: The display order of legend keys. Returns
+--   (originalIndex, label); color is looked up by originalIndex, so each
+--   key's color stays fixed even when reversed. Reversed when
+--   vsLegendReverse=True. ★Migrated from Render/Layer, since auto-wrap's
+--   column-width computation depends on display order and must be shared
+--   between reservation (computeLayout) and rendering (a single source of
+--   truth).
 legendOrder :: VisualSpec -> [Text] -> [(Int, Text)]
 legendOrder spec vals =
   let ix = zip [0 ..] vals
   in if getLast (vsLegendReverse spec) == Just True then reverse ix else ix
 
--- | 全 ColorByCol レイヤのカテゴリを順序保存で union (= 凡例 swatch / glyph 色の正本)。
---   明示 'colorCats' があればそれを先頭に、 無ければデータ水準を 'orderedCats' 順で。
+-- | [日本語]: 全 ColorByCol レイヤのカテゴリを順序保存で union (= 凡例 swatch /
+--   glyph 色の正本)。 明示 @colorCats@ があればそれを先頭に、 無ければデータ
+--   水準を 'orderedCats' 順で。
+--   [English]: The order-preserving union of categories across all
+--   ColorByCol layers (the source of truth for legend swatches / glyph
+--   colors). If explicit @colorCats@ are given, they come first; otherwise,
+--   data levels are used in 'orderedCats' order.
 allColorCategories :: Resolver -> [Layer] -> [Text]
 allColorCategories r ls =
   let dataCats = orderedCats $ concat
@@ -930,14 +1061,21 @@ allColorCategories r ls =
        then dataCats
        else explicit ++ filter (`notElem` explicit) dataCats
 
--- | 凡例 guide (色 / 形)。 描画 (renderGuideBlock) と予約 (legendW) が共有。
+-- | [日本語]: 凡例 guide (色 / 形)。 描画 (renderGuideBlock) と予約 (legendW)
+--   が共有。
+--   [English]: A legend guide (color or shape). Shared between rendering
+--   (renderGuideBlock) and reservation (legendW).
 data LegendGuide
-  = ColorGuide !ColorEnc      -- 色 guide (categorical / continuous)
-  | ShapeGuide !ColRef        -- 形 guide (色とは別列・または色無しのとき)
-  | CountBarGuide !Double !Double  -- ★ Phase 40: 件数 colorbar (lo,hi)。 hexbin/bin2d-count 用
-                                   -- (列でなく集計値ゆえ ColorByContinuous と別。 ラベル = "count")
+  = ColorGuide !ColorEnc      -- [日本語]: 色 guide (categorical / continuous)。 [English]: A color guide (categorical or continuous).
+  | ShapeGuide !ColRef        -- [日本語]: 形 guide (色とは別列・または色無しのとき)。 [English]: A shape guide (a column distinct from color, or used when there is no color).
+  | CountBarGuide !Double !Double  -- [日本語]: ★件数 colorbar (lo,hi)。 hexbin/bin2d-count 用 (列でなく集計値ゆえ ColorByContinuous と別。 ラベル = "count")。
+                                   -- [English]: ★A count colorbar (lo,hi), for hexbin/bin2d-count (distinct from ColorByContinuous since it is an aggregate rather than a column; labeled "count").
 
--- | spec から guide を ggplot 順 (color → shape) で収集。 形が色と同列なら統合し形 guide なし。
+-- | [日本語]: spec から guide を ggplot 順 (color → shape) で収集。 形が色と
+--   同列なら統合し形 guide なし。
+--   [English]: Collects guides from a spec in ggplot order (color, then
+--   shape). If shape shares its column with color, they are merged and no
+--   separate shape guide is produced.
 collectGuides :: Resolver -> VisualSpec -> [LegendGuide]
 collectGuides r spec =
   let mEnc     = findColorEnc (vsLayers spec)
@@ -954,8 +1092,12 @@ collectGuides r spec =
         _                        -> []
   in colorG <> countG <> shapeG
 
--- | Phase 40: spec 中の hexbin layer の件数域 (min,max)。 colorbar guide + needsLegend が使う。
---   render (renderHexbin) と同じ 'hexbinLayerCells' で計算するので域が一致する。
+-- | [日本語]: spec 中の hexbin layer の件数域 (min,max)。 colorbar guide +
+--   needsLegend が使う。 render (renderHexbin) と同じ 'hexbinLayerCells' で
+--   計算するので域が一致する。
+--   [English]: The count domain (min, max) of the hexbin layer in a spec,
+--   used by the colorbar guide and needsLegend. Computed with the same
+--   'hexbinLayerCells' as render (renderHexbin), so the domains agree.
 hexbinCountDomain :: Resolver -> VisualSpec -> Maybe (Double, Double)
 hexbinCountDomain r spec =
   case [ l | l <- vsLayers spec, getFirst (lyKind l) == Just MHexbin ] of
@@ -964,9 +1106,15 @@ hexbinCountDomain r spec =
       cs -> Just (fromIntegral (minimum cs), fromIntegral (maximum cs))
     _ -> Nothing
 
--- | Phase 9 A-5 (PS Layout と同一): 凡例を実際に描画する位置 (= None なら凡例なし)。
--- color encoding が無ければ位置指定があっても None。 予約 (computeLayout) / 描画 (Render) の
--- 両方がこれを使い、 「予約したのに描かれない / 描いたのに予約してない」 ズレを防ぐ。
+-- | [日本語]: 凡例を実際に描画する位置 (= None なら凡例なし。 PS Layout と
+--   同一)。 color encoding が無ければ位置指定があっても None。 予約
+--   (computeLayout) / 描画 (Render) の両方がこれを使い、 「予約したのに
+--   描かれない / 描いたのに予約してない」 ズレを防ぐ。
+--   [English]: The position at which the legend is actually drawn (None
+--   means no legend; identical to the PureScript Layout). Without a color
+--   encoding, this is None even if a position was requested. Both
+--   reservation (computeLayout) and rendering (Render) use this, preventing
+--   the mismatch of "reserved but not drawn" or "drawn but not reserved".
 needsLegend :: VisualSpec -> LegendPosition -> LegendPosition
 needsLegend spec pos
   | pos == LegendNone                = LegendNone
@@ -977,110 +1125,183 @@ needsLegend spec pos
     || hasHexbinCountGuide spec       = pos
   | otherwise                        = LegendNone
 
--- | Phase 40: 色 enc を持たない hexbin layer (= 件数 colorbar 駆動) があるか (構造のみ)。
+-- | [日本語]: 色 enc を持たない hexbin layer (= 件数 colorbar 駆動) があるか
+--   (構造のみ)。
+--   [English]: Whether there is a hexbin layer without a color encoding
+--   (driven by a count colorbar); a structural check only.
 hasHexbinCountGuide :: VisualSpec -> Bool
 hasHexbinCountGuide spec =
   not (hasColorEncoding (vsLayers spec))
   && any (\l -> getFirst (lyKind l) == Just MHexbin) (vsLayers spec)
 
--- | layer 群に shape aesthetic (lyShapeBy) があるか。
+-- | [日本語]: layer 群に shape aesthetic (lyShapeBy) があるか。
+--   [English]: Whether any layer in the group has a shape aesthetic
+--   (lyShapeBy).
 hasShapeEncoding :: [Layer] -> Bool
 hasShapeEncoding = any (\l -> case getLast (lyShapeBy l) of
                                 Just _  -> True
                                 Nothing -> False)
 
--- | 有効 legend position を解決。 Phase 63 A3: 優先順 = 図レベル vsLegend
---   ('legendPos' setter) > theme (toLegendPos) > 既定 LegendRightCenter
---   (Phase 43: ggplot legend.position="right" と同じ縦中央)。
+-- | [日本語]: 有効 legend position を解決。 優先順 = 図レベル vsLegend
+--   (@legendPos@ setter) > theme (toLegendPos) > 既定 LegendRightCenter
+--   (= ggplot legend.position="right" と同じ縦中央)。
+--   [English]: Resolves the effective legend position. Priority: the
+--   figure-level vsLegend (the @legendPos@ setter) > theme (toLegendPos) >
+--   the default LegendRightCenter (matching ggplot's vertically centered
+--   legend.position="right").
 effectiveLegendPos :: VisualSpec -> LegendPosition
 effectiveLegendPos spec = case getLast (vsLegend spec) of
   Just l  -> lgPosition l
   Nothing -> maybe LegendRightCenter id
                (getLast (toLegendPos (vsThemeOverride spec)))
 
--- | Phase 63 A4: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 half_line/2
--- (ggplot axis.ticks.length。 ★A13: 固定 'ggTickLen' 2.75 から base 派生へ、
--- 既定 11 で bit 同値。 ★A19: ThemeVoid のみ既定 0 = ggplot theme_void の
--- axis.ticks.length = 0)。
+-- | [日本語]: 実効 tick 長 (pt)。 theme (toTickLength) > 既定 half_line/2
+--   (ggplot axis.ticks.length。 ★固定 'ggTickLen' 2.75 から base 派生へ、
+--   既定 11 で bit 同値。 ★ThemeVoid のみ既定 0 = ggplot theme_void の
+--   axis.ticks.length = 0)。
+--   [English]: The effective tick length (pt). Priority: theme
+--   (toTickLength) > the default half_line/2 (ggplot's
+--   axis.ticks.length; ★changed from the fixed 'ggTickLen' 2.75 to a
+--   base-derived value, bit-identical at the default of 11. ★ThemeVoid
+--   alone defaults to 0, matching ggplot theme_void's
+--   axis.ticks.length = 0).
 effectiveTickLength :: VisualSpec -> Double
 effectiveTickLength spec =
   maybe def id (getLast (toTickLength (vsThemeOverride spec)))
   where def = if isVoidTheme spec then 0 else effectiveHalfLine spec / 2
 
--- | Phase 63 A19: theme preset が ThemeVoid か (void 系の既定分岐用)。
+-- | [日本語]: theme preset が ThemeVoid か (void 系の既定分岐用)。
+--   [English]: Whether the theme preset is ThemeVoid (used to branch on
+--   void-family defaults).
 isVoidTheme :: VisualSpec -> Bool
 isVoidTheme spec = getLast (vsTheme spec) == Just ThemeVoid
 
--- | Phase 63 A19: 実効 axis.text (目盛ラベル文字) 表示。 theme (toShowAxisText) >
--- preset 既定 (ThemeVoid のみ False = ggplot theme_void の axis.text element_blank)。
--- 表示 off は tick ラベル分の margin 予約 (axTextMar / xTickReserve / maxYTickW) に
--- 波及するため、 computeLayout (予約) と Render.tickMarks (描画) の単一情報源。
+-- | [日本語]: 実効 axis.text (目盛ラベル文字) 表示。 theme (toShowAxisText) >
+--   preset 既定 (ThemeVoid のみ False = ggplot theme_void の axis.text
+--   element_blank)。 表示 off は tick ラベル分の margin 予約 (axTextMar /
+--   xTickReserve / maxYTickW) に波及するため、 computeLayout (予約) と
+--   Render.tickMarks (描画) の単一情報源。
+--   [English]: Whether axis.text (tick label text) is effectively shown.
+--   Priority: theme (toShowAxisText) > the preset default (False only for
+--   ThemeVoid, matching ggplot theme_void's axis.text element_blank).
+--   Turning display off cascades into the tick-label margin reservation
+--   (axTextMar / xTickReserve / maxYTickW), so this is the single source of
+--   truth shared by computeLayout (reservation) and Render.tickMarks
+--   (drawing).
 effectiveShowAxisText :: VisualSpec -> Bool
 effectiveShowAxisText spec =
   maybe (not (isVoidTheme spec)) id (getLast (toShowAxisText (vsThemeOverride spec)))
 
--- | Phase 63 A19: 実効 axis.title (軸タイトル) 表示。 既定は 'effectiveShowAxisText'
--- と同じ規則 (ThemeVoid のみ False)。 computeLayout (予約) と Render.labels
--- (描画) の単一情報源。
+-- | [日本語]: 実効 axis.title (軸タイトル) 表示。 既定は
+--   'effectiveShowAxisText' と同じ規則 (ThemeVoid のみ False)。
+--   computeLayout (予約) と Render.labels (描画) の単一情報源。
+--   [English]: Whether axis.title is effectively shown. The default
+--   follows the same rule as 'effectiveShowAxisText' (False only for
+--   ThemeVoid). A single source of truth shared by computeLayout
+--   (reservation) and Render.labels (drawing).
 effectiveShowAxisTitle :: VisualSpec -> Bool
 effectiveShowAxisTitle spec =
   maybe (not (isVoidTheme spec)) id (getLast (toShowAxisTitle (vsThemeOverride spec)))
 
--- | Phase 63 A4: 実効 tick 向き。 theme (toTickDir) > 既定 'TickOut' (ggplot 既定 = 外向き)。
+-- | [日本語]: 実効 tick 向き。 theme (toTickDir) > 既定 'TickOut' (ggplot 既定
+--   = 外向き)。
+--   [English]: The effective tick direction. Priority: theme (toTickDir) >
+--   the default 'TickOut' (ggplot's default, pointing outward).
 effectiveTickDir :: VisualSpec -> TickDir
 effectiveTickDir spec =
   maybe TickOut id (getLast (toTickDir (vsThemeOverride spec)))
 
--- | Phase 63 A4: tick の panel 外向き突出量 (pt)。 margin 予約 (computeLayout) と
--- 軸ラベル offset (Render.tickMarks) の単一情報源。 'TickIn' は panel 外に出ない
--- ので 0 (= ラベルが軸に寄る、 ggplot の負 axis.ticks.length と同挙動)。
+-- | [日本語]: tick の panel 外向き突出量 (pt)。 margin 予約 (computeLayout) と
+--   軸ラベル offset (Render.tickMarks) の単一情報源。 'TickIn' は panel 外に
+--   出ないので 0 (= ラベルが軸に寄る、 ggplot の負 axis.ticks.length と同挙動)。
+--   [English]: The amount a tick protrudes outward from the panel (pt). A
+--   single source of truth shared by margin reservation (computeLayout) and
+--   the axis-label offset (Render.tickMarks). 'TickIn' does not protrude
+--   past the panel, so this is 0 (labels sit close to the axis, matching
+--   ggplot's behaviour with a negative axis.ticks.length).
 tickOutwardLen :: VisualSpec -> Double
 tickOutwardLen spec = case effectiveTickDir spec of
   TickIn -> 0
   _      -> effectiveTickLength spec
 
--- | Phase 63 A5: 実効 plot margin (pt)。 theme (toPlotMargin) > 既定 各辺 half_line
--- (★A13: 固定 'ggHalfLine' 5.5 から base 派生へ、 既定 11 で bit 同値)。
--- 指定時は外周分を **置き換える** (ggplot plot.margin と同じ)。 軸ラベル・title 帯・
--- 凡例などの内側予約は従来どおり自動算出のまま (computeLayout と Render.labels が共有)。
+-- | [日本語]: 実効 plot margin (pt)。 theme (toPlotMargin) > 既定 各辺
+--   half_line (★固定 'ggHalfLine' 5.5 から base 派生へ、 既定 11 で bit 同値)。
+--   指定時は外周分を __置き換える__ (ggplot plot.margin と同じ)。 軸ラベル・
+--   title 帯・凡例などの内側予約は従来どおり自動算出のまま (computeLayout と
+--   Render.labels が共有)。
+--   [English]: The effective plot margin (pt). Priority: theme
+--   (toPlotMargin) > the default, half_line on each side (★changed from
+--   the fixed 'ggHalfLine' 5.5 to a base-derived value, bit-identical at
+--   the default of 11). When specified, it __replaces__ the outer margin
+--   entirely (matching ggplot's plot.margin). Inner reservations for axis
+--   labels, the title band, the legend, etc. remain auto-computed as before
+--   (shared by computeLayout and Render.labels).
 effectivePlotMargin :: VisualSpec -> Margin
 effectivePlotMargin spec =
   let hl = effectiveHalfLine spec
   in maybe (Margin hl hl hl hl) id
            (getLast (toPlotMargin (vsThemeOverride spec)))
 
--- | Phase 63 A12: 実効 base font size (pt)。 theme (toBaseFontSize) > 既定 11
--- (ggplot theme_grey base_size)。 各 slot の既定 font size はこれからの相対倍率で
--- 派生する。 computeLayout (予約) と Render.mkFontTS (描画) の単一情報源。
+-- | [日本語]: 実効 base font size (pt)。 theme (toBaseFontSize) > 既定 11
+--   (ggplot theme_grey base_size)。 各 slot の既定 font size はこれからの
+--   相対倍率で派生する。 computeLayout (予約) と Render.mkFontTS (描画) の
+--   単一情報源。
+--   [English]: The effective base font size (pt). Priority: theme
+--   (toBaseFontSize) > the default 11 (ggplot theme_grey's base_size). Each
+--   slot's default font size is derived from this by a relative multiplier.
+--   A single source of truth shared by computeLayout (reservation) and
+--   Render.mkFontTS (drawing).
 effectiveBaseFontSize :: VisualSpec -> Double
 effectiveBaseFontSize spec =
   maybe 11 id (getLast (toBaseFontSize (vsThemeOverride spec)))
 
--- | Phase 63 A13: 実効 half_line (pt) = base/2 (ggplot @half_line@)。 spacing 系
--- (外周 margin・title 下 margin・panel.spacing・凡例 gap) の共通派生元。
--- 既定 base 11 で 5.5 = 従来 'ggHalfLine' と bit 同値 (golden 不変 gate、 ULP 検証済)。
+-- | [日本語]: 実効 half_line (pt) = base/2 (ggplot @half_line@)。 spacing 系
+--   (外周 margin・title 下 margin・panel.spacing・凡例 gap) の共通派生元。
+--   既定 base 11 で 5.5 = 従来 'ggHalfLine' と bit 同値 (golden 不変 gate、
+--   ULP 検証済)。
+--   [English]: The effective half_line (pt), = base/2 (ggplot's
+--   @half_line@). The common derivation source for spacing values (outer
+--   margin, title bottom margin, panel.spacing, legend gap). At the default
+--   base of 11, this is 5.5, bit-identical to the previous 'ggHalfLine'
+--   (verified to ULP precision via a golden-invariance gate).
 effectiveHalfLine :: VisualSpec -> Double
 effectiveHalfLine spec = effectiveBaseFontSize spec / 2
 
--- | Phase 63 A13: 実効 axis.text margin (pt) = 0.8 × half_line/2 (ggplot 忠実)。
--- 既定 11 で 2.2 = 従来 'ggAxTextMar' と bit 同値。
+-- | [日本語]: 実効 axis.text margin (pt) = 0.8 × half_line/2 (ggplot 忠実)。
+--   既定 11 で 2.2 = 従来 'ggAxTextMar' と bit 同値。
+--   [English]: The effective axis.text margin (pt), = 0.8 × half_line/2
+--   (faithful to ggplot). At the default of 11, this is 2.2, bit-identical
+--   to the previous 'ggAxTextMar'.
 effectiveAxTextMar :: VisualSpec -> Double
 effectiveAxTextMar spec = 0.8 * (effectiveHalfLine spec / 2)
 
--- | Phase 63 A13: 実効 axis.title margin (pt) = half_line/2 (ggplot 忠実)。
--- 既定 11 で 2.75 = 従来 'ggAxTitleMar' と bit 同値。
+-- | [日本語]: 実効 axis.title margin (pt) = half_line/2 (ggplot 忠実)。 既定
+--   11 で 2.75 = 従来 'ggAxTitleMar' と bit 同値。
+--   [English]: The effective axis.title margin (pt), = half_line/2
+--   (faithful to ggplot). At the default of 11, this is 2.75, bit-identical
+--   to the previous 'ggAxTitleMar'.
 effectiveAxTitleMar :: VisualSpec -> Double
 effectiveAxTitleMar spec = effectiveHalfLine spec / 2
 
--- | Phase 63 A13: 実効凡例ベースフォント (pt) = 2 × half_line = base
--- (ggplot @base_size@ と一致)。 既定 11 で従来 'legendBaseSize' と bit 同値。
+-- | [日本語]: 実効凡例ベースフォント (pt) = 2 × half_line = base (ggplot
+--   @base_size@ と一致)。 既定 11 で従来 'legendBaseSize' と bit 同値。
+--   [English]: The effective legend base font size (pt), = 2 × half_line =
+--   base (matching ggplot's @base_size@). At the default of 11,
+--   bit-identical to the previous 'legendBaseSize'.
 effectiveLegendBaseSize :: VisualSpec -> Double
 effectiveLegendBaseSize spec = 2 * effectiveHalfLine spec
 
--- | Phase 63 A13: 実効凡例キー 1 辺 (pt) = 1.2 lines (行高 1.3133 倍率は
--- 'legendKeyW' と同一)。 既定 11 で bit 同値。 pitch = keyW (キーセル隣接)。
--- ★ A19.5: theme (toLegendKeySize、 ggplot legend.key.size 相当) が最優先。
---   cowplot preset は 1.1 × font_size を焼き込む (gold 実測: base14 = 15.4pt = 32px)。
+-- | [日本語]: 実効凡例キー 1 辺 (pt) = 1.2 lines (行高 1.3133 倍率は
+--   'legendKeyW' と同一)。 既定 11 で bit 同値。 pitch = keyW (キーセル隣接)。
+--   ★theme (toLegendKeySize、 ggplot legend.key.size 相当) が最優先。
+--   cowplot preset は 1.1 × font_size を焼き込む (gold 実測: base14 = 15.4pt
+--   = 32px)。
+--   [English]: The effective legend key side length (pt), = 1.2 lines (the
+--   1.3133 line-height multiplier matches 'legendKeyW'). Bit-identical at
+--   the default of 11. pitch = keyW (key cells adjacent). ★theme
+--   (toLegendKeySize, corresponding to ggplot's legend.key.size) takes
+--   priority. The cowplot preset bakes in 1.1 × font_size (measured against
+--   gold: base14 = 15.4pt = 32px).
 effectiveLegendKeyW :: VisualSpec -> Double
 effectiveLegendKeyW spec =
   maybe (1.2 * effectiveLegendBaseSize spec * 1.3133) id
@@ -1089,11 +1310,17 @@ effectiveLegendKeyW spec =
 effectiveLegendKeyPitch :: VisualSpec -> Double
 effectiveLegendKeyPitch = effectiveLegendKeyW
 
--- | Phase 63 A14: 実効 subtitle / caption / tag font size (pt) = base 派生
--- (ggplot theme_grey の倍率: plot.subtitle ×1 / plot.caption ×0.8 / plot.tag ×1.2)。
--- 旧固定 11/9/13 は base 11 の丸め値 (caption 8.8→9 / tag 13.2→13) だったのを
--- ggplot 忠実の派生式へ。 computeLayout (labs 予約) と Render.labels (描画) の
--- 単一情報源。
+-- | [日本語]: 実効 subtitle / caption / tag font size (pt) = base 派生
+--   (ggplot theme_grey の倍率: plot.subtitle ×1 / plot.caption ×0.8 /
+--   plot.tag ×1.2)。 旧固定 11/9/13 は base 11 の丸め値 (caption 8.8→9 /
+--   tag 13.2→13) だったのを ggplot 忠実の派生式へ。 computeLayout (labs
+--   予約) と Render.labels (描画) の単一情報源。
+--   [English]: The effective subtitle / caption / tag font size (pt),
+--   derived from base (ggplot theme_grey's multipliers: plot.subtitle ×1,
+--   plot.caption ×0.8, plot.tag ×1.2). Replaces the old fixed 11/9/13
+--   (rounded values of base 11: caption 8.8→9, tag 13.2→13) with a formula
+--   faithful to ggplot. A single source of truth shared by computeLayout
+--   (labs reservation) and Render.labels (drawing).
 effectiveSubtitleSize :: VisualSpec -> Double
 effectiveSubtitleSize = effectiveBaseFontSize
 
@@ -1103,34 +1330,65 @@ effectiveCaptionSize spec = 0.8 * effectiveBaseFontSize spec
 effectiveTagSize :: VisualSpec -> Double
 effectiveTagSize spec = 1.2 * effectiveBaseFontSize spec
 
--- | Phase 63 A12: slot の実効 font size (pt)。 解決順は Render.mkFontTS と同一 =
--- theme override (fsSize) > font setter (fsSize) > 既定 (base 派生)。
--- setter と override は Maybe FontSpec の field-wise merge (override の Just が優先)。
+-- | [日本語]: slot の実効 font size (pt)。 解決順は Render.mkFontTS と同一 =
+--   theme override (fsSize) > font setter (fsSize) > 既定 (base 派生)。
+--   setter と override は Maybe FontSpec の field-wise merge (override の
+--   Just が優先)。
+--   [English]: The effective font size (pt) of a slot. Resolution order
+--   matches Render.mkFontTS: theme override (fsSize) > the font setter
+--   (fsSize) > the default (base-derived). The setter and override are
+--   field-wise merged as Maybe FontSpec (a Just in override takes
+--   priority).
 effectiveFontSize :: Last FontSpec -> Last FontSpec -> Double -> Double
 effectiveFontSize setterL overrideL def =
   case getLast setterL <> getLast overrideL of
     Just fs -> maybe def id (getLast (fsSize fs))
     Nothing -> def
 
--- | layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous) があるか。
+-- | [日本語]: layer 群に color/fill aesthetic (ColorByCol / ColorByContinuous)
+--   があるか。
+--   [English]: Whether any layer in the group has a color/fill aesthetic
+--   (ColorByCol or ColorByContinuous).
 hasColorEncoding :: [Layer] -> Bool
 hasColorEncoding = any (\l -> case getLast (lyColor l) of
   Just (ColorByCol _)        -> True
   Just (ColorByContinuous _) -> True
   _                          -> False)
 
--- | Phase 34: 軸 tick ラベルを ggplot / base-R @format()@ 準拠で **ベクトル整形**する。
--- ggplot の連続スケール既定 (@labels = waiver()@) は break ベクトル全体に base R
--- @format()@ を掛ける。 その挙動を再現:
+-- | [日本語]: 軸 tick ラベルを ggplot / base-R @format()@ 準拠で __ベクトル整形__
+--   する。 ggplot の連続スケール既定 (@labels = waiver()@) は break ベクトル
+--   全体に base R @format()@ を掛ける。 その挙動を再現:
 --
---   1. 全 break で**小数桁を統一**する (末尾ゼロを残す)。 例 0,.25,.5 → "0.00","0.25","0.50"
---      (旧 numToText は単値ごとにゼロ削りして "0.5" になっていた)。
---   2. **固定小数 vs 指数**を「最大幅が短い方」で選ぶ (base R @scipen = 0@: 固定表記が
---      指数表記より広いときだけ指数にする)。 例 density の 0..5e-4 は固定 "0.0005"(6字) >
---      指数 "5e-04"(5字) ゆえ "0e+00".."5e-04"、 0..1 は固定 "0.50"(4字) ≤ 指数 "5e-01"(5字)
---      ゆえ "0.00".."1.00"。
+--     1. 全 break で__小数桁を統一__する (末尾ゼロを残す)。 例 0,.25,.5 →
+--        "0.00","0.25","0.50" (旧 numToText は単値ごとにゼロ削りして
+--        "0.5" になっていた)。
+--     2. __固定小数 vs 指数__を「最大幅が短い方」で選ぶ (base R
+--        @scipen = 0@: 固定表記が指数表記より広いときだけ指数にする)。 例
+--        density の 0..5e-4 は固定 "0.0005"(6字) > 指数 "5e-04"(5字) ゆえ
+--        "0e+00".."5e-04"、 0..1 は固定 "0.50"(4字) ≤ 指数 "5e-01"(5字) ゆえ
+--        "0.00".."1.00"。
 --
--- R @ggplot_build@ 実測値と一致することを確認済 (density y / 0..1 比率 y / 3000..6000 x)。
+--   R @ggplot_build@ 実測値と一致することを確認済 (density y / 0..1 比率 y /
+--   3000..6000 x)。
+--   [English]: Vector-formats axis tick labels following ggplot / base-R
+--   @format()@. ggplot's default for continuous scales (@labels = waiver()@)
+--   applies base R's @format()@ to the whole break vector. This reproduces
+--   that behaviour:
+--
+--     1. Uses __the same decimal digit count for every break__ (keeping
+--        trailing zeros). E.g. 0,.25,.5 becomes "0.00","0.25","0.50"
+--        (the previous 'numToText' stripped zeros per value,
+--        producing "0.5").
+--     2. Chooses __fixed decimal vs. exponential__ by whichever has the
+--        shorter maximum width (matching base R's @scipen = 0@: switches to
+--        exponential only when fixed notation is wider). E.g. for density's
+--        0..5e-4, fixed "0.0005" (6 chars) is wider than exponential
+--        "5e-04" (5 chars), so "0e+00".."5e-04" is used; for 0..1, fixed
+--        "0.50" (4 chars) is no wider than exponential "5e-01" (5 chars),
+--        so "0.00".."1.00" is used.
+--
+--   Verified to match measured R @ggplot_build@ output (density y, 0..1
+--   ratio y, 3000..6000 x).
 formatTicksGG :: [Double] -> [Text]
 formatTicksGG [] = []
 formatTicksGG xs =
@@ -1142,7 +1400,10 @@ formatTicksGG xs =
       wSci   = maximum (map T.length sci)
   in if wFixed > wSci then sci else fixed
 
--- | v を誤差なく表すのに要する小数桁 (0..10)。 nice tick 前提で 10 桁上限。
+-- | [日本語]: v を誤差なく表すのに要する小数桁 (0..10)。 nice tick 前提で
+--   10 桁上限。
+--   [English]: The decimal digits (0..10) needed to represent v without
+--   error. Capped at 10 digits, assuming nice ticks.
 decimalsNeeded :: Double -> Int
 decimalsNeeded v = go 0
   where
@@ -1152,7 +1413,10 @@ decimalsNeeded v = go 0
     rounded k = let tk = 10 ^^ k :: Double
                 in fromIntegral (round (v * tk) :: Integer) / tk
 
--- | v を仮数 m∈[1,10) と指数 e に正規化 (v = m * 10^e)。 0 は (0,0)。
+-- | [日本語]: v を仮数 m∈[1,10) と指数 e に正規化 (v = m * 10^e)。 0 は
+--   (0,0)。
+--   [English]: Normalizes v to a mantissa m∈[1,10) and an exponent e
+--   (v = m * 10^e). 0 becomes (0,0).
 sciParts :: Double -> (Double, Int)
 sciParts 0 = (0, 0)
 sciParts v =
@@ -1165,7 +1429,9 @@ sciParts v =
       | abs m <  1  = norm (m * 10) (e - 1)
       | otherwise   = (m, e)
 
--- | 指数表記 1 個 (仮数 d 桁 + "e±NN")。
+-- | [日本語]: 指数表記 1 個 (仮数 d 桁 + "e±NN")。
+--   [English]: A single exponential-notation string (a d-digit mantissa
+--   plus "e±NN").
 sciStr :: Int -> Double -> Text
 sciStr d v =
   let (m, e) = sciParts v
@@ -1175,14 +1441,26 @@ sciStr d v =
       expt   = (if ae < 10 then "0" else "") ++ show ae
   in T.pack (mant ++ "e" ++ sign ++ expt)
 
--- | Categorical axis labels (= ColTxt の distinct 値、 layer 横断)。
--- どの encoding (encX / encY) を見るかは accessor 引数で指定。
+-- | [日本語]: Categorical axis labels (= ColTxt の distinct 値、 layer 横断)。
+--   どの encoding (encX / encY) を見るかは accessor 引数で指定。
 --
--- Phase 28 (2026-06-14): 既定順を ggplot2 の factor 既定と同じ **アルファベット順**
--- ('orderedCats') にした (= R4DS と凡例・色・軸並びを一致させる)。 明示順が要るときは
--- @scale_x_discrete(limits=)@ 相当の discrete-limits override (第 4 引数) を渡す
--- (= fct_infreq / fct_reorder 相当)。 override 指定時はデータ内に在る水準だけを
--- その順で返す (applyDiscreteLimits がデータ側を既に filter/並べ替え済)。
+--   既定順を ggplot2 の factor 既定と同じ __アルファベット順__ ('orderedCats')
+--   にした (= R4DS と凡例・色・軸並びを一致させる)。 明示順が要るときは
+--   @scale_x_discrete(limits=)@ 相当の discrete-limits override (第 4 引数) を
+--   渡す (= fct_infreq / fct_reorder 相当)。 override 指定時はデータ内に
+--   在る水準だけをその順で返す (applyDiscreteLimits がデータ側を既に
+--   filter/並べ替え済)。
+--   [English]: Categorical axis labels (the distinct ColTxt values, across
+--   layers). Which encoding (encX / encY) is inspected is chosen by the
+--   accessor argument.
+--
+--   The default order matches ggplot2's default factor order, __alphabetical__
+--   ('orderedCats'), keeping legend/color/axis ordering consistent with
+--   R4DS. When an explicit order is needed, pass a discrete-limits override
+--   (the 4th argument) equivalent to @scale_x_discrete(limits=)@ (comparable
+--   to fct_infreq / fct_reorder). When an override is given, only the
+--   levels present in the data are returned, in that order
+--   (applyDiscreteLimits has already filtered/reordered the data side).
 collectCategoricalLabels
   :: (Layer -> Last ColRef)
   -> Resolver -> VisualSpec -> Maybe [Text] -> [Text]
@@ -1197,9 +1475,14 @@ collectCategoricalLabels acc r spec mOverride =
        Just ws -> [ w | w <- ws, w `elem` labels ]   -- 明示順 (= fct_infreq 等)
        Nothing -> orderedCats labels                  -- 既定 = アルファベット順
 
--- | Phase 11 A4-a: scale の range (rLo/rHi) を入替えて軸反転。 domain は不変なので
--- tick (= domain 値) は scaleApply 経由で自動的に逆向き座標へ写る。 全 Scale variant が
--- lsRangeLo/lsRangeHi を共有するため record update 1 つで賄える。
+-- | [日本語]: scale の range (rLo/rHi) を入替えて軸反転。 domain は不変なので
+--   tick (= domain 値) は scaleApply 経由で自動的に逆向き座標へ写る。 全
+--   Scale variant が lsRangeLo/lsRangeHi を共有するため record update 1 つで
+--   賄える。
+--   [English]: Reverses an axis by swapping the scale's range (rLo/rHi).
+--   Since the domain is unchanged, ticks (domain values) map automatically
+--   to reversed coordinates via scaleApply. All Scale variants share
+--   lsRangeLo/lsRangeHi, so a single record update suffices.
 revScale :: Scale -> Scale
 revScale s = s { lsRangeLo = lsRangeHi s, lsRangeHi = lsRangeLo s }
 
@@ -1235,23 +1518,32 @@ scaleApply (TimeScale dLo dHi rLo rHi) v
 -- 解決は backend ではなく engine 内 (この層) で行う ([[Option 1]])。本 phase の
 -- layout 出力は純 pt なので、UCtx も pt 空間で解く (dpi は PAbs の Px 入力解決だけ)。
 
--- | 'Pos' を pt 座標へ解決する context。panel rect と x/y scale を与える。
+-- | [日本語]: 'Pos' を pt 座標へ解決する context。panel rect と x/y scale を
+--   与える。
+--   [English]: The context for resolving a 'Pos' to pt coordinates. Supplies
+--   the panel rect and the x/y scales.
 data UCtx = UCtx
-  { uDpi    :: !Double   -- ^ PAbs の Px を pt 化する dpi。
-  , uRect   :: !Rect     -- ^ panel rect (pt)。PNpc 解決に使う。
-  , uXScale :: !Scale    -- ^ PNative (x) 解決。
-  , uYScale :: !Scale    -- ^ PNative (y) 解決。
+  { uDpi    :: !Double   -- ^ [日本語]: PAbs の Px を pt 化する dpi。 [English]: The dpi used to convert PAbs's Px to pt.
+  , uRect   :: !Rect     -- ^ [日本語]: panel rect (pt)。PNpc 解決に使う。 [English]: The panel rect (pt), used to resolve PNpc.
+  , uXScale :: !Scale    -- ^ [日本語]: PNative (x) 解決。 [English]: Used to resolve PNative (x).
+  , uYScale :: !Scale    -- ^ [日本語]: PNative (y) 解決。 [English]: Used to resolve PNative (y).
   } deriving (Show, Eq)
 
--- | x 座標の 'Pos' を pt へ。PNpc 0=左端 (rX), 1=右端 (rX+rW)。
+-- | [日本語]: x 座標の 'Pos' を pt へ。PNpc 0=左端 (rX), 1=右端 (rX+rW)。
+--   [English]: Resolves an x-coordinate 'Pos' to pt. For PNpc, 0 is the
+--   left edge (rX) and 1 is the right edge (rX+rW).
 resolvePosX :: UCtx -> Pos -> Double
 resolvePosX c p = case p of
   PAbs len  -> rX (uRect c) + lengthToPt (uDpi c) len
   PNpc t    -> rX (uRect c) + t * rW (uRect c)
   PNative v -> scaleApply (uXScale c) v
 
--- | y 座標の 'Pos' を pt へ。device 座標は y 下向き (rY=上端) ゆえ
--- PNpc 1=上端 (rY), 0=下端 (rY+rH)。PNative は反転済 scale が処理。
+-- | [日本語]: y 座標の 'Pos' を pt へ。device 座標は y 下向き (rY=上端) ゆえ
+--   PNpc 1=上端 (rY), 0=下端 (rY+rH)。PNative は反転済 scale が処理。
+--   [English]: Resolves a y-coordinate 'Pos' to pt. Since device coordinates
+--   point downward (rY is the top edge), PNpc 1 is the top edge (rY) and 0
+--   is the bottom edge (rY+rH). PNative is handled by the already-flipped
+--   scale.
 resolvePosY :: UCtx -> Pos -> Double
 resolvePosY c p = case p of
   PAbs len  -> rY (uRect c) + lengthToPt (uDpi c) len
@@ -1266,12 +1558,16 @@ resolvePosY c p = case p of
 -- projectBarRect を通す。 Cartesian は従来と bit 一致、 Flip は x/y を入替える。
 -- **Coord は位置だけ変換** (= テキスト anchor/font・点半径・bar 厚みは px のまま)。
 
--- | spec の座標系 (Nothing = Cartesian)。
+-- | [日本語]: spec の座標系 (Nothing = Cartesian)。
+--   [English]: A spec's coordinate system (Nothing means Cartesian).
 coordOf :: VisualSpec -> Coord
 coordOf spec = maybe CoordCartesian id (getLast (vsCoord spec))
 
--- | データ空間 (dx, dy) → px (横, 縦)。 Cartesian は (sx dx, sy dy)、 Flip は
---   データ x を縦 px・データ y を横 px に (= 軸入替)。
+-- | [日本語]: データ空間 (dx, dy) → px (横, 縦)。 Cartesian は (sx dx, sy dy)、
+--   Flip はデータ x を縦 px・データ y を横 px に (= 軸入替)。
+--   [English]: Maps data space (dx, dy) to px (horizontal, vertical).
+--   Cartesian is (sx dx, sy dy); Flip maps data x to vertical px and data y
+--   to horizontal px (swapping the axes).
 projectXY :: Coord -> Layout -> Double -> Double -> (Double, Double)
 projectXY CoordCartesian l dx dy =
   (scaleApply (lpXScale l) dx, scaleApply (lpYScale l) dy)
@@ -1282,13 +1578,19 @@ projectXY CoordFlip l dx dy =
 projectXY CoordPolarX l dx dy = polarPoint l (domFrac (lpXScale l) dx) (domFrac (lpYScale l) dy)
 projectXY CoordPolarY l dx dy = polarPoint l (domFrac (lpYScale l) dy) (domFrac (lpXScale l) dx)
 
--- | scale の domain における正規化位置 [0,1] (= (v - dLo)/(dHi - dLo))。 極座標で
---   角度/半径の比率を出すのに使う。 domain が退化していれば 0。
+-- | [日本語]: scale の domain における正規化位置 [0,1] (= (v - dLo)/(dHi -
+--   dLo))。 極座標で角度/半径の比率を出すのに使う。 domain が退化していれば
+--   0。
+--   [English]: The normalized position [0,1] within a scale's domain
+--   ((v - dLo)/(dHi - dLo)). Used to compute angle/radius ratios in polar
+--   coordinates. Returns 0 if the domain is degenerate.
 domFrac :: Scale -> Double -> Double
 domFrac s v = let lo = lsDomainLo s; hi = lsDomainHi s
               in if hi == lo then 0 else (v - lo) / (hi - lo)
 
--- | 極座標の中心と最大半径 (= panel に内接する円)。
+-- | [日本語]: 極座標の中心と最大半径 (= panel に内接する円)。
+--   [English]: The center and maximum radius of polar coordinates (the
+--   circle inscribed in the panel).
 polarCenter :: Layout -> (Double, Double, Double)
 polarCenter l = let a = lpPlotArea l
                     cx = rX a + rW a / 2
@@ -1296,7 +1598,11 @@ polarCenter l = let a = lpPlotArea l
                     maxR = min (rW a) (rH a) / 2
                 in (cx, cy, maxR)
 
--- | (角度 frac, 半径 frac) → px。 角度 0 を上 (12 時) とし時計回り、 半径 frac=1 が外周。
+-- | [日本語]: (角度 frac, 半径 frac) → px。 角度 0 を上 (12 時) とし時計回り、
+--   半径 frac=1 が外周。
+--   [English]: Maps (angle fraction, radius fraction) to px. Angle 0 is at
+--   the top (12 o'clock) going clockwise; radius fraction 1 is the outer
+--   edge.
 polarPoint :: Layout -> Double -> Double -> (Double, Double)
 polarPoint l thetaFrac rFrac =
   let (cx, cy, maxR) = polarCenter l
@@ -1304,18 +1610,30 @@ polarPoint l thetaFrac rFrac =
       r     = rFrac * maxR
   in (cx + r * sin theta, cy - r * cos theta)
 
--- | データ空間の矩形 (x/y の min/max) → px Rect。 Flip では bbox が縦横転置される。
---   2 隅を projectXY して min/abs で正規化するだけ (= 向きに依らず正しい Rect)。
+-- | [日本語]: データ空間の矩形 (x/y の min/max) → px Rect。 Flip では bbox が
+--   縦横転置される。 2 隅を projectXY して min/abs で正規化するだけ (= 向きに
+--   依らず正しい Rect)。
+--   [English]: Maps a data-space rectangle (x/y min/max) to a px Rect. Under
+--   Flip, the bbox is transposed. Simply projects two corners via projectXY
+--   and normalizes with min/abs (correct regardless of orientation).
 projectRectData :: Coord -> Layout -> Double -> Double -> Double -> Double -> Rect
 projectRectData c l xminD xmaxD yminD ymaxD =
   let (x0, y0) = projectXY c l xminD yminD
       (x1, y1) = projectXY c l xmaxD ymaxD
   in Rect (min x0 x1) (min y0 y1) (abs (x1 - x0)) (abs (y1 - y0))
 
--- | bar/box 用: 中心線の data 座標 (centerD = x 群位置) と base..value の data 区間、
---   厚み thicknessPx (= px 単位の bar 幅) から px Rect を作る。 Cartesian では
---   横位置 = centerD ± 厚み/2、 縦 = base..value。 Flip では縦位置 = centerD ± 厚み/2、
---   横 = base..value (= 厚みは常に px のまま = 軸スケールに依らない)。
+-- | [日本語]: bar/box 用: 中心線の data 座標 (centerD = x 群位置) と
+--   base..value の data 区間、 厚み thicknessPx (= px 単位の bar 幅) から px
+--   Rect を作る。 Cartesian では横位置 = centerD ± 厚み/2、 縦 = base..value。
+--   Flip では縦位置 = centerD ± 厚み/2、 横 = base..value (= 厚みは常に px の
+--   まま = 軸スケールに依らない)。
+--   [English]: For bar/box: builds a px Rect from the centerline's data
+--   coordinate (centerD, the x-group position), the base..value data
+--   interval, and the thickness thicknessPx (the bar width in px). Under
+--   Cartesian, horizontal position = centerD ± thickness/2 and
+--   vertical = base..value. Under Flip, vertical position =
+--   centerD ± thickness/2 and horizontal = base..value (thickness always
+--   stays in px, independent of the axis scale).
 projectBarRect :: Coord -> Layout -> Double -> Double -> Double -> Double -> Rect
 projectBarRect CoordCartesian l centerD baseD valueD thicknessPx =
   let cx = scaleApply (lpXScale l) centerD
@@ -1327,7 +1645,7 @@ projectBarRect CoordFlip l centerD baseD valueD thicknessPx =
       x0 = scaleApply (lpYScaleFlipped l) baseD
       x1 = scaleApply (lpYScaleFlipped l) valueD
   in Rect (min x0 x1) (cy - thicknessPx / 2) (abs (x1 - x0)) thicknessPx
--- Phase 11 A7-c: 極座標の bar は wedge (扇形) で描くため Rect では表せない。
+-- 極座標の bar は wedge (扇形) で描くため Rect では表せない。
 --   renderBar が極座標を検出して PPath で arc を描く (= projectBarRect は使わない)。
 --   ここは totality 維持のための placeholder (Cartesian 同式・極座標 bar 経路では未使用)。
 projectBarRect CoordPolarX l centerD baseD valueD thicknessPx =
@@ -1516,13 +1834,26 @@ projectCrossBar coord l loc offPx _halfPx halfD vLo vHi =
        BarWedge segs | offPx /= 0 -> BarWedge (map nudgeSeg segs)
        shape                      -> shape
 
--- | Phase 10 A4-fix: categorical 1 スロットの cross 軸 px 幅 (bar/box 等の厚みに使う)。
---   Cartesian は x 軸 (sx) の 1 単位、 Flip は category が縦に来るので flipped scale の
---   縦 1 単位。 これを使わず常に (sx 1 - sx 0) を厚みにすると flip 時に縦スロットを超えて
---   bar が重なる。 Cartesian では (sx 1 - sx 0) と完全一致 (= ゼロ diff)。
--- | Phase 41: ggplot @resolution(x)@ = ソート済み一意値の最小正間隔。 errorbar/crossbar の
--- cap 幅をデータ単位化する基準 (width = markWidth × resolution)。 一意値が 1 個以下なら 1
--- (categorical = 整数位置 0,1,2… で間隔 1・単一点も 1)。
+-- | [日本語]: categorical 1 スロットの cross 軸 px 幅 (bar/box 等の厚みに使う)。
+--   Cartesian は x 軸 (sx) の 1 単位、 Flip は category が縦に来るので
+--   flipped scale の縦 1 単位。 これを使わず常に (sx 1 - sx 0) を厚みにすると
+--   flip 時に縦スロットを超えて bar が重なる。 Cartesian では (sx 1 - sx 0)
+--   と完全一致 (= ゼロ diff)。
+--   [English]: The cross-axis px width of a single categorical slot (used
+--   for bar/box thickness). Under Cartesian, this is 1 unit of the x axis
+--   (sx); under Flip, categories run vertically, so it is 1 vertical unit
+--   of the flipped scale. Always using (sx 1 - sx 0) instead would let bars
+--   overrun their vertical slot and overlap when flipped. Under Cartesian,
+--   it is exactly (sx 1 - sx 0) (zero diff).
+-- | [日本語]: ggplot @resolution(x)@ = ソート済み一意値の最小正間隔。
+--   errorbar/crossbar の cap 幅をデータ単位化する基準 (width = markWidth ×
+--   resolution)。 一意値が 1 個以下なら 1 (categorical = 整数位置 0,1,2… で
+--   間隔 1・単一点も 1)。
+--   [English]: ggplot's @resolution(x)@: the smallest positive gap between
+--   sorted unique values. The basis for converting errorbar/crossbar cap
+--   width to data units (width = markWidth × resolution). If there is at
+--   most one unique value, returns 1 (categorical positions are integers
+--   0,1,2… with gap 1; a single point also gives 1).
 resolutionOf :: [Double] -> Double
 resolutionOf vs =
   let us  = map head . group . sort $ vs
@@ -1538,8 +1869,12 @@ catUnitPx CoordFlip      l =
 catUnitPx CoordPolarX l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 catUnitPx CoordPolarY l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 
--- | 軸が物理的にどの辺に来るか。 Cartesian: データ x=下・y=左。 Flip: データ x=左・y=下。
---   極座標は直交的な辺軸を持たない (Render の polar 分岐が独自に grid/軸を描く)。
+-- | [日本語]: 軸が物理的にどの辺に来るか。 Cartesian: データ x=下・y=左。
+--   Flip: データ x=左・y=下。 極座標は直交的な辺軸を持たない (Render の polar
+--   分岐が独自に grid/軸を描く)。
+--   [English]: Which physical edge an axis is placed on. Cartesian: data
+--   x=bottom, y=left. Flip: data x=left, y=bottom. Polar coordinates have no
+--   orthogonal edge axis (Render's polar branch draws its own grid/axes).
 data AxisPlacement = AxisBottom | AxisLeft | AxisTop | AxisRight
   deriving (Show, Eq)
 
@@ -1551,18 +1886,22 @@ coordYAxisPlacement :: Coord -> AxisPlacement
 coordYAxisPlacement CoordFlip      = AxisBottom
 coordYAxisPlacement _              = AxisLeft
 
--- | データ x の grid line が縦線か (Cartesian) 横線か (Flip)。
+-- | [日本語]: データ x の grid line が縦線か (Cartesian) 横線か (Flip)。
+--   [English]: Whether the grid line for data x is vertical (Cartesian) or
+--   horizontal (Flip).
 coordXGridIsVertical :: Coord -> Bool
 coordXGridIsVertical CoordFlip      = False
 coordXGridIsVertical _              = True
 
--- | 極座標か (= CoordPolarX / CoordPolarY)。
+-- | [日本語]: 極座標か (= CoordPolarX / CoordPolarY)。
+--   [English]: Whether this is polar (CoordPolarX or CoordPolarY).
 isPolar :: Coord -> Bool
 isPolar CoordPolarX = True
 isPolar CoordPolarY = True
 isPolar _           = False
 
--- | D3 風 nice tick (= 1/2/5 × 10^k の刻み)。
+-- | [日本語]: D3 風 nice tick (= 1/2/5 × 10^k の刻み)。
+--   [English]: D3-style nice ticks (steps of 1/2/5 × 10^k).
 niceTicks :: Int -> Double -> Double -> [Double]
 niceTicks n lo hi
   | hi <= lo  = [lo]
@@ -1582,18 +1921,37 @@ niceTicks n lo hi
                | otherwise = x : go (x + step)
       in go start
 
--- | Phase 8 C (§5 G3): R labeling::extended (Talbot, Lin & Hanrahan 2010
--- "An Extension of Wilkinson's Algorithm…") の移植。 ggplot2 の既定 breaks
--- (`scales::extended_breaks(n)`) と同一: 候補刻み Q=[1,5,2,2.5,4,3]、 重み
--- w=[simplicity 0.25, coverage 0.2, density 0.5, legibility 0.05]、 only.loose=False、
--- legibility は常に 1 (R 実装も placeholder)。 simplicity/coverage/density の重み付き
--- スコアを最大化する (lmin, lmax, lstep) を選び、 等間隔 break 列を返す。
--- 入力 (dmin,dmax) は **expansion 前のデータ範囲**、 m は目標ラベル数。 旧 niceTicks
--- (1/2/5×10^k) を linear 軸で置換 (端点・本数が ggplot と一致する)。
+-- | [日本語]: R labeling::extended (Talbot, Lin & Hanrahan 2010 "An
+--   Extension of Wilkinson's Algorithm…") の移植。 ggplot2 の既定 breaks
+--   (`scales::extended_breaks(n)`) と同一: 候補刻み Q=[1,5,2,2.5,4,3]、 重み
+--   w=[simplicity 0.25, coverage 0.2, density 0.5, legibility 0.05]、
+--   only.loose=False、 legibility は常に 1 (R 実装も placeholder)。
+--   simplicity/coverage/density の重み付きスコアを最大化する (lmin, lmax,
+--   lstep) を選び、 等間隔 break 列を返す。 入力 (dmin,dmax) は
+--   __expansion 前のデータ範囲__、 m は目標ラベル数。 旧 niceTicks (1/2/5×10^k) を linear
+--   軸で置換 (端点・本数が ggplot と一致する)。
 --
--- j→q→k→z→start のネストループは R 実装をそのまま再現。 各段の上界 (simplicityMax /
--- densityMax / coverageMax) による枝刈りで停止するが、 浮動小数の保険として j/k/z に
--- 上限ガードを置く (実用域では枝刈りが先に効く)。
+--   j→q→k→z→start のネストループは R 実装をそのまま再現。 各段の上界
+--   (simplicityMax / densityMax / coverageMax) による枝刈りで停止するが、
+--   浮動小数の保険として j/k/z に上限ガードを置く (実用域では枝刈りが先に
+--   効く)。
+--   [English]: A port of R's labeling::extended (Talbot, Lin & Hanrahan
+--   2010, "An Extension of Wilkinson's Algorithm…"), matching ggplot2's
+--   default breaks (`scales::extended_breaks(n)`): candidate steps
+--   Q=[1,5,2,2.5,4,3], weights w=[simplicity 0.25, coverage 0.2,
+--   density 0.5, legibility 0.05], only.loose=False, legibility always 1
+--   (a placeholder in the R implementation too). Selects (lmin, lmax,
+--   lstep) that maximises the weighted score of simplicity/coverage/
+--   density, and returns an evenly spaced break sequence. The input
+--   (dmin,dmax) is __the data range before expansion__; m is the target
+--   label count. Replaces the previous niceTicks (1/2/5×10^k) on linear
+--   axes (matching ggplot's endpoints and tick count).
+--
+--   The nested j→q→k→z→start loops reproduce the R implementation
+--   directly. Each level stops via pruning on its upper bound
+--   (simplicityMax / densityMax / coverageMax), with upper-bound guards on
+--   j/k/z as a floating-point safety net (pruning kicks in first in
+--   practical ranges).
 data Best = Best
   { bLmin  :: !Double
   , bLmax  :: !Double
@@ -1701,7 +2059,10 @@ extendedBreaks m dmin0 dmax0
                then Best lmin lmax lstep score
                else acc
 
--- | Log scale 用 tick (= 10^k グリッド)。 domain 内の整数 exponent を出す。
+-- | [日本語]: Log scale 用 tick (= 10^k グリッド)。 domain 内の整数 exponent
+--   を出す。
+--   [English]: Ticks for the Log scale (a 10^k grid). Emits integer
+--   exponents within the domain.
 niceTicksLog :: Int -> Double -> Double -> [Double]
 niceTicksLog _n lo hi
   | lo <= 0 || hi <= 0 || hi <= lo = [lo]
@@ -1711,8 +2072,11 @@ niceTicksLog _n lo hi
       in [ 10 ** fromIntegral k | k <- [kLo .. kHi], let v = 10 ** fromIntegral k :: Double
                                                  , v >= lo, v <= hi ]
 
--- | Sqrt scale 用 tick (Phase 6 A6): sqrt 後を niceTicks に通し、 二乗して戻す。
--- domain が非負前提。 負値 lo は 0 にクランプ。
+-- | [日本語]: Sqrt scale 用 tick: sqrt 後を niceTicks に通し、 二乗して戻す。
+--   domain が非負前提。 負値 lo は 0 にクランプ。
+--   [English]: Ticks for the Sqrt scale: passes sqrt-transformed values
+--   through niceTicks, then squares them back. Assumes a non-negative
+--   domain; a negative lo is clamped to 0.
 niceTicksSqrt :: Int -> Double -> Double -> [Double]
 niceTicksSqrt n lo hi
   | hi <= lo  = [max 0 lo]
@@ -1724,10 +2088,15 @@ niceTicksSqrt n lo hi
           sTks = niceTicks n sLo sHi
       in map (\t -> t * t) sTks
 
--- | Time scale 用 tick (Phase 6 A7): unix epoch (= seconds since 1970) を入力に、
--- 「綺麗な」 間隔 (= 1m / 1h / 1d / 1w / 1M / 1y) で tick を生成。
--- 簡略実装: linear nice ticks を秒単位で取り、 1m / 1h / 1d / 1w 単位に丸め。
--- 月 / 年単位の境界調整は将来。
+-- | [日本語]: Time scale 用 tick: unix epoch (= seconds since 1970) を入力に、
+--   「綺麗な」 間隔 (= 1m / 1h / 1d / 1w / 1M / 1y) で tick を生成。 簡略実装:
+--   linear nice ticks を秒単位で取り、 1m / 1h / 1d / 1w 単位に丸め。 月 / 年
+--   単位の境界調整は将来。
+--   [English]: Ticks for the Time scale: takes a unix epoch (seconds since
+--   1970) as input and generates ticks at "nice" intervals (1m / 1h / 1d /
+--   1w / 1M / 1y). A simplified implementation: takes linear nice ticks in
+--   seconds and rounds to 1m / 1h / 1d / 1w units. Boundary adjustment for
+--   month / year units is future work.
 niceTimeTicks :: Int -> Double -> Double -> [Double]
 niceTimeTicks n lo hi
   | hi <= lo  = [lo]

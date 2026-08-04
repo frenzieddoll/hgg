@@ -1,25 +1,46 @@
 -- |
 -- Module      : Graphics.Hgg.Layout.RangeOf
--- Description : Layer 2 ─ MarkKind 別 x/y axis range 寄与の計算
+-- Description : Layer 2 — computes each MarkKind's contribution to the x/y axis range
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 各 chart 種類 (MarkKind) は y/x domain の決め方が異なる:
+-- [日本語]: 各 chart 種類 (MarkKind) は y/x domain の決め方が異なる:
 --
---   * scatter / line / errorbar / regression : encY = 値、 そのまま domain
---   * bar / waterfall                         : encY = 値、 domain は 0-base + max
---   * histogram / density                     : encY 無し、 domain は count / KDE peak
---   * box                                     : encY = 値、 min-max (outlier 込み、 Phase 65)
---   * violin / strip / swarm / raincloud / ridge : encY = 値、 min-max
---   * autocorr                                : x = [0, maxLag]、 y = [-1, 1]
---   * ess                                     : x = [0, nChain]、 y = [0, N/nChain]
+--     * scatter / line / errorbar / regression : encY = 値、 そのまま domain
+--     * bar / waterfall                         : encY = 値、 domain は 0-base + max
+--     * histogram / density                     : encY 無し、 domain は count / KDE peak
+--     * box                                     : encY = 値、 min-max (outlier 込み)
+--     * violin / strip / swarm / raincloud / ridge : encY = 値、 min-max
+--     * autocorr                                : x = [0, maxLag]、 y = [-1, 1]
+--     * ess                                     : x = [0, nChain]、 y = [0, N/nChain]
 --
--- これらを 1 箇所 ('Graphics.Hgg.Layout' の旧 paddedRange) で吸収しようとすると
--- chart 横断の副作用が出る (Phase 7 §0)。 本 module は MarkKind 別の range 寄与を
--- 分離し、 'computeLayout' は各 layer の寄与を集めるだけにする足場を提供する。
+--   これらを 1 箇所 ('Graphics.Hgg.Layout' の旧 paddedRange) で吸収しようとすると
+--   chart 横断の副作用が出る。 本 module は MarkKind 別の range 寄与を分離し、
+--   @computeLayout@ は各 layer の寄与を集めるだけにする足場を提供する。
 --
--- Phase 7 A2a: まず既存 'Graphics.Hgg.Layout' から range 計算を「挙動不変」 で
--- 抽出 (= 出力 byte 一致)。 paddedRange 特例の除去は A2b で行う。
+--   既存 'Graphics.Hgg.Layout' から range 計算を「挙動不変」 で抽出した
+--   (= 出力 byte 一致)。
+-- [English]: Each chart type (MarkKind) determines its y/x domain
+--   differently:
+--
+--     * scatter / line / errorbar / regression: encY is the value, used as
+--       the domain directly.
+--     * bar / waterfall: encY is the value; the domain is 0-based plus max.
+--     * histogram / density: no encY; the domain is the count or KDE peak.
+--     * box: encY is the value; min-max, including outliers.
+--     * violin / strip / swarm / raincloud / ridge: encY is the value;
+--       min-max.
+--     * autocorr: x = [0, maxLag], y = [-1, 1].
+--     * ess: x = [0, nChain], y = [0, N/nChain].
+--
+--   Trying to absorb all of this in a single place (the old paddedRange in
+--   'Graphics.Hgg.Layout') causes cross-chart side effects. This module
+--   separates the range contribution per MarkKind, providing the scaffolding
+--   for @computeLayout@ to simply collect each layer's contribution.
+--
+--   The range computation was extracted from the existing
+--   'Graphics.Hgg.Layout' with behaviour unchanged (output is byte
+--   identical).
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Layout.RangeOf
   ( collectXY
@@ -50,12 +71,18 @@ import qualified Data.Vector       as V
 -- 全 layer 横断の x/y range 収集
 -- ===========================================================================
 
--- | 全 layer の encX / encY を resolve して連結。
+-- | [日本語]: 全 layer の encX / encY を resolve して連結。
 --
--- Phase 6 A4/A5: MAutocorr / MEss は encX を「値ベクター」 として使うが、
--- x 軸の domain は **lag** (= 0..maxLag) なので、 encX を x として使うと壊れる。
--- 該当 mark を持つ layer は x = [0, maxLag]、 y = [-1, 1] (autocorr) or
--- y = ESS 範囲 (= encX の長さ近辺) を contribute する。
+--   MAutocorr / MEss は encX を「値ベクター」 として使うが、 x 軸の domain は
+--   __lag__ (= 0..maxLag) なので、 encX を x として使うと壊れる。 該当 mark を
+--   持つ layer は x = [0, maxLag]、 y = [-1, 1] (autocorr) or y = ESS 範囲
+--   (= encX の長さ近辺) を contribute する。
+--   [English]: Resolves and concatenates encX / encY across all layers.
+--
+--   MAutocorr / MEss use encX as a "value vector", but their x-axis domain
+--   is __lag__ (0..maxLag), so using encX directly as x would break. Layers
+--   with these marks instead contribute x = [0, maxLag] and y = [-1, 1] (for
+--   autocorr) or y = the ESS range (roughly the length of encX).
 collectXY :: Resolver -> VisualSpec -> (Vector Double, Vector Double)
 collectXY r spec =
   let -- ★ Phase 36 D3: 合成 Layer (base + overlay) を range 計算用に展開し、 各 overlay の値列も
@@ -124,14 +151,21 @@ collectXY r spec =
 -- MarkKind 別 y axis range 寄与
 -- ===========================================================================
 
--- | MHistogram layer か。
+-- | [日本語]: MHistogram layer か。
+--   [English]: Whether this is an MHistogram layer.
 isHistogram :: Layer -> Bool
 isHistogram l = getFirst (lyKind l) == Just MHistogram
 
--- | Phase 8 B7: 全 histogram layer 共通の生 (pad なし) x domain (lo, hi)。
--- render (renderHistogram) と y-range 計算 (sharedHistYRange) が **同じ** bin 境界を
--- 使うための単一情報源。 これがズレると bin 幅が変わり count が食い違って
--- バーが y range を突き抜ける (Phase 8 B7 のはみ出しバグの原因)。
+-- | [日本語]: 全 histogram layer 共通の生 (pad なし) x domain (lo, hi)。
+--   render (renderHistogram) と y-range 計算 (sharedHistYRange) が __同じ__
+--   bin 境界を使うための単一情報源。 これがズレると bin 幅が変わり count が
+--   食い違って バーが y range を突き抜ける (かつてのはみ出しバグの原因)。
+--   [English]: The raw (unpadded), shared x domain (lo, hi) across all
+--   histogram layers. The single source of truth that ensures render
+--   (renderHistogram) and the y-range computation (sharedHistYRange) use
+--   __the same__ bin boundaries. If they drift apart, bin widths differ and
+--   counts mismatch, causing bars to overshoot the y range (the cause of a
+--   past overshoot bug).
 histRawDomain :: Resolver -> [Layer] -> Maybe (Double, Double)
 histRawDomain r histLayers =
   let allXs = filter (not . isNaN)   -- NA (NaN) を除く (nullable 列対応・有限には no-op)
@@ -141,9 +175,15 @@ histRawDomain r histLayers =
                        , Just v  <- [resolveNum r cr] ]
   in if null allXs then Nothing else Just (minimum allXs, maximum allXs)
 
--- | Phase 8 B7: 全 histogram layer 共通 bin での maxCount を y range に。
--- bin 境界は 'histRawDomain' (= 生 min/max) を単一情報源とし render と一致させる。
--- density mode は count/(N*binW) に正規化。 戻り値は [0, 全層通じての maxY]。
+-- | [日本語]: 全 histogram layer 共通 bin での maxCount を y range に。
+--   bin 境界は 'histRawDomain' (= 生 min/max) を単一情報源とし render と一致
+--   させる。 density mode は count/(N*binW) に正規化。 戻り値は
+--   [0, 全層通じての maxY]。
+--   [English]: Puts the maxCount across a shared bin, for all histogram
+--   layers, into the y range. Bin boundaries are kept consistent with
+--   rendering by using 'histRawDomain' (raw min/max) as the single source of
+--   truth. In density mode, values are normalised to count/(N*binW). Returns
+--   [0, maxY across all layers].
 sharedHistYRange :: Resolver -> [Layer] -> Vector Double
 sharedHistYRange r histLayers = case histRawDomain r histLayers of
   Nothing -> V.empty
@@ -169,12 +209,21 @@ sharedHistYRange r histLayers = case histRawDomain r histLayers of
         maxY = maximum (0 : [ layerMaxY l xs | (l, xs) <- zip histLayers xsPerLayer ])
     in V.fromList [0, maxY]
 
--- | Phase 28: 全 histogram layer 共通 bin の x 軸範囲 (= bin 外縁)。
--- ggplot 流 origin (boundary = w/2) は data 下端より下から始まり、 最終 bin 端は
--- data 上端を超えうるので、 x domain を生 data min/max で取ると外側の bar が
--- パネル外にはみ出す (binwidth 大で顕著・binwidth 小でも潜在)。 render
--- (renderHistogram) と同じ 'histBinning' (共有 domain) で各 layer の
--- [origin, origin + nBin*binW] を求め、 その union を返す。
+-- | [日本語]: 全 histogram layer 共通 bin の x 軸範囲 (= bin 外縁)。
+--   ggplot 流 origin (boundary = w/2) は data 下端より下から始まり、 最終 bin
+--   端は data 上端を超えうるので、 x domain を生 data min/max で取ると外側の
+--   bar がパネル外にはみ出す (binwidth 大で顕著・binwidth 小でも潜在)。 render
+--   (renderHistogram) と同じ 'histBinning' (共有 domain) で各 layer の
+--   [origin, origin + nBin*binW] を求め、 その union を返す。
+--   [English]: The x-axis range of the shared bin across all histogram
+--   layers (the bin's outer edges). Since the ggplot-style origin
+--   (boundary = w/2) starts below the data's lower edge, and the last bin's
+--   edge can exceed the data's upper edge, taking the x domain from the raw
+--   data min/max would overflow the outer bars past the panel (pronounced
+--   for large binwidths, and latent even for small ones). This computes
+--   [origin, origin + nBin*binW] for each layer using the same
+--   'histBinning' (shared domain) as render (renderHistogram), and returns
+--   the union.
 sharedHistXRange :: Resolver -> [Layer] -> Vector Double
 sharedHistXRange r histLayers = case histRawDomain r histLayers of
   Nothing -> V.empty
@@ -187,9 +236,12 @@ sharedHistXRange r histLayers = case histRawDomain r histLayers of
          _  -> V.fromList [ minimum (map fst extents)
                           , maximum (map snd extents) ]
 
--- | MHistogram / MDensity / MBar / MWaterfall の y 軸 range 候補。
--- bar 系 chart の bar base は y=0、 だから y domain は [0, max(value)] にする。
--- (= matplotlib / seaborn 慣例)
+-- | [日本語]: MHistogram / MDensity / MBar / MWaterfall の y 軸 range 候補。
+--   bar 系 chart の bar base は y=0、 だから y domain は [0, max(value)] に
+--   する。 (= matplotlib / seaborn 慣例)
+--   [English]: The y-axis range candidate for MHistogram / MDensity / MBar /
+--   MWaterfall. Bar-family charts have a bar base of y=0, so the y domain is
+--   [0, max(value)] (following matplotlib / seaborn convention).
 histogramYRange :: Resolver -> Layer -> Vector Double
 histogramYRange r l = case getFirst (lyKind l) of
   -- Bar / Waterfall: encY の max + 0 を contribute (= base = 0、 上方が data max)
@@ -366,7 +418,10 @@ histogramYRange r l = case getFirst (lyKind l) of
 -- lag 軸 (autocorr / ess) の x/y range 寄与
 -- ===========================================================================
 
--- | autocorr / ess layer の x 軸 range 候補 (= [0, maxLag] or [0, nChain])
+-- | [日本語]: autocorr / ess layer の x 軸 range 候補 (= [0, maxLag] or
+--   [0, nChain])。
+--   [English]: The x-axis range candidate for autocorr / ess layers
+--   ([0, maxLag] or [0, nChain]).
 lagXRange :: Resolver -> Layer -> Vector Double
 lagXRange r l = case getFirst (lyKind l) of
   Just MAutocorr ->
@@ -386,7 +441,8 @@ lagXRange r l = case getFirst (lyKind l) of
     uniqList :: Eq a => [a] -> [a]
     uniqList = foldr (\x acc -> if x `elem` acc then acc else x : acc) []
 
--- | autocorr / ess layer の y 軸 range 候補
+-- | [日本語]: autocorr / ess layer の y 軸 range 候補。
+--   [English]: The y-axis range candidate for autocorr / ess layers.
 lagYRange :: Resolver -> Layer -> Vector Double
 lagYRange r l = case getFirst (lyKind l) of
   Just MAutocorr -> V.fromList [-1.0, 1.0]
@@ -411,8 +467,11 @@ lagYRange r l = case getFirst (lyKind l) of
     uniqList :: Eq a => [a] -> [a]
     uniqList = foldr (\x acc -> if x `elem` acc then acc else x : acc) []
 
--- | Forest layer の x range 寄与 (= estimate ± error + 中央 null line x=0)。
--- これを range に含めないと CI 線が plotArea からはみ出す (Phase 8 B14)。
+-- | [日本語]: Forest layer の x range 寄与 (= estimate ± error + 中央 null
+--   line x=0)。 これを range に含めないと CI 線が plotArea からはみ出す。
+--   [English]: The x-range contribution of a Forest layer (estimate ± error
+--   plus the central null line x=0). Omitting it would let the CI lines
+--   overflow the plot area.
 forestXRange :: Resolver -> Layer -> Vector Double
 forestXRange r l = case getFirst (lyKind l) of
   Just MForest ->
@@ -426,8 +485,12 @@ forestXRange r l = case getFirst (lyKind l) of
        else V.fromList [0] V.++ los V.++ his  -- null line x=0 も含める
   _ -> V.empty
 
--- | Phase 11 A6-4b: linerange / pointrange / crossbar の y 軸 range 寄与 = y ± errorY
--- (= forest の x ± err と同型)。 これが無いと区間 (y±err) が plotArea からはみ出す。
+-- | [日本語]: linerange / pointrange / crossbar の y 軸 range 寄与 = y ± errorY
+--   (= forest の x ± err と同型)。 これが無いと区間 (y±err) が plotArea から
+--   はみ出す。
+--   [English]: The y-range contribution of linerange / pointrange /
+--   crossbar: y ± errorY (structurally identical to forest's x ± err).
+--   Without it, the interval (y±err) would overflow the plot area.
 rangeBarYRange :: Resolver -> Layer -> Vector Double
 rangeBarYRange r l = case getFirst (lyKind l) of
   Just k | k `elem` [MLineRange, MPointRange, MCrossbar] ->
@@ -440,10 +503,15 @@ rangeBarYRange r l = case getFirst (lyKind l) of
     in if V.null ys then V.empty else los V.++ his
   _ -> V.empty
 
--- | Phase 15 A8: MBand (area band) の y 軸 range 寄与 = 上境界 encY2。
--- 下境界 encY は collectXY の ysFromEncY が既に拾う。 上境界 encY2 はどこも拾わ
--- ないため、 これが無いと帯の上側が plotArea からはみ出してクリップされる
--- (GLM の非対称 μ-CI 帯で露見)。
+-- | [日本語]: MBand (area band) の y 軸 range 寄与 = 上境界 encY2。 下境界 encY
+--   は collectXY の ysFromEncY が既に拾う。 上境界 encY2 はどこも拾わないため、
+--   これが無いと帯の上側が plotArea からはみ出してクリップされる (GLM の
+--   非対称 μ-CI 帯で露見)。
+--   [English]: The y-range contribution of MBand (an area band): the upper
+--   bound, encY2. The lower bound, encY, is already picked up by
+--   collectXY's ysFromEncY. Since nothing else picks up encY2, omitting
+--   this would clip the upper side of the band at the plot area (surfaced
+--   by GLM's asymmetric μ-CI bands).
 bandYRange :: Resolver -> Layer -> Vector Double
 bandYRange r l = case getFirst (lyKind l) of
   Just MBand ->
@@ -452,9 +520,15 @@ bandYRange r l = case getFirst (lyKind l) of
     in los V.++ his
   _ -> V.empty
 
--- | Phase 52.D2: streamgraph の y 軸 range 寄与。 各 x 値ごとに全系列の y を合算した
--- 総和 total(x) の最大 M を取り、 中心化 (silhouette: baseline=-Σy/2) ゆえ [-M/2, M/2]
--- を返す。 系列は color で分かれるが range には x ごとの総和だけが要る。
+-- | [日本語]: streamgraph の y 軸 range 寄与。 各 x 値ごとに全系列の y を合算した
+--   総和 total(x) の最大 M を取り、 中心化 (silhouette: baseline=-Σy/2) ゆえ
+--   [-M/2, M/2] を返す。 系列は color で分かれるが range には x ごとの総和
+--   だけが要る。
+--   [English]: The y-range contribution of a streamgraph. Takes the maximum
+--   M of the per-x total(x), the sum of y across all series at each x
+--   value, and returns [-M/2, M/2] since the layout is centered (silhouette:
+--   baseline = -Σy/2). Series are split by color, but the range only needs
+--   the per-x total.
 streamYRange :: Resolver -> Layer -> Vector Double
 streamYRange r l = case getFirst (lyKind l) of
   Just MStream ->
@@ -467,9 +541,15 @@ streamYRange r l = case getFirst (lyKind l) of
     in if n == 0 then V.empty else V.fromList [negate (m / 2), m / 2]
   _ -> V.empty
 
--- | Phase 11 A6-2: Q-Q plot の x 軸 range 寄与。 sample (encY) をソートして得る
--- order statistic に理論正規分位点 Φ⁻¹((i-0.5)/n) を割り当て、 その min/max を
--- x domain に contribute する (= 理論分位点は列に無いので forestXRange と同型で算出)。
+-- | [日本語]: Q-Q plot の x 軸 range 寄与。 sample (encY) をソートして得る
+--   order statistic に理論正規分位点 Φ⁻¹((i-0.5)/n) を割り当て、 その min/max
+--   を x domain に contribute する (= 理論分位点は列に無いので forestXRange と
+--   同型で算出)。
+--   [English]: The x-range contribution of a Q-Q plot. Assigns theoretical
+--   normal quantiles Φ⁻¹((i-0.5)/n) to the order statistics obtained by
+--   sorting the sample (encY), and contributes their min/max to the x
+--   domain (theoretical quantiles are not in any column, so they are
+--   computed the same way as forestXRange).
 qqXRange :: Resolver -> Layer -> Vector Double
 qqXRange r l = case getFirst (lyKind l) of
   Just MQQ -> case getLast (lyEncY l) >>= resolveNum r of
@@ -479,10 +559,17 @@ qqXRange r l = case getFirst (lyKind l) of
     _ -> V.empty
   _ -> V.empty
 
--- | Phase 11 A6-2: サンプルから Q-Q plot の点列 (理論分位点, order statistic) を作る。
--- render と range が **同じ式** を使うための単一情報源 (= histRawDomain と同思想)。
--- y_(i) = ソート済 sample の i 番目、 x_i = Φ⁻¹((i-0.5)/n) (= plotting position、
--- ggplot stat_qq / R qqnorm の既定 (a=0.5 of Blom 近傍))。
+-- | [日本語]: サンプルから Q-Q plot の点列 (理論分位点, order statistic) を
+--   作る。 render と range が __同じ式__ を使うための単一情報源
+--   (= histRawDomain と同思想)。 y_(i) = ソート済 sample の i 番目、
+--   x_i = Φ⁻¹((i-0.5)/n) (= plotting position、 ggplot stat_qq / R qqnorm
+--   の既定 (a=0.5 of Blom 近傍))。
+--   [English]: Builds the Q-Q plot point list (theoretical quantile, order
+--   statistic) from a sample. A single source of truth ensuring render and
+--   range use __the same formula__ (the same idea as histRawDomain).
+--   y_(i) is the i-th sorted sample value; x_i = Φ⁻¹((i-0.5)/n) is the
+--   plotting position, the default used by ggplot's stat_qq / R's qqnorm
+--   (a near Blom's a=0.5).
 qqPoints :: [Double] -> [(Double, Double)]
 qqPoints sample =
   let ys = sort sample
@@ -490,9 +577,15 @@ qqPoints sample =
   in [ (invNormCdf ((fromIntegral i - 0.5) / fromIntegral n), y)
      | (i, y) <- zip [(1 :: Int) ..] ys ]
 
--- | Phase 11 A6-4: ECDF (= ggplot stat_ecdf) の階段ポリライン頂点。 render と x/y range が
--- 同じ式を使うための単一情報源。 右連続の階段 F(x)=#(≤x)/n を、 角点列で表す:
---   (x_1,0), (x_1,1/n), (x_2,1/n), (x_2,2/n), …, (x_n, n/n)。 空入力は []。
+-- | [日本語]: ECDF (= ggplot stat_ecdf) の階段ポリライン頂点。 render と x/y
+--   range が同じ式を使うための単一情報源。 右連続の階段 F(x)=#(≤x)/n を、
+--   角点列で表す: (x_1,0), (x_1,1/n), (x_2,1/n), (x_2,2/n), …, (x_n, n/n)。
+--   空入力は []。
+--   [English]: The vertices of the ECDF (ggplot's stat_ecdf) step polyline.
+--   A single source of truth ensuring render and the x/y range use the same
+--   formula. Represents the right-continuous step function F(x)=#(≤x)/n as
+--   a sequence of corner points: (x_1,0), (x_1,1/n), (x_2,1/n), (x_2,2/n),
+--   …, (x_n, n/n). An empty input yields [].
 ecdfPoints :: [Double] -> [(Double, Double)]
 ecdfPoints sample =
   let xs = sort sample
@@ -506,9 +599,14 @@ ecdfPoints sample =
                              : [ (xs !! i, fn i) | i < n ]  -- 次の x まで水平 (最後は無し)
                            | (i, x) <- zip [(1 :: Int) ..] xs ]
 
--- | 標準正規分布の逆累積分布関数 Φ⁻¹ (= probit / qnorm)。 Acklam の有理多項式近似
--- (相対誤差 < 1.15e-9)。 p ∈ (0,1) を仮定 (端点は ±∞ を返すが qqPoints では (0.5/n)
--- 〜((n-0.5)/n) なので 0/1 には到達しない)。
+-- | [日本語]: 標準正規分布の逆累積分布関数 Φ⁻¹ (= probit / qnorm)。 Acklam の
+--   有理多項式近似 (相対誤差 < 1.15e-9)。 p ∈ (0,1) を仮定 (端点は ±∞ を返す
+--   が qqPoints では (0.5/n)〜((n-0.5)/n) なので 0/1 には到達しない)。
+--   [English]: The inverse CDF of the standard normal distribution, Φ⁻¹
+--   (probit / qnorm). Uses Acklam's rational polynomial approximation
+--   (relative error < 1.15e-9). Assumes p ∈ (0,1) (the endpoints return ±∞,
+--   but qqPoints only supplies (0.5/n) through ((n-0.5)/n), so 0/1 are never
+--   reached).
 invNormCdf :: Double -> Double
 invNormCdf p
   | p <= 0    = -1 / 0
@@ -541,7 +639,10 @@ invNormCdf p
     d1 =  7.784695709041462e-03; d2 =  3.224671290700398e-01
     d3 =  2.445134137142996e+00; d4 =  3.754408661907416e+00
 
--- | autocorr / ess は encX を「値」 としてではなく lag/chain 軸として扱う layer。
+-- | [日本語]: autocorr / ess は encX を「値」 としてではなく lag/chain 軸と
+--   して扱う layer。
+--   [English]: Whether this layer treats encX as a lag/chain axis rather
+--   than a "value" (as autocorr / ess do).
 isLagAxis :: Layer -> Bool
 isLagAxis l = case getFirst (lyKind l) of
   Just MAutocorr -> True
@@ -552,7 +653,8 @@ isLagAxis l = case getFirst (lyKind l) of
 -- 共通 helper
 -- ===========================================================================
 
--- | Vector の (min, max)。 空なら default (0, 1)。
+-- | [日本語]: Vector の (min, max)。 空なら default (0, 1)。
+--   [English]: A vector's (min, max), defaulting to (0, 1) when empty.
 extentsOrDefault :: Vector Double -> (Double, Double)
 extentsOrDefault v
   | V.null v  = (0, 1)

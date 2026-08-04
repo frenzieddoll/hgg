@@ -1,17 +1,27 @@
 -- |
 -- Module      : Graphics.Hgg.Primitive
--- Description : backend 非依存の描画 primitive・幾何・スタイルの基盤型 (leaf)
+-- Description : Backend-agnostic drawing primitives, geometry, and style leaf types
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 51: 描画 primitive (Point/Rect/style/PathSegment/Transform/Primitive) を
--- Spec/Layout/Render に依存しない **leaf module** へ集約。 これらは元々
--- 'Graphics.Hgg.Render.Common' (Spec/Layout を import する上位) に置かれていたため、
--- 「'Spec.Layer' が draw closure (@RenderCtx -> [Primitive]@) を保持する」 拡張 (custom
--- mark) が **module 循環**で不能だった。 primitive は概念的に幾何 + Text のみに依存する
--- 基盤型ゆえ、 正しい層 (= 最下層 leaf) へ戻す。 挙動・出力は完全に不変 (純粋な型移動)。
--- 'Graphics.Hgg.Render.Common' / 'Graphics.Hgg.Render' が本 module を re-export するので
--- 既存の import 経路は不変。
+-- [日本語]: 描画 primitive (Point/Rect/style/PathSegment/Transform/Primitive) を
+--   Spec/Layout/Render に依存しない __leaf module__ へ集約。 これらは元々
+--   'Graphics.Hgg.Render.Common' (Spec/Layout を import する上位) に置かれていたため、
+--   「'Spec.Layer' が draw closure (@RenderCtx -> [Primitive]@) を保持する」 拡張 (custom
+--   mark) が __module 循環__で不能だった。 primitive は概念的に幾何 + Text のみに依存する
+--   基盤型ゆえ、 正しい層 (= 最下層 leaf) へ戻す。 挙動・出力は完全に不変 (純粋な型移動)。
+--   'Graphics.Hgg.Render.Common' / 'Graphics.Hgg.Render' が本 module を re-export するので
+--   既存の import 経路は不変。
+--   [English]: Consolidates the drawing primitives (Point/Rect/style/PathSegment/
+--   Transform/Primitive) into a __leaf module__ with no dependency on Spec/Layout/
+--   Render. These originally lived in 'Graphics.Hgg.Render.Common' (an upper layer
+--   that imports Spec/Layout), which made it impossible to extend 'Spec.Layer' to
+--   hold a draw closure (@RenderCtx -> [Primitive]@) for custom marks, due to a
+--   __module cycle__. Since primitives conceptually depend only on geometry and
+--   Text, they belong in the correct (lowest, leaf) layer. Behaviour and output
+--   are completely unchanged (a pure type relocation). 'Graphics.Hgg.Render.Common'
+--   and 'Graphics.Hgg.Render' re-export this module, so existing import paths are
+--   unaffected.
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Primitive
@@ -43,7 +53,9 @@ import           GHC.Generics (Generic)
 
 data Point = Point !Double !Double deriving (Show, Eq)
 
--- | plot 領域や clip 矩形。 (x,y) 左上 + 幅高 (pt 空間)。
+-- | [日本語]: plot 領域や clip 矩形。 (x,y) 左上 + 幅高 (pt 空間)。
+--   [English]: A plot area or clip rectangle: (x,y) top-left plus width and
+--   height, in pt space.
 data Rect = Rect { rX :: !Double, rY :: !Double, rW :: !Double, rH :: !Double }
   deriving (Show, Eq, Generic)
 
@@ -54,12 +66,18 @@ instance FromJSON Rect
 -- スタイル
 -- ===========================================================================
 
--- | 線スタイル。 'lsDash' = SVG stroke-dasharray / Canvas setLineDash 用 px 配列。
--- 既定 (= 実線) は空配列 []。 'solid' ヘルパで作ると常に実線 (Phase 11 A4-b 以前と同一)。
+-- | [日本語]: 線スタイル。 'lsDash' = SVG stroke-dasharray / Canvas setLineDash 用 px 配列。
+--   既定 (= 実線) は空配列 []。 'solid' ヘルパで作ると常に実線。
+--   [English]: A line style. 'lsDash' is the px array used by SVG
+--   stroke-dasharray / Canvas setLineDash. The default (solid) is the empty
+--   array []. Building it via the 'solid' helper always yields a solid line.
 data LineStyle   = LineStyle   { lsColor :: !Text, lsWidth :: !Double, lsDash :: ![Double] } deriving (Show, Eq)
 
--- | Phase 11 A4-b: 実線 'LineStyle' の簡易構築 (= 旧 2 引数 LineStyle と同一)。
--- dash を持たない既存呼出は全てこれに置換 (出力完全不変)。
+-- | [日本語]: 実線 'LineStyle' の簡易構築 (= 旧 2 引数 LineStyle と同一)。
+--   dash を持たない既存呼出は全てこれに置換 (出力完全不変)。
+--   [English]: A convenience constructor for a solid 'LineStyle' (equivalent
+--   to the old 2-argument LineStyle). All existing call sites without a dash
+--   are replaced by this (output is completely unchanged).
 solid :: Text -> Double -> LineStyle
 solid c w = LineStyle c w []
 
@@ -93,14 +111,19 @@ data PathSegment
 -- Primitive
 -- ===========================================================================
 
--- | backend 非依存の描画 primitive。 各 backend は drawPrimitives で
--- これを順に解釈するだけ。
+-- | [日本語]: backend 非依存の描画 primitive。 各 backend は drawPrimitives で
+--   これを順に解釈するだけ。
+--   [English]: A backend-agnostic drawing primitive. Each backend simply
+--   interprets these in sequence via drawPrimitives.
 data Primitive
   = PLine          !Point !Point !LineStyle
   | PRect          !Rect !FillStyle (Maybe StrokeStyle)
-  -- | 'PCircle' は最終フィールドに optional hover label。 SVG backend は
-  -- <title> 要素として埋め込み、 ブラウザ native の hover tooltip に。
-  -- JS 不要。
+  -- | [日本語]: 'PCircle' は最終フィールドに optional hover label。 SVG backend は
+  --   <title> 要素として埋め込み、 ブラウザ native の hover tooltip に。
+  --   JS 不要。
+  --   [English]: 'PCircle' carries an optional hover label as its final
+  --   field. The SVG backend embeds it as a @\<title\>@ element, giving a
+  --   browser-native hover tooltip with no JS required.
   | PCircle        !Point !Double !FillStyle (Maybe StrokeStyle) (Maybe Text)
   | PPath          ![PathSegment] !FillStyle (Maybe StrokeStyle)
   | PText          !Point !Text !TextStyle
@@ -110,10 +133,16 @@ data Primitive
   | PTransformPop
   deriving (Show, Eq)
 
--- | Phase 33 B5: pt 空間の primitive を device 単位へ一括 scale (k = dpi/72)。
--- ★ raster/vector backend で **唯一の dpi 適用点**。Layout/Render は
--- 純 pt を出力し、ここで一度だけ k を掛ける。PDF は k=1 (pt 直結・恒等) を渡す。
--- 座標・サイズ・線幅・font size・dash 配列を全て k 倍する。'ScaleT' は比率ゆえ不変。
+-- | [日本語]: pt 空間の primitive を device 単位へ一括 scale (k = dpi/72)。
+--   ★ raster/vector backend で __唯一の dpi 適用点__。Layout/Render は
+--   純 pt を出力し、ここで一度だけ k を掛ける。PDF は k=1 (pt 直結・恒等) を渡す。
+--   座標・サイズ・線幅・font size・dash 配列を全て k 倍する。'ScaleT' は比率ゆえ不変。
+--   [English]: Bulk-scales primitives from pt space to device units
+--   (k = dpi/72). ★ This is the __sole point where dpi is applied__ across
+--   the raster/vector backends: Layout/Render emit pure pt values, and k is
+--   applied exactly once here. PDF passes k=1 (a pt-direct identity).
+--   Coordinates, sizes, line widths, font sizes, and dash arrays are all
+--   scaled by k; 'ScaleT' is unaffected since it is a ratio.
 scalePrimitives :: Double -> [Primitive] -> [Primitive]
 scalePrimitives k
   | k == 1    = id

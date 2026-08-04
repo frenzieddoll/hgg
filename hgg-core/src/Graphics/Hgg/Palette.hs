@@ -1,13 +1,20 @@
 -- |
 -- Module      : Graphics.Hgg.Palette
--- Description : Categorical / Sequential / Diverging palette カタログ
+-- Description : Categorical, sequential, and diverging palette catalog
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
---   P17 (2026-05-26 改訂):
+--   [日本語]: 2026-05-26 改訂:
 --     * default `hggMain` = F-3 Balanced Mix (= 中程度彩度で重み均等)
 --     * sub `hggPastel`   = F-2 Pastel Mix (= 淡色 secondary)
 --     * 全色は 7 キャラ設定画 Color Palette セクションの公式 hex
+--   [English]: As of the 2026-05-26 revision:
+--     * The default, `hggMain`, is F-3 Balanced Mix (medium saturation,
+--       evenly weighted).
+--     * The sub-palette, `hggPastel`, is F-2 Pastel Mix (light-colored
+--       secondary).
+--     * All colors are the official hex values from the Color Palette
+--       section of the 7-character design sheet.
 {-# LANGUAGE OverloadedStrings #-}
 
 module Graphics.Hgg.Palette
@@ -51,7 +58,7 @@ module Graphics.Hgg.Palette
   , hggHighlight
   , hggSuccess
   , hggInfo
-    -- * ColorBrewer 2.0 palette (Phase 6 A9、 P17)
+    -- * ColorBrewer 2.0 palette
     -- $colorbrewer
     -- ** Categorical (qualitative)
   , brewerSet1
@@ -83,7 +90,9 @@ okabeIto =
 viridis5 :: SequentialPalette
 viridis5 = ["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"]
 
--- | Spotfire 風 (= 標準 UI default colorPalette と一致)。
+-- | [日本語]: Spotfire 風 (= 標準 UI default colorPalette と一致)。
+--   [English]: Spotfire-style (matches the standard UI's default
+--   colorPalette).
 spotfire :: CategoricalPalette
 spotfire =
   [ "#93c5fd", "#fca5a5", "#fde047", "#86efac", "#f9a8d4"
@@ -110,10 +119,17 @@ hggPastel =
   [ "#F0A5A0", "#C0B8E6", "#B79DB8", "#A7D7DE"
   , "#D7A1A6", "#C7D7E6", "#A45353" ]
 
--- | ggplot2 既定 discrete パレット (= @scales::hue_pal()@)。
--- HCL 色空間で等間隔 hue (L=65, C=100, hue = seq(15,375,length=n+1)[1:n])。
--- 色数 n に依存して hue が再配分されるため、 R @hue_pal()(n)@ の出力を n=1..8 で
--- テーブル化 (= 実行時 HCL→sRGB 変換を避ける)。 n>8 は 8 色版を循環、 n<1 は 8 色版。
+-- | [日本語]: ggplot2 既定 discrete パレット (= @scales::hue_pal()@)。
+--   HCL 色空間で等間隔 hue (L=65, C=100, hue = seq(15,375,length=n+1)[1:n])。
+--   色数 n に依存して hue が再配分されるため、 R @hue_pal()(n)@ の出力を n=1..8
+--   でテーブル化 (= 実行時 HCL→sRGB 変換を避ける)。 n>8 は 8 色版を循環、 n<1 は
+--   8 色版。
+--   [English]: ggplot2's default discrete palette (@scales::hue_pal()@).
+--   Evenly spaced hues in HCL space (L=65, C=100, hue =
+--   seq(15,375,length=n+1)[1:n]). Since the hues are redistributed depending
+--   on the color count n, the output of R's @hue_pal()(n)@ is tabulated for
+--   n=1..8 (avoiding an HCL to sRGB conversion at run time). For n>8 the
+--   8-color table is cycled; n<1 also uses the 8-color table.
 ggplotHue :: Int -> CategoricalPalette
 ggplotHue n
   | n <= 0    = ggplotHue8
@@ -208,86 +224,110 @@ hggInfo      = "#8AA0BA"
 -- ===========================================================================
 
 -- $colorbrewer
--- ColorBrewer は地図・科学可視化向け 35 palette のセット。
+-- [日本語]: ColorBrewer は地図・科学可視化向け 35 palette のセット。
 -- ここでは categorical 5 種 + diverging 7 種を import (= 9-class が中心)。
 -- 公式: <https://colorbrewer2.org/>
 -- License: Apache 2.0 (= attribution required)
+--
+-- [English]: ColorBrewer is a set of 35 palettes designed for maps and
+-- scientific visualization. Here 5 categorical and 7 diverging palettes are
+-- imported (mostly the 9-class variants). Official site:
+-- <https://colorbrewer2.org/>. License: Apache 2.0 (attribution required).
 
--- | Categorical Set1 (9-class)。 強い primary 色、 区別性高い。
+-- | [日本語]: Categorical Set1 (9-class)。 強い primary 色、 区別性高い。
+--   [English]: Categorical Set1 (9-class): strong primary colors with high
+--   distinguishability.
 brewerSet1 :: CategoricalPalette
 brewerSet1 =
   [ "#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00"
   , "#FFFF33", "#A65628", "#F781BF", "#999999" ]
 
--- | Categorical Set2 (8-class)。 やや pastel、 印刷に向く。
+-- | [日本語]: Categorical Set2 (8-class)。 やや pastel、 印刷に向く。
+--   [English]: Categorical Set2 (8-class): somewhat pastel, suited to print.
 brewerSet2 :: CategoricalPalette
 brewerSet2 =
   [ "#66C2A5", "#FC8D62", "#8DA0CB", "#E78AC3", "#A6D854"
   , "#FFD92F", "#E5C494", "#B3B3B3" ]
 
--- | Categorical Set3 (12-class)。 多 categorical に向く、 薄め。
+-- | [日本語]: Categorical Set3 (12-class)。 多 categorical に向く、 薄め。
+--   [English]: Categorical Set3 (12-class): suited to many categories,
+--   lighter tones.
 brewerSet3 :: CategoricalPalette
 brewerSet3 =
   [ "#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3"
   , "#FDB462", "#B3DE69", "#FCCDE5", "#D9D9D9", "#BC80BD"
   , "#CCEBC5", "#FFED6F" ]
 
--- | Paired (12-class)。 light/dark のペア (= 2 グループ × 6 色)。
+-- | [日本語]: Paired (12-class)。 light/dark のペア (= 2 グループ × 6 色)。
+--   [English]: Paired (12-class): light/dark pairs (2 groups of 6 colors
+--   each).
 brewerPaired :: CategoricalPalette
 brewerPaired =
   [ "#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99"
   , "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A"
   , "#FFFF99", "#B15928" ]
 
--- | Dark2 (8-class)。 dark 系、 強い contrast。
+-- | [日本語]: Dark2 (8-class)。 dark 系、 強い contrast。
+--   [English]: Dark2 (8-class): dark tones with strong contrast.
 brewerDark2 :: CategoricalPalette
 brewerDark2 =
   [ "#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E"
   , "#E6AB02", "#A6761D", "#666666" ]
 
--- | Diverging RdYlBu (9-class、 中心 #FFFFBF)。 赤 ↔ 黄 ↔ 青。
+-- | [日本語]: Diverging RdYlBu (9-class、 中心 #FFFFBF)。 赤 ↔ 黄 ↔ 青。
+--   [English]: Diverging RdYlBu (9-class, center #FFFFBF): red to yellow to
+--   blue.
 brewerRdYlBu :: DivergingPalette
 brewerRdYlBu =
   [ "#D73027", "#F46D43", "#FDAE61", "#FEE090"
   , "#FFFFBF"
   , "#E0F3F8", "#ABD9E9", "#74ADD1", "#4575B4" ]
 
--- | Diverging RdBu (9-class)。 赤 ↔ 青、 中央 #F7F7F7。
+-- | [日本語]: Diverging RdBu (9-class)。 赤 ↔ 青、 中央 #F7F7F7。
+--   [English]: Diverging RdBu (9-class): red to blue, center #F7F7F7.
 brewerRdBu :: DivergingPalette
 brewerRdBu =
   [ "#B2182B", "#D6604D", "#F4A582", "#FDDBC7"
   , "#F7F7F7"
   , "#D1E5F0", "#92C5DE", "#4393C3", "#2166AC" ]
 
--- | Diverging Spectral (11-class)。 虹 (= 赤→橙→黄→緑→青→紫)、 中心 #FFFFBF。
+-- | [日本語]: Diverging Spectral (11-class)。 虹 (= 赤→橙→黄→緑→青→紫)、 中心
+--   #FFFFBF。
+--   [English]: Diverging Spectral (11-class): a rainbow (red to orange to
+--   yellow to green to blue to purple), center #FFFFBF.
 brewerSpectral :: DivergingPalette
 brewerSpectral =
   [ "#9E0142", "#D53E4F", "#F46D43", "#FDAE61", "#FEE08B"
   , "#FFFFBF"
   , "#E6F598", "#ABDDA4", "#66C2A5", "#3288BD", "#5E4FA2" ]
 
--- | Diverging PuOr (9-class)。 紫 ↔ 橙、 中央 #F7F7F7。
+-- | [日本語]: Diverging PuOr (9-class)。 紫 ↔ 橙、 中央 #F7F7F7。
+--   [English]: Diverging PuOr (9-class): purple to orange, center #F7F7F7.
 brewerPuOr :: DivergingPalette
 brewerPuOr =
   [ "#B35806", "#E08214", "#FDB863", "#FEE0B6"
   , "#F7F7F7"
   , "#D8DAEB", "#B2ABD2", "#8073AC", "#542788" ]
 
--- | Diverging BrBG (9-class)。 茶 ↔ 緑、 中央 #F5F5F5。
+-- | [日本語]: Diverging BrBG (9-class)。 茶 ↔ 緑、 中央 #F5F5F5。
+--   [English]: Diverging BrBG (9-class): brown to green, center #F5F5F5.
 brewerBrBG :: DivergingPalette
 brewerBrBG =
   [ "#8C510A", "#BF812D", "#DFC27D", "#F6E8C3"
   , "#F5F5F5"
   , "#C7EAE5", "#80CDC1", "#35978F", "#01665E" ]
 
--- | Diverging RdGy (9-class)。 赤 ↔ 灰、 中央 #FFFFFF。
+-- | [日本語]: Diverging RdGy (9-class)。 赤 ↔ 灰、 中央 #FFFFFF。
+--   [English]: Diverging RdGy (9-class): red to gray, center #FFFFFF.
 brewerRdGy :: DivergingPalette
 brewerRdGy =
   [ "#B2182B", "#D6604D", "#F4A582", "#FDDBC7"
   , "#FFFFFF"
   , "#E0E0E0", "#BABABA", "#878787", "#4D4D4D" ]
 
--- | Diverging PiYG (9-class)。 ピンク ↔ 黄緑、 中央 #F7F7F7。
+-- | [日本語]: Diverging PiYG (9-class)。 ピンク ↔ 黄緑、 中央 #F7F7F7。
+--   [English]: Diverging PiYG (9-class): pink to yellow-green, center
+--   #F7F7F7.
 brewerPiYG :: DivergingPalette
 brewerPiYG =
   [ "#C51B7D", "#DE77AE", "#F1B6DA", "#FDE0EF"

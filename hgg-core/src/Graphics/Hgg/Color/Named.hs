@@ -1,15 +1,24 @@
 -- |
 -- Module      : Graphics.Hgg.Color.Named
--- Description : R colors() の 657 名前付き色 (機械生成、Phase 30)
+-- Description : The 657 named colors from R's colors() (machine-generated)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
---   ★このファイルは機械生成物 (scripts/gen-named-colors.py)。 手で編集しない。
+--   [日本語]: ★このファイルは機械生成物 (scripts/gen-named-colors.py)。 手で編集しない。
 --   一次ソース = R src/library/grDevices/src/colors.c の ColorDataBase[]
 --   (= R colors() の実体・657 色)。 値は捏造せず colors.c の hex から導出。
 --
 --   タイポは文字列ルックアップでなくトップレベル束縛ゆえコンパイルエラーで防げる。
 --   grey/gray の両綴り・連番 (grey0..grey100 等) も R に倣って保持。
+--   [English]: ★This file is machine-generated (scripts/gen-named-colors.py).
+--   Do not edit it by hand. The primary source is R's
+--   src/library/grDevices/src/colors.c, specifically ColorDataBase[] (the
+--   backing data for R's colors(), 657 colors). Values are derived from the
+--   hex codes in colors.c, never invented.
+--
+--   Because these are top-level bindings rather than a string lookup, typos
+--   are caught as compile errors. Both the grey/gray spellings and the
+--   numbered series (grey0..grey100, etc.) are kept, following R.
 {-# LANGUAGE OverloadedStrings #-}
 
 module Graphics.Hgg.Color.Named where

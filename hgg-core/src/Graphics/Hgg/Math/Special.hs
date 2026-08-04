@@ -1,19 +1,33 @@
 -- |
 -- Module      : Graphics.Hgg.Math.Special
--- Description : 特殊関数 (log-gamma / 正則化不完全ベータ / ベータ分位点)
+-- Description : Special functions — log-gamma, regularized incomplete beta, beta quantile
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- backend 非依存の数値特殊関数。 確率プロットの厳密 rank-based CI
--- (順序統計量 U_(i) ~ Beta(i, n-i+1)) などで必要になる:
+-- [日本語]: backend 非依存の数値特殊関数。 確率プロットの厳密 rank-based CI
+--   (順序統計量 U_(i) ~ Beta(i, n-i+1)) などで必要になる:
 --
---   * 'logGamma'          : ln Γ(x) (Lanczos 近似、 x > 0)
---   * 'regIncompleteBeta' : 正則化不完全ベータ I_x(a,b) (連分数 / Lentz 法)
---   * 'betaQuantile'      : I_x(a,b) = q を満たす x (二分法による逆関数)
+--     * 'logGamma'          : ln Γ(x) (Lanczos 近似、 x > 0)
+--     * 'regIncompleteBeta' : 正則化不完全ベータ I_x(a,b) (連分数 / Lentz 法)
+--     * 'betaQuantile'      : I_x(a,b) = q を満たす x (二分法による逆関数)
 --
--- アルゴリズムは Numerical Recipes の @gammln@ / @betai@ / @betacf@ に準ずる。
--- core 内に他の特殊関数 (invNormCdf) は 'Graphics.Hgg.Layout.RangeOf' にあるが、
--- ベータ系はサイズが大きいので本 module に分離する。
+--   アルゴリズムは Numerical Recipes の @gammln@ / @betai@ / @betacf@ に準ずる。
+--   core 内に他の特殊関数 (invNormCdf) は 'Graphics.Hgg.Layout.RangeOf' にあるが、
+--   ベータ系はサイズが大きいので本 module に分離する。
+-- [English]: Backend-agnostic numerical special functions, needed for
+--   example by the exact rank-based confidence intervals of probability
+--   plots (order statistics U_(i) ~ Beta(i, n-i+1)):
+--
+--     * 'logGamma'          : ln Γ(x) (Lanczos approximation, x > 0)
+--     * 'regIncompleteBeta' : the regularized incomplete beta function
+--       I_x(a,b) (continued fraction / Lentz's method)
+--     * 'betaQuantile'      : the x satisfying I_x(a,b) = q (inverse via
+--       bisection)
+--
+--   The algorithms follow Numerical Recipes' @gammln@ / @betai@ / @betacf@.
+--   Another special function (invNormCdf) lives in 'Graphics.Hgg.Layout.RangeOf'
+--   elsewhere in core, but the beta-related functions are split into this
+--   module because of their size.
 module Graphics.Hgg.Math.Special
   ( logGamma
   , regIncompleteBeta
@@ -24,8 +38,10 @@ module Graphics.Hgg.Math.Special
 -- log-gamma (Lanczos 近似、 g=5 / 6 係数)
 -- ===========================================================================
 
--- | ln Γ(x) (x > 0 を仮定)。 相対誤差 < 2e-10。
--- Numerical Recipes @gammln@ と同一係数 (Lanczos, g=5)。
+-- | [日本語]: ln Γ(x) (x > 0 を仮定)。 相対誤差 < 2e-10。
+--   Numerical Recipes @gammln@ と同一係数 (Lanczos, g=5)。
+--   [English]: ln Γ(x), assuming x > 0. Relative error < 2e-10. Uses the
+--   same coefficients as Numerical Recipes' @gammln@ (Lanczos, g=5).
 logGamma :: Double -> Double
 logGamma x =
   let tmp0 = x + 5.5
@@ -42,9 +58,14 @@ logGamma x =
 -- 正則化不完全ベータ I_x(a,b)
 -- ===========================================================================
 
--- | 正則化不完全ベータ関数 I_x(a,b) = B(x;a,b) / B(a,b) ∈ [0,1]。
--- a,b > 0、 x ∈ [0,1]。 x < (a+1)/(a+b+2) で連分数を直接、 それ以外は
--- 対称性 I_x(a,b) = 1 - I_{1-x}(b,a) を使い収束を確保する。
+-- | [日本語]: 正則化不完全ベータ関数 I_x(a,b) = B(x;a,b) / B(a,b) ∈ [0,1]。
+--   a,b > 0、 x ∈ [0,1]。 x < (a+1)/(a+b+2) で連分数を直接、 それ以外は
+--   対称性 I_x(a,b) = 1 - I_{1-x}(b,a) を使い収束を確保する。
+--   [English]: The regularized incomplete beta function
+--   I_x(a,b) = B(x;a,b) / B(a,b) ∈ [0,1], for a,b > 0 and x ∈ [0,1]. When
+--   x < (a+1)/(a+b+2) the continued fraction is evaluated directly;
+--   otherwise the symmetry I_x(a,b) = 1 - I_{1-x}(b,a) is used to ensure
+--   convergence.
 regIncompleteBeta :: Double -> Double -> Double -> Double
 regIncompleteBeta a b x
   | x <= 0    = 0
@@ -56,7 +77,9 @@ regIncompleteBeta a b x
            then bt * betacf a b x / a
            else 1 - bt * betacf b a (1 - x) / b
 
--- | I_x(a,b) の連分数展開 (Lentz の修正法)。 NR @betacf@ と同型。
+-- | [日本語]: I_x(a,b) の連分数展開 (Lentz の修正法)。 NR @betacf@ と同型。
+--   [English]: The continued-fraction expansion of I_x(a,b) (Lentz's
+--   modified method). Structurally identical to Numerical Recipes' @betacf@.
 betacf :: Double -> Double -> Double -> Double
 betacf a b x = go 1 h0 c0 d0
   where
@@ -93,9 +116,14 @@ betacf a b x = go 1 h0 c0 d0
 -- ベータ分位点 (I_x(a,b) = q の逆関数)
 -- ===========================================================================
 
--- | I_x(a,b) = q を満たす x ∈ [0,1] を二分法で求める (= Beta(a,b) の q 分位点)。
--- 'regIncompleteBeta' は x について単調増加なので二分法が確実に収束する。
--- 80 反復で区間幅は 2^-80 (≈ 1e-24) になり double 精度では完全収束。
+-- | [日本語]: I_x(a,b) = q を満たす x ∈ [0,1] を二分法で求める (= Beta(a,b) の
+--   q 分位点)。 'regIncompleteBeta' は x について単調増加なので二分法が確実に
+--   収束する。 80 反復で区間幅は 2^-80 (≈ 1e-24) になり double 精度では完全収束。
+--   [English]: Finds the x ∈ [0,1] satisfying I_x(a,b) = q by bisection (the
+--   q-quantile of Beta(a,b)). Since 'regIncompleteBeta' is monotonically
+--   increasing in x, bisection is guaranteed to converge. After 80
+--   iterations the interval width is 2^-80 (≈ 1e-24), which is full
+--   convergence at double precision.
 betaQuantile :: Double -> Double -> Double -> Double
 betaQuantile q a b
   | q <= 0    = 0
