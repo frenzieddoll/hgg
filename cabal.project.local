@@ -1,0 +1,6 @@
+packages:
+  /home/toshiaki/projects/cc/hanalyze
+
+-- readme-images (hgg-tutorials) が Hanalyze.Plot を使うため (private repo と同じ dev 既定)
+package hanalyze
+  flags: +plot-integration

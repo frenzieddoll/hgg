@@ -7,6 +7,8 @@
 合成単位は **layer**、描画の種類は **mark** (型名 `MarkKind`)、個別関数は `scatter` / `line` / `bar` / …。
 mark は `layer (mark <> 修飾子…)` の形で図に重ねる。引数の `ColRef` は **`inline [..]`** (数値)・
 **`inlineCat [..]`** (カテゴリ)、または DataFrame 利用時の**列名リテラル** `"weight"` ([06 dataframe](06-dataframe.ja.md))。
+リスト書きが好みなら等価な別名 `layers :: [Layer] -> VisualSpec` (= `layer . mconcat`) も使える
+(`layers [scatter "x" "y", colorBy "group"]`)。本ガイドの例は `<>` 版で統一する。
 
 このページは **描けるグラフ (mark) のカタログ**に専念する。構成: **[1. 役割別 mark 索引](#index)**(1 行 1 mark・
 詳細へ 1 ホップ) → **[2. mark 定型エントリ](#entries)**(mark ごとの統一フォーマット)。

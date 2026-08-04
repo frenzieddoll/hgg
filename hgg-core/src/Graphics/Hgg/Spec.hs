@@ -302,6 +302,7 @@ module Graphics.Hgg.Spec
     -- * Top-level setters (= VisualSpec 返却)
   , purePlot
   , layer
+  , layers   -- ★ Phase 66
   , title
   , theme
   , facet

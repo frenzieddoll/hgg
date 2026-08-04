@@ -333,6 +333,11 @@ main = hspec $ do
           b = title "t"
           c = theme ThemeDark
       in ((a <> b) <> c) `shouldBe` (a <> (b <> c))
+    it "layers [a, b] == layer (a <> b) (Phase 66 リスト別名)" $
+      layers [scatter "x" "y", colorBy "group"]
+        `shouldBe` layer (scatter "x" "y" <> colorBy "group")
+    it "layers [] == layer mempty (空 list = 空 Layer 1 枚、 purePlot ではない)" $
+      layers [] `shouldBe` layer mempty
 
   describe "Layout" $ do
     it "computeLayout default viewport 468x288pt (= 6.5x4in・Phase 33 B8)" $

@@ -7,6 +7,8 @@
 The composition unit is **layer**, the drawing type is **mark** (type name `MarkKind`), and individual functions are `scatter` / `line` / `bar` / ….
 Marks are composed as `layer (mark <> modifiers…)` stacked onto a plot. Arguments of type `ColRef` are **`inline [..]`** (numeric) / 
 **`inlineCat [..]`** (categorical), or column name literals like **`"weight"`** when using DataFrames ([06 dataframe](06-dataframe.md)).
+If you prefer list syntax, the equivalent alias `layers :: [Layer] -> VisualSpec` (= `layer . mconcat`) is also available
+(`layers [scatter "x" "y", colorBy "group"]`). Examples in this guide consistently use the `<>` form.
 
 This page focuses on **a catalog of drawable plots (marks)**. Structure: **[1. Mark index by role](#index)** (one row per mark / 
 one-hop to details) → **[2. Mark standard entries](#entries)** (uniform format per mark).

@@ -15,7 +15,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 module Graphics.Hgg.Spec.Setters
   ( -- * layer 装着 + 基本 setter
-    layer, purePlot, title, subtitle, caption, tag, xLabel, yLabel
+    layer, layers, purePlot, title, subtitle, caption, tag, xLabel, yLabel
   , Labs(..), labs, emptyLabs
   , theme, facet, facetWrap, facetGrid, facetCols, facetScales, facetSpace
   , subplots, subplotCols, subplotWidths, subplotHeights, subplotTags
@@ -87,6 +87,13 @@ purePlot = mempty
 -- | 'Layer' を 'VisualSpec' に lift (= layer リストの単一要素 spec)。
 layer :: Layer -> VisualSpec
 layer l = mempty { vsLayers = [l] }
+
+-- | 'layer' のリスト版 (= @layer . mconcat@)。 hvega 風のリスト書きが好みの場合に:
+--   @layers [scatter "x" "y", colorBy "group"] = layer (scatter "x" "y" <> colorBy "group")@。
+--   等価な別名であり '<>' 版が正典 (doc の例は '<>' で統一)。 Phase 66 で外部
+--   フィードバック (公開版 hgg へのコメント) を受けて追加した。
+layers :: [Layer] -> VisualSpec
+layers = layer . mconcat
 
 title, xLabel, yLabel :: Text -> VisualSpec
 title  t = mempty { vsTitle  = Last (Just t) }
