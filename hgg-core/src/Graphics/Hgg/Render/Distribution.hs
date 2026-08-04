@@ -20,7 +20,11 @@ import           Graphics.Hgg.Layout (Layout (..), Rect (..), Scale (..),
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
-                                      coordXGridIsVertical)
+                                      coordXGridIsVertical,
+                                      -- Phase 64 A3: categorical-cross 投影口
+                                      CrossLoc (..), BarShape (..),
+                                      projectCrossPoint, projectCrossSpan,
+                                      projectCrossBar, valueAxisPx)
 import           Graphics.Hgg.Layout.RangeOf (qqPoints, ecdfPoints)  -- Phase 11 A6-2/A6-4
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Time.Format     as Data.Time.Format
@@ -73,13 +77,14 @@ laneIndices layout gs =
 -- | Box plot (= 5-number summary)。 PS / HS で API 統一: lyEncY = 値、 lyEncX = 群 (optional)。
 -- 群指定なしなら単一 box を plot 中央に。 群指定ありなら各群について並列描画。
 -- 中央線 (median) + IQR 箱 + 髭 (min/max within 1.5*IQR)。
--- | Phase 36 B2: box glyph を「cross 軸中心 (px) + box half 幅 (px)」 指定で描く共通部。
---   value 軸変換 (Cartesian は @sy@、 flip は @valPxF@) と coord を受け、 fill/stroke/alpha
---   と外れ値ドットを適用。 normal path (群 = カテゴリ位置) と dodge path (sub-slot 中心) が共有。
---   @sorted@ は昇順済みの値列。 'renderBox' の旧インライン mkBox と出力 byte 一致。
-boxGlyphPx :: Coord -> (Double -> Double) -> (Double -> Double)
-           -> Double -> Double -> Double -> [Double] -> Text -> Text -> [Primitive]
-boxGlyphPx coord sy valPxF crossC half a sorted0 fill stroke =
+-- | Phase 36 B2 → Phase 64 A3: box glyph を CrossLoc (cross 位置) + 半幅指定で描く共通部。
+--   座標変換は projectCrossBar/Span/Point (Layout) に集約し、 geom 側は coord を場合分け
+--   しない。 直線座標系は旧 px 式と byte 一致 (halfPx = box 半幅 px)、 polar は
+--   箱 = wedge (halfD = data 半幅)・髭 = radial 線・median/cap = 弧。
+--   normal path (群 = カテゴリ位置) と dodge path (sub-slot 中心) が共有。
+boxGlyphAt :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
+           -> Double -> [Double] -> Text -> Text -> [Primitive]
+boxGlyphAt coord layout loc offPx halfPx halfD a sorted0 fill stroke =
   let sorted = sort sorted0
       n  = length sorted
       q p =
@@ -97,26 +102,27 @@ boxGlyphPx coord sy valPxF crossC half a sorted0 fill stroke =
       hiW = q3 + 1.5 * iqr
       loV = case dropWhile (< loW) sorted of (v:_) -> v; [] -> q1
       hiV = case reverse (takeWhile (<= hiW) sorted) of (v:_) -> v; [] -> q3
-      mkPt v off = case coord of
-        CoordCartesian -> Point (crossC + off) (sy v)
-        CoordFlip      -> Point (valPxF v) (crossC + off)
-        _              -> Point (crossC + off) (sy v)
-      mkRect vLo vHi h = case coord of
-        CoordCartesian -> Rect (crossC - h) (min (sy vLo) (sy vHi)) (2 * h) (abs (sy vHi - sy vLo))
-        CoordFlip      -> Rect (min (valPxF vLo) (valPxF vHi)) (crossC - h) (abs (valPxF vHi - valPxF vLo)) (2 * h)
-        _              -> Rect (crossC - h) (min (sy vLo) (sy vHi)) (2 * h) (abs (sy vHi - sy vLo))
+      pt v = projectCrossPoint coord layout loc offPx v
+      -- cross 方向の短線 (median/cap)。 直線座標系は 2 点 = 単一 PLine (byte 不変)、
+      -- polar の弧 (> 2 点) は連続 PLine 群で折線化。
+      spanLine w hPx hD v =
+        let pts = projectCrossSpan coord layout loc offPx hPx hD v
+        in [ PLine p0 p1 (solid stroke w) | (p0, p1) <- zip pts (drop 1 pts) ]
+      body = case projectCrossBar coord layout loc offPx halfPx halfD q1 q3 of
+        BarRect rect  -> PRect rect (FillStyle fill a) (Just (StrokeStyle stroke 1.0))
+        BarWedge segs -> PPath segs (FillStyle fill a) (Just (StrokeStyle stroke 1.0))
       outliers = filter (\v -> v < loW || v > hiW) sorted
       outR = defaultMarkerDiameter / 2
       outlierPrims =
-        [ PCircle (mkPt v 0) outR (FillStyle stroke 1.0) (Just (StrokeStyle stroke 1.0)) Nothing
+        [ PCircle (pt v) outR (FillStyle stroke 1.0) (Just (StrokeStyle stroke 1.0)) Nothing
         | v <- outliers ]
-  in [ PRect (mkRect q1 q3 half) (FillStyle fill a) (Just (StrokeStyle stroke 1.0))
-     , PLine (mkPt q2 (-half)) (mkPt q2 half) (solid stroke 2.0)
-     , PLine (mkPt q1 0) (mkPt loV 0) (solid stroke 1.0)
-     , PLine (mkPt q3 0) (mkPt hiV 0) (solid stroke 1.0)
-     , PLine (mkPt loV (-half / 2)) (mkPt loV (half / 2)) (solid stroke 1.0)
-     , PLine (mkPt hiV (-half / 2)) (mkPt hiV (half / 2)) (solid stroke 1.0)
-     ] <> outlierPrims
+  in [ body ]
+     <> spanLine 2.0 halfPx halfD q2
+     <> [ PLine (pt q1) (pt loV) (solid stroke 1.0)
+        , PLine (pt q3) (pt hiV) (solid stroke 1.0) ]
+     <> spanLine 1.0 (halfPx / 2) (halfD / 2) loV
+     <> spanLine 1.0 (halfPx / 2) (halfD / 2) hiV
+     <> outlierPrims
 
 renderBox :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBox r layout pal ly
@@ -148,8 +154,6 @@ renderBox r layout pal ly =
                       then catPal !! (i `mod` length catPal)
                       else c
       a  = doubleOr (lyAlpha ly) 1.0
-      sy = scaleApply (lpYScale layout)
-      sx = scaleApply (lpXScale layout)
       area = lpPlotArea layout
       nG = length groups
       hasCats = not (null (lpXCategoryLabels layout))
@@ -162,66 +166,18 @@ renderBox r layout pal ly =
       -- ★ Phase 36 D2: no-cat (単一) は slot = plotArea ゆえ nudge 基準も rW area (strip/PS と統一)。
       nudgePx = doubleOr (lyNudge ly) 0 * (if hasCats then catUnitPx (lpCoord layout) layout else rW area)
       bwFor = if hasCats then catUnitPx (lpCoord layout) layout * mw else step * mw
-      cxFor i =
-        (if hasCats then sx (fromIntegral i)
-         else rX area + rW area / 2) + nudgePx
-      -- Phase 10 A4: flip 時の cross 軸 (category=縦) 中心 + value 軸 (=横) スケール。
-      coord  = flipOnly (lpCoord layout)   -- A7-c: box は polar 非対象
-      valPxF = scaleApply (lpYScaleFlipped layout)
-      cyFor i =
-        (if hasCats then scaleApply (lpXScaleFlipped layout) (fromIntegral i)
-         else rY area + rH area / 2) + nudgePx
+      -- ★ Phase 64 A3: 座標変換は boxGlyphAt (→ projectCross*) に集約。 flipOnly を
+      --   撤去し polar もそのまま渡す (箱 = wedge / 髭 = radial で描かれる)。
+      coord = lpCoord layout
+      -- polar 用の data 半幅: cat は 1 slot = 1 data 単位の mw/2、 単一群は x domain
+      -- 全幅の mw/2 (linear 座標系では halfPx 側が使われ、 この値は参照されない)。
+      spanX = lsDomainHi (lpXScale layout) - lsDomainLo (lpXScale layout)
+      halfD = mw / 2 * (if hasCats then 1 else spanX)
+      locFor i = if hasCats then CrossAt (fromIntegral i) else CrossMid
       mkBox i (_lbl, sorted) =
-        let n  = length sorted
-            -- R type 7 linear interpolation (= numpy/matplotlib/ggplot default)
-            q p =
-              let pos  = p * fromIntegral (n - 1)
-                  lo   = floor pos :: Int
-                  hi   = min (n - 1) (lo + 1)
-                  frac = pos - fromIntegral lo
-              in case (sorted !? lo, sorted !? hi) of
-                   (Just a, Just b) -> a + (b - a) * frac
-                   _                -> 0
-            (!?) xs i_ = if i_ < 0 || i_ >= length xs then Nothing else Just (xs !! i_)
-            q1 = q 0.25
-            q2 = q 0.50
-            q3 = q 0.75
-            iqr = q3 - q1
-            loW = q1 - 1.5 * iqr
-            hiW = q3 + 1.5 * iqr
-            loV = case dropWhile (< loW) sorted of
-                    (v:_) -> v
-                    []    -> q1
-            hiV = case reverse (takeWhile (<= hiW) sorted) of
-                    (v:_) -> v
-                    []    -> q3
-            cx = cxFor i
-            cy = cyFor i
-            bw = bwFor
-            -- Phase 10 A4: value 軸 = y (Cartesian は縦・flip は横)、 cross 軸 = cx/cy。
-            -- 厚み bw・cap は px のまま。 Cartesian 分岐は従来 AST と bit 一致。
-            mkPt v off = case coord of
-              CoordCartesian -> Point (cx + off) (sy v)
-              CoordFlip      -> Point (valPxF v) (cy + off)
-            mkRect vLo vHi half = case coord of
-              CoordCartesian -> Rect (cx - half) (min (sy vLo) (sy vHi)) (2 * half) (abs (sy vHi - sy vLo))
-              CoordFlip      -> Rect (min (valPxF vLo) (valPxF vHi)) (cy - half) (abs (valPxF vHi - valPxF vLo)) (2 * half)
-            -- ★ Phase 34: 1.5×IQR フェンス外を外れ値ドットで描画 (ggplot outlier、 既定径)。
-            outliers = filter (\v -> v < loW || v > hiW) sorted
-            outR = defaultMarkerDiameter / 2
-            sc = strokeFor i                                    -- Phase 36 C: hollow 時は群色枠
-            boxFill = if isHollow then FillStyle (boxFillFor i) 0.0  -- fill=NA (透明)
-                                  else FillStyle (boxFillFor i) a
-            outlierPrims =
-              [ PCircle (mkPt v 0) outR (FillStyle sc 1.0) (Just (StrokeStyle sc 1.0)) Nothing
-              | v <- outliers ]
-        in [ PRect (mkRect q1 q3 (bw / 2)) boxFill (Just (StrokeStyle sc 1.0))
-           , PLine (mkPt q2 (-bw / 2)) (mkPt q2 (bw / 2)) (solid sc 2.0)
-           , PLine (mkPt q1 0) (mkPt loV 0) (solid sc 1.0)
-           , PLine (mkPt q3 0) (mkPt hiV 0) (solid sc 1.0)
-           , PLine (mkPt loV (-bw / 4)) (mkPt loV (bw / 4)) (solid sc 1.0)
-           , PLine (mkPt hiV (-bw / 4)) (mkPt hiV (bw / 4)) (solid sc 1.0)
-           ] <> outlierPrims
+        boxGlyphAt coord layout (locFor i) nudgePx (bwFor / 2) halfD
+                   (if isHollow then 0.0 else a) sorted
+                   (boxFillFor i) (strokeFor i)
   in concat (zipWith mkBox (laneIndices layout groups) groups)
 
 -- | Phase 36 B2: dodge box。 位置列 (@groupBy@) × 色列 (@colorBy@) で各位置カテゴリ内に
@@ -237,17 +193,15 @@ renderBoxDodge r layout _pal ly =
       -- ★ Phase 36 C: hollow は塗り透明・枠を群色 (= colorFor)。 非 hollow は従来 (枠 grey20)。
       isHollow = getLast (lyHollow ly) == Just True
       a      = doubleOr (lyAlpha ly) 1.0
-      coord  = flipOnly (lpCoord layout)
-      sy     = scaleApply (lpYScale layout)
-      valPxF = scaleApply (lpYScaleFlipped layout)
+      -- ★ Phase 64 A3: 座標変換は boxGlyphAt (→ projectCross*) に集約 (flipOnly 撤去)。
+      coord  = lpCoord layout
       unit   = catUnitPx (lpCoord layout) layout
       subW   = unit * 0.9 / fromIntegral nColor   -- sub-slot px 幅
       bw     = subW * 0.85                          -- box 実幅 (sub-slot の 85%)
-      crossScale d = case coord of
-        CoordFlip -> scaleApply (lpXScaleFlipped layout) d
-        _         -> scaleApply (lpXScale layout) d
+      -- polar 用 data 半幅 = sub-slot (0.9/nColor data 単位) の 85% の半分
+      halfD  = 0.9 / fromIntegral nColor * 0.85 / 2
   in concat
-     [ boxGlyphPx coord sy valPxF (crossScale (dodgeCenterD pix cix nColor)) (bw / 2)
+     [ boxGlyphAt coord layout (CrossAt (dodgeCenterD pix cix nColor)) 0 (bw / 2) halfD
                   (if isHollow then 0.0 else a) (sort vs)
                   (colorFor cix) (if isHollow then colorFor cix else stroke)
      | (pix, cix, vs) <- cells ]

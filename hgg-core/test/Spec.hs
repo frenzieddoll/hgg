@@ -2124,6 +2124,13 @@ main = hspec $ do
       projectCrossBar CoordPolarX lay (CrossAt 1) 0 999 0.45 0 2
         `shouldBe` projectBar CoordPolarX lay 1 0 2 0.45 0
 
+    -- A1 実測の決定的証拠 (box は coordPolar 有無で geom PRect 完全一致 = Cartesian
+    -- 落ち) の解消ゲート: polar box の箱は wedge (PPath) で出る。
+    it "polar + boxplot は箱が wedge (PPath) になる (Phase 64 A3 polar 落ち解消)" $
+      let sp = layer (boxplot (inline [1.0, 2, 3, 4, 5, 6, 7, 100])) <> coordPolar
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver sp) sp
+      in (length [() | PPath{} <- ps] >= 1) `shouldBe` True
+
     it "valueAxisPx: Cartesian = sy / Flip = syF と bit 一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
           layF = computeLayout emptyResolver
