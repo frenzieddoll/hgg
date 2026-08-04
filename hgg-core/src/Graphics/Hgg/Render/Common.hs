@@ -499,20 +499,8 @@ polarGrid spec layout pal =
   in if tpShowGrid pal then circles <> spokes <> boundary <> radLabels <> thetaLabels
      else boundary <> radLabels <> thetaLabels
 
--- | Phase 11 A7-c: 極座標の bar = 扇形 (annular sector)。 (角度 frac tf0..tf1、 半径
---   frac rf0..rf1) を弧近似 (約 0.1 rad/seg) した閉路 PathSegment を返す。 pie (rf0=0)
---   は中心からの扇形、 rose (rf0=0, 角度帯) は円形棒。 HS/PS 同一。
-wedgeSegments :: Layout -> Double -> Double -> Double -> Double -> [PathSegment]
-wedgeSegments l tf0 tf1 rf0 rf1 =
-  let dθ    = abs (tf1 - tf0) * 2 * pi
-      nSeg  = max 2 (ceiling (dθ / 0.1)) :: Int
-      steps = [ tf0 + (tf1 - tf0) * fromIntegral i / fromIntegral nSeg | i <- [0 .. nSeg] ]
-      mk t rf = uncurry Point (polarPoint l t rf)
-      outer = [ mk t rf1 | t <- steps ]
-      inner = [ mk t rf0 | t <- reverse steps ]
-  in case outer ++ inner of
-       (p0 : rest) -> MoveTo p0 : map LineTo rest ++ [ClosePath]
-       []          -> []
+-- ★ Phase 64 A2: wedgeSegments (Phase 11 A7-c の扇形 path) は投影層 (Layout.hs) へ
+--   移設 (projectBar が共有するため)。
 
 fromMaybe :: a -> Maybe a -> a
 fromMaybe d Nothing  = d

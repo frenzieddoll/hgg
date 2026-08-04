@@ -2004,6 +2004,44 @@ main = hspec $ do
       in ( abs (xr - (ccx + cmaxR)) < 1e-6, abs (yr - ccy) < 1e-6 )
            `shouldBe` (True, True)
 
+    -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
+    it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
+      let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+          pts  = projectSegment CoordCartesian layC (0, 0) (1, 1)
+          p0   = uncurry Point (projectXY CoordCartesian layC 0 0)
+          p1   = uncurry Point (projectXY CoordCartesian layC 1 1)
+      in pts `shouldBe` [p0, p1]
+
+    it "projectSegment polar: θ 不変 (純 radial) は 2 点のまま" $
+      length (projectSegment CoordPolarX lay (1, 0) (1, 3)) `shouldBe` 2
+
+    it "projectSegment polar: r 一定の 1/4 周は弧にサンプルされ全点が同半径" $
+      -- x domain 0..3 の x=0→x=1.5 は θfrac 0.5×(expansion 補正)。 サンプル数 ≥ 3 と
+      -- 「全点が中心から同距離」 (= 弧、 直線なら中点が凹む) を確認する。
+      let ptsArc = projectSegment CoordPolarX lay (0, 3) (1.5, 3)
+          ds     = [ sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
+                   | Point x y <- ptsArc ]
+      in ( length ptsArc > 2
+         , maximum ds - minimum ds < 1e-6 )
+           `shouldBe` (True, True)
+
+    it "projectBar Cartesian: BarRect = projectBarRect と bit 一致" $
+      let layC = computeLayout emptyResolver
+                   (layer (bars [1, 2, 3] [4, 7, 5]))
+      in projectBar CoordCartesian layC 1 0 4 0.45 20
+           `shouldBe` BarRect (projectBarRect CoordCartesian layC 1 0 4 20)
+
+    it "projectBar PolarX: BarWedge = wedgeSegments (旧 mkWedge の式) と一致" $
+      let s    = layer (bars [1, 2, 3, 4] [4, 7, 5, 9]) <> coordPolar
+          layP = computeLayout emptyResolver s
+          spanX = lsDomainHi (lpXScale layP) - lsDomainLo (lpXScale layP)
+          hw    = 0.45 / spanX
+          dfx   = domFrac (lpXScale layP)
+          dfy   = domFrac (lpYScale layP)
+      in projectBar CoordPolarX layP 1 0 4 0.45 999
+           `shouldBe` BarWedge (wedgeSegments layP (dfx 1 - hw) (dfx 1 + hw)
+                                                   (dfy 0) (dfy 4))
+
     it "polar の grid は同心円 (PCircle) を含む (直交 grid line でなく円)" $
       let ps = renderToPrimitives emptyResolver lay
                  (overlay [points [0, 1, 2, 3] [0, 1, 2, 3]] <> coordPolar)

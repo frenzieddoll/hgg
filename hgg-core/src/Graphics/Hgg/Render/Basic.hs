@@ -20,6 +20,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, resolutionOf,
+                                      BarShape (..), projectBar,
                                       AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical)
@@ -419,23 +420,14 @@ renderBarSimple r layout pal ly =
                 else rW area / fromIntegral nBars * 0.6
       -- Phase 10 A3: bar は projectBarRect で flip 追従 (厚み bw は px のまま、 base=0..value)。
       -- Cartesian は Rect (sx x - bw/2)(min (sy y)(sy 0)) bw (abs (sy y - sy 0)) と bit 一致。
-      -- Phase 11 A7-c: 極座標は扇形 (wedge) で描く。 PolarX = rose (角度帯×半径=値)、
-      --   PolarY = 中心からの扇形 (角度=値×半径帯)。 厚みは frac 単位の角度/半径幅。
-      spanX = lsDomainHi (lpXScale layout) - lsDomainLo (lpXScale layout)
-      hwFrac = if spanX == 0 then 0.5 else 0.45 / spanX
-      dfx = domFrac (lpXScale layout)
-      dfy = domFrac (lpYScale layout)
-      mkWedge x y = case coord of
-        CoordPolarY -> wedgeSegments layout (dfy 0) (dfy y)
-                                     (max 0 (dfx x - hwFrac)) (dfx x + hwFrac)
-        _           -> wedgeSegments layout (dfx x - hwFrac) (dfx x + hwFrac)
-                                     (dfy 0) (dfy y)
-  in if isPolar coord
-       then [ PPath (mkWedge x y) (FillStyle c a) border
-            | (x, y, c) <- zip3 (V.toList xs) (V.toList ys) (V.toList cs) ]
-       else [ PRect (projectBarRect coord layout x 0 y bw)
-                    (FillStyle c a) border
-            | (x, y, c) <- zip3 (V.toList xs) (V.toList ys) (V.toList cs) ]
+      -- Phase 11 A7-c: 極座標は扇形 (wedge)。 PolarX = rose (角度帯×半径=値)、
+      --   PolarY = 中心からの扇形 (角度=値×半径帯)。
+      -- ★ Phase 64 A2: coord 分岐は投影層 projectBar へ集約 (旧 mkWedge と式レベル同一。
+      --   halfWidthD 0.45 = resolution 0.9 の半分)。 geom は BarShape で case する。
+  in [ case projectBar coord layout x 0 y 0.45 bw of
+         BarRect rect  -> PRect rect (FillStyle c a) border
+         BarWedge segs -> PPath segs (FillStyle c a) border
+     | (x, y, c) <- zip3 (V.toList xs) (V.toList ys) (V.toList cs) ]
 
 -- | Phase 9 B: 群分け bar の position adjustment (dodge / stack / fill)。
 --   long-form データ (= 各 row が (x-cat, group, value)) を前提に、 x カテゴリ slot 内で

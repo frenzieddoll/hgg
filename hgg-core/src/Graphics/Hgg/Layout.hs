@@ -93,6 +93,11 @@ module Graphics.Hgg.Layout
   , polarCenter
   , polarPoint
   , domFrac
+    -- ★ Phase 64 A2: 座標系依存の形状を投影層に集約する口 (§1 の受け皿)。
+  , projectSegment
+  , BarShape(..)
+  , projectBar
+  , wedgeSegments
   ) where
 
 import           Graphics.Hgg.Layout.RangeOf (collectXY, extentsOrDefault,
@@ -116,7 +121,8 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     lyYAxisSide, orderedCats, resolveCol,
                                     resolveNum, themeSeriesPalette,
                                     HexCell (..), hexbinLayerCells)
-import           Graphics.Hgg.Primitive (Rect (..))  -- Phase 51: leaf へ移設・re-export
+import           Graphics.Hgg.Primitive (PathSegment (..), Point (..),
+                                         Rect (..))  -- Phase 51: leaf へ移設・re-export
 import           Numeric           (showFFloat)
 import           Data.Aeson        (FromJSON, ToJSON)
 import           Data.List         (foldl', nub, group, sort)
@@ -1322,6 +1328,69 @@ projectBarRect CoordPolarX l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
 projectBarRect CoordPolarY l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
+
+-- | Phase 64 A2 (Common.hs:505 から移設): 扇形 (annular sector) の path。
+--   (tf0..tf1) = 角度 frac 帯、 (rf0..rf1) = 半径 frac 帯。 円弧は 0.1 rad 刻みの
+--   折線近似 (nSeg ≥ 2)。 polar bar (rose/pie) と 'projectBar' が共有する。
+wedgeSegments :: Layout -> Double -> Double -> Double -> Double -> [PathSegment]
+wedgeSegments l tf0 tf1 rf0 rf1 =
+  let dθ    = abs (tf1 - tf0) * 2 * pi
+      nSeg  = max 2 (ceiling (dθ / 0.1)) :: Int
+      steps = [ tf0 + (tf1 - tf0) * fromIntegral i / fromIntegral nSeg | i <- [0 .. nSeg] ]
+      mk t rf = uncurry Point (polarPoint l t rf)
+      outer = [ mk t rf1 | t <- steps ]
+      inner = [ mk t rf0 | t <- reverse steps ]
+  in case outer ++ inner of
+       (p0 : rest) -> MoveTo p0 : map LineTo rest ++ [ClosePath]
+       []          -> []
+
+-- | Phase 64 A2: データ空間の線分 → px polyline。 直線座標系 (Cartesian/Flip) は
+--   両端の 2 点 (= 従来の直線結線と bit 一致)、 極座標は data 空間で線形補間した
+--   中間点を 'projectXY' で投影し θ 0.1 rad 刻み ('wedgeSegments' と同粒度) の
+--   折線に曲げる。 θ 不変 (= 純 radial) な線分は 2 点のまま。 geom はこの関数を
+--   通すことで「線分が座標系でどう曲がるか」 を知らずに済む (§1 集約の受け皿)。
+projectSegment :: Coord -> Layout -> (Double, Double) -> (Double, Double) -> [Point]
+projectSegment coord l (dx0, dy0) (dx1, dy1)
+  | not (isPolar coord) =
+      [ uncurry Point (projectXY coord l dx0 dy0)
+      , uncurry Point (projectXY coord l dx1 dy1) ]
+  | otherwise =
+      let (tf0, tf1) = case coord of
+            CoordPolarY -> (domFrac (lpYScale l) dy0, domFrac (lpYScale l) dy1)
+            _           -> (domFrac (lpXScale l) dx0, domFrac (lpXScale l) dx1)
+          dTheta = abs (tf1 - tf0) * 2 * pi
+          nSeg   = max 1 (ceiling (dTheta / 0.1)) :: Int
+          lerp a b t = a + (b - a) * t
+          ts     = [ fromIntegral i / fromIntegral nSeg | i <- [0 .. nSeg] ]
+      in [ uncurry Point (projectXY coord l (lerp dx0 dx1 t) (lerp dy0 dy1 t))
+         | t <- ts ]
+
+-- | Phase 64 A2: bar/box 系「data 空間の棒」 の座標系対応形状。 geom 側の
+--   @case coord of@ を「形状の case」 に置き換えるための戻り値型。
+data BarShape = BarRect !Rect | BarWedge ![PathSegment]
+  deriving (Show, Eq)
+
+-- | Phase 64 A2: 棒 (中心 centerD ± halfWidthD、 base..value) の投影 dispatcher。
+--   直線座標系は 'projectBarRect' の px Rect (= bit 一致、 厚みは従来通り px 指定)、
+--   極座標は 'wedgeSegments' の扇形。 halfWidthD は data 単位の半幅 (bar 既定 0.45
+--   = resolution 0.9 の半分)、 thicknessPx は直線座標系専用の px 厚み (極座標では
+--   未使用)。 renderBarSimple の旧 mkWedge (Basic.hs) と式レベルで同一:
+--   PolarX = 角度帯 centerD±halfWidthD × 半径 base..value (rose)、
+--   PolarY = 角度 base..value × 半径帯 centerD±halfWidthD (内径は 0 で clamp)。
+--   domain 退化 (span=0) 時の半幅 frac は 0.5 (= 旧 hwFrac の既定と同一)。
+projectBar :: Coord -> Layout -> Double -> Double -> Double -> Double -> Double
+           -> BarShape
+projectBar coord l centerD baseD valueD halfWidthD thicknessPx = case coord of
+  CoordPolarX -> BarWedge (wedgeSegments l (cfx - hf) (cfx + hf)
+                                           (dfy baseD) (dfy valueD))
+  CoordPolarY -> BarWedge (wedgeSegments l (dfy baseD) (dfy valueD)
+                                           (max 0 (cfx - hf)) (cfx + hf))
+  _           -> BarRect (projectBarRect coord l centerD baseD valueD thicknessPx)
+  where
+    cfx   = domFrac (lpXScale l) centerD
+    dfy   = domFrac (lpYScale l)
+    spanX = lsDomainHi (lpXScale l) - lsDomainLo (lpXScale l)
+    hf    = if spanX == 0 then 0.5 else halfWidthD / spanX
 
 -- | Phase 10 A4-fix: categorical 1 スロットの cross 軸 px 幅 (bar/box 等の厚みに使う)。
 --   Cartesian は x 軸 (sx) の 1 単位、 Flip は category が縦に来るので flipped scale の
