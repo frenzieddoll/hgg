@@ -11,20 +11,15 @@
 --
 -- 同じ 'ModelGraph' を出力する 3 種類のルートがある。 用途に応じて使い分け:
 --
--- +---------------+---------------------------------------------+--------------------+-----------------------+
--- | ルート        | 場所                                        | 出力 / 描画依存    | 推奨用途              |
--- +===============+=============================================+====================+=======================+
--- | Mermaid HTML  | @Hanalyze.Viz.ModelGraph.renderModelGraph@  | .html + CDN script | GitHub README、 ノート |
--- +---------------+---------------------------------------------+--------------------+-----------------------+
--- | Graphviz DOT  | @Hanalyze.Viz.ModelGraphDot.toDot@          | .dot text + dot CLI| graphviz 連携、 加工   |
--- +---------------+---------------------------------------------+--------------------+-----------------------+
--- | 本 module     | 'renderModelGraphSVG' (= A3 完了)           | 依存ゼロ           | production、 offline   |
--- |               | 'renderModelGraphPNG' / 'renderModelGraphPDF' (= A4 stub、 backend 待ち) |             |             |
--- +---------------+---------------------------------------------+--------------------+-----------------------+
+-- [Mermaid HTML]: @Hanalyze.Viz.ModelGraph.renderModelGraph@ —
+--   出力は @.html@ で描画に CDN script が要る。 GitHub README やノート向け。
+-- [Graphviz DOT]: @Hanalyze.Viz.ModelGraphDot.toDot@ —
+--   出力は @.dot@ テキストで描画に @dot@ CLI が要る。 graphviz 連携・加工向け。
+-- [本 module]: 'renderModelGraphSVG' は依存ゼロで production / offline 向け。
+--   @renderModelGraphPNG@ / @renderModelGraphPDF@ は backend 待ちの stub。
 --
 -- 3 ルートとも同じ 'ModelGraph' 構造 (= node / edge / plate) を表現する。
--- visual layout は実装ごとに異なる: 本ルートは graphviz dot 70-80% 同等品質
--- (Phase 1 §10.1)。
+-- visual layout は実装ごとに異なる: 本ルートは graphviz dot の 70-80% 同等品質。
 --
 -- == 使用例 (= A3 で 'renderModelGraphSVG' 公開予定)
 --

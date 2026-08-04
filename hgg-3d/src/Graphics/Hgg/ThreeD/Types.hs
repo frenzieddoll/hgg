@@ -61,23 +61,16 @@ instance ToJSON   Vec3
 instance FromJSON Vec3
 
 -- $convention
--- hgg-3d は **z-up と y-up の両方をサポート** する。 default は **z-up**
+-- hgg-3d は __z-up と y-up の両方をサポート__ する。 default は __z-up__
 -- (= mplot3d / 工学慣例)。 user は用途に応じて切替可能。
 --
 -- == 業界の使い分け (= 2026 時点の調査)
 --
--- +-------------------+-------------------------------------------------+------------+
--- | 分野              | 主要ライブラリ                                  | up         |
--- +===================+=================================================+============+
--- | __data viz__      | matplotlib mplot3d / plotly / Mathematica /     | __z-up__   |
--- |                   | gnuplot splot / mayavi / R rgl                  |            |
--- +-------------------+-------------------------------------------------+------------+
--- | __工学 / CAD__    | AutoCAD / SolidWorks / Inventor / Unreal Engine | __z-up__   |
--- +-------------------+-------------------------------------------------+------------+
--- | __game / CG__     | Unity / Godot 3D / OpenGL 慣例 / DirectX 慣例   | __y-up__   |
--- +-------------------+-------------------------------------------------+------------+
--- | __3D modeling__   | Blender (= z-up に切替済) / Maya (= y-up)       | 分裂       |
--- +-------------------+-------------------------------------------------+------------+
+-- [data viz]: __z-up__ — matplotlib mplot3d、 plotly、 Mathematica、
+--   gnuplot splot、 mayavi、 R rgl
+-- [工学 / CAD]: __z-up__ — AutoCAD、 SolidWorks、 Inventor、 Unreal Engine
+-- [game / CG]: __y-up__ — Unity、 Godot 3D、 OpenGL 慣例、 DirectX 慣例
+-- [3D modeling]: 分裂 — Blender (= z-up に切替済) と Maya (= y-up) で割れている
 --
 -- == hgg-3d の default = z-up を選んだ理由
 --
