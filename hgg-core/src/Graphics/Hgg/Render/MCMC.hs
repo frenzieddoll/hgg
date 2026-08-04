@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.MCMC
--- Description : MCMC 診断 mark (forest/funnel/autocorr/ess)
+-- Description : MCMC diagnostic marks (forest, funnel, autocorrelation, ESS)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+--   [English]: Split off from the Render monolith (output-neutral, pure move).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -65,12 +66,21 @@ import           Graphics.Hgg.Render.Common
 -- Phase 6 A4: MCMC autocorrelation
 -- ===========================================================================
 
--- | autocorrelation plot (P19、 Phase 6 A4): 1 列の時系列から lag-k 自己相関 r(τ)
--- を計算 + bar chart。 ±1.96/√N の significance band も併せて。
--- | Autocorrelation plot (Phase 8 B12): encX = 生サンプル列、 lyChain = chain (任意)。
--- chain ごとに ACF ρ(k), k=0..maxLag を計算し、 lag を横軸に chain 別の細い棒で描く
--- (= bayesplot mcmc_acf_bar 流: ACF は plot 内で計算)。 x=lag/y=相関 で軸転置のため
--- Layout scale に頼らず自前マッピング。
+-- | [日本語]: autocorrelation plot: 1 列の時系列から lag-k 自己相関 r(τ)
+--   を計算 + bar chart。 ±1.96/√N の significance band も併せて。
+--   [English]: Autocorrelation plot: computes the lag-k autocorrelation r(τ)
+--   from a single time-series column and draws it as a bar chart, along with
+--   the ±1.96/√N significance band.
+-- | [日本語]: Autocorrelation plot: encX = 生サンプル列、 lyChain = chain (任意)。
+--   chain ごとに ACF ρ(k), k=0..maxLag を計算し、 lag を横軸に chain 別の細い棒で描く
+--   (= bayesplot mcmc_acf_bar 流: ACF は plot 内で計算)。 x=lag/y=相関 で軸転置のため
+--   Layout scale に頼らず自前マッピング。
+--   [English]: Autocorrelation plot: encX is the raw sample column, lyChain
+--   is the chain (optional). Computes ACF ρ(k) for k=0..maxLag per chain and
+--   draws thin per-chain bars along the lag axis (in the style of
+--   bayesplot's mcmc_acf_bar, where the ACF is computed inside the plot).
+--   Since x=lag / y=correlation transposes the axes, this uses its own
+--   mapping rather than relying on the Layout scale.
 renderAutocorr :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderAutocorr r layout thePal ly =
   let xs     = V.toList (vecOr (lyEncX ly) r)
@@ -155,10 +165,17 @@ renderAutocorr r layout thePal ly =
 -- Phase 6 A5: Effective Sample Size
 -- ===========================================================================
 
--- | ESS plot (Phase 8 B13): encX = パラメータ/chain 名、 encY = 計算済み ESS 値。
--- ESS 計算は統計ライブラリの責務、 plot は値を棒にするだけ (= ggplot/bayesplot 流の
--- 計算と描画の分離)。 ESS 閾値 (100/400) で色分け (赤=低い/橙=中/緑=高い)。
--- x=名前/y=ESS で軸が転置するため Layout scale に頼らず自前マッピング。
+-- | [日本語]: ESS plot: encX = パラメータ/chain 名、 encY = 計算済み ESS 値。
+--   ESS 計算は統計ライブラリの責務、 plot は値を棒にするだけ (= ggplot/bayesplot 流の
+--   計算と描画の分離)。 ESS 閾値 (100/400) で色分け (赤=低い/橙=中/緑=高い)。
+--   x=名前/y=ESS で軸が転置するため Layout scale に頼らず自前マッピング。
+--   [English]: ESS plot: encX is the parameter/chain name, encY is the
+--   pre-computed ESS value. ESS computation is the statistics library's
+--   responsibility; the plot just turns the values into bars (following the
+--   ggplot/bayesplot convention of separating computation from drawing).
+--   Colored by the ESS threshold (100/400): red = low, orange = medium,
+--   green = high. Since x=name / y=ESS transposes the axes, this uses its
+--   own mapping rather than relying on the Layout scale.
 renderESS :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderESS r layout thePal ly =
   let names = catLabelsOf r ly
@@ -219,8 +236,12 @@ renderESS r layout thePal ly =
 -- Phase 6 A2: Forest plot
 -- ===========================================================================
 
--- | Forest plot (Phase 6 A2): 各 row が「label + 点推定 + CI」 の horizontal CI bar 群。
--- encY = label index (= 0..n-1)、 encX = estimate、 errorX = ± 半幅。 中央 vertical 線。
+-- | [日本語]: Forest plot: 各 row が「label + 点推定 + CI」 の horizontal CI bar 群。
+--   encY = label index (= 0..n-1)、 encX = estimate、 errorX = ± 半幅。 中央 vertical 線。
+--   [English]: Forest plot: each row is a horizontal CI bar showing
+--   "label + point estimate + CI". encY is the label index (0..n-1), encX is
+--   the estimate, and errorX is the ± half-width. Includes a central
+--   vertical line.
 renderForest :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderForest r layout pal ly =
   let ests = V.toList (vecOr (lyEncX ly) r)
@@ -261,8 +282,11 @@ renderForest r layout pal ly =
 -- Phase 6 A3: Funnel plot
 -- ===========================================================================
 
--- | Funnel plot (Phase 6 A3): 効果量 vs 標準誤差の散布図 + 95% envelope。
--- encX = effect、 encY = SE。 envelope は y range の最大 SE まで diagonal で描画。
+-- | [日本語]: Funnel plot: 効果量 vs 標準誤差の散布図 + 95% envelope。
+--   encX = effect、 encY = SE。 envelope は y range の最大 SE まで diagonal で描画。
+--   [English]: Funnel plot: a scatter of effect size vs. standard error plus
+--   a 95% envelope. encX is the effect, encY is the SE. The envelope is
+--   drawn diagonally out to the maximum SE in the y range.
 renderFunnel :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderFunnel r layout pal ly =
   let effects = V.toList (vecOr (lyEncX ly) r)

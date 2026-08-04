@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.Statistical
--- Description : 統計 mark (qq/ecdf/rangebar/heatmap/contour/regression/density/statline)
+-- Description : Statistical marks: qq, ecdf, rangebar, heatmap, contour, regression, density, statline
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+--   [English]: Split out from the Render monolith (an output-neutral, pure move).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -64,10 +65,16 @@ import           Graphics.Hgg.Primitive
 import           Graphics.Hgg.Render.Common
 
 
--- | Phase 11 A6-2: Q-Q plot (= ggplot geom_qq)。 sample (encY) をソートして
--- order statistic を y、 理論正規分位点 Φ⁻¹((i-0.5)/n) を x に取り点を描く。
--- 理論分位点は 'qqPoints' (RangeOf) を単一情報源として共有 (= x range と一致)。
--- 参照線 (qq line) は ggplot でも別 geom (geom_qq_line) なので本 geom は点のみ。
+-- | [日本語]: Q-Q plot (= ggplot geom_qq)。 sample (encY) をソートして
+--   order statistic を y、 理論正規分位点 Φ⁻¹((i-0.5)/n) を x に取り点を描く。
+--   理論分位点は 'qqPoints' (RangeOf) を単一情報源として共有 (= x range と一致)。
+--   参照線 (qq line) は ggplot でも別 geom (geom_qq_line) なので本 geom は点のみ。
+--   [English]: A Q-Q plot (ggplot's geom_qq). Sorts the sample (encY) and
+--   plots points with the order statistic as y and the theoretical normal
+--   quantile Φ⁻¹((i-0.5)/n) as x. The theoretical quantiles are shared from
+--   a single source, 'qqPoints' (RangeOf), so they match the x range. Even in
+--   ggplot the reference line (qq line) is a separate geom (geom_qq_line), so
+--   this geom draws only the points.
 renderQQ :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderQQ r layout pal ly =
   let sample = V.toList (vecOr (lyEncY ly) r)
@@ -80,8 +87,11 @@ renderQQ r layout pal ly =
                (FillStyle c a) (Just (StrokeStyle c 1.0)) Nothing
      | (xt, y) <- pts ]
 
--- | Phase 11 A6-4: ECDF (= ggplot stat_ecdf)。 sample (encX) をソートして右連続の
--- 階段 F(x)=#(≤x)/n を描く。 角点列 'ecdfPoints' を単一情報源とし連続線で結ぶ。
+-- | [日本語]: ECDF (= ggplot stat_ecdf)。 sample (encX) をソートして右連続の
+--   階段 F(x)=#(≤x)/n を描く。 角点列 'ecdfPoints' を単一情報源とし連続線で結ぶ。
+--   [English]: An ECDF (ggplot's stat_ecdf). Sorts the sample (encX) and draws
+--   the right-continuous step function F(x)=#(≤x)/n. The corner points come
+--   from a single source, 'ecdfPoints', connected with a continuous line.
 renderEcdf :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderEcdf r layout pal ly =
   let sample = V.toList (vecOr (lyEncX ly) r)
@@ -97,9 +107,14 @@ renderEcdf r layout pal ly =
        [] -> []
        _  -> map mkSeg (zip verts (tail verts))
 
--- | Phase 11 A6-4b: 区間 geom (linerange / pointrange / crossbar)。 各 (x,y) に縦区間
--- y±errorY を描く。 withPoint=中心点を足す (pointrange)、 asBox=幅付き箱+中央線 (crossbar)。
--- 箱の半幅は px 固定 (= error bar cap と同じ px 空間、 連続 x でも安定)。
+-- | [日本語]: 区間 geom (linerange / pointrange / crossbar)。 各 (x,y) に縦区間
+--   y±errorY を描く。 withPoint=中心点を足す (pointrange)、 asBox=幅付き箱+中央線 (crossbar)。
+--   箱の半幅は px 固定 (= error bar cap と同じ px 空間、 連続 x でも安定)。
+--   [English]: A range geom (linerange / pointrange / crossbar). Draws a
+--   vertical interval y±errorY at each (x,y). withPoint adds a center point
+--   (pointrange); asBox draws a box with a width plus a center line
+--   (crossbar). The box half-width is fixed in px (the same px space as the
+--   error-bar cap, so it stays stable even for continuous x).
 renderRangeBar :: Resolver -> Layout -> ThemePalette -> Layer -> Bool -> Bool -> [Primitive]
 renderRangeBar r layout pal ly withPoint asBox =
   let xs = V.toList (vecOr (lyEncX ly) r)
@@ -136,10 +151,17 @@ renderRangeBar r layout pal ly withPoint asBox =
                     else [])
   in if n <= 0 then [] else concatMap mkOne [0 .. n - 1]
 
--- | Phase 11 A6-3: heatmap (= ggplot geom_tile)。 x/y はカテゴリ列、 value (= lyColor の
--- ColorByContinuous) を各 (x,y) セルの連続色 (Viridis) に写して矩形で塗る。 セルは data 空間で
--- カテゴリ中心 ±0.5 の 1 単位四方 (= projectRectData で flip も自動追従)。 cell 間は背景色の
--- 細い枠で区切る (= grid 状)。 同 (x,y) が重複する行は後勝ち (= 描画順で上書き)。
+-- | [日本語]: heatmap (= ggplot geom_tile)。 x/y はカテゴリ列、 value (= lyColor の
+--   ColorByContinuous) を各 (x,y) セルの連続色 (Viridis) に写して矩形で塗る。 セルは data 空間で
+--   カテゴリ中心 ±0.5 の 1 単位四方 (= projectRectData で flip も自動追従)。 cell 間は背景色の
+--   細い枠で区切る (= grid 状)。 同 (x,y) が重複する行は後勝ち (= 描画順で上書き)。
+--   [English]: A heatmap (ggplot's geom_tile). x/y are categorical columns;
+--   the value (lyColor's ColorByContinuous) is mapped to a continuous color
+--   (Viridis) and painted as a rectangle for each (x,y) cell. Cells are a
+--   one-unit square in data space, category center ±0.5 (using
+--   projectRectData, so flip is handled automatically). Cells are separated
+--   by a thin border in the background color (a grid look). When (x,y) is
+--   duplicated across rows, the last one wins (overwritten in draw order).
 renderHeatmap :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderHeatmap r layout pal ly =
   let toLabels mcr = case getLast mcr of
@@ -165,11 +187,19 @@ renderHeatmap r layout pal ly =
         Just (PRect rc (FillStyle c a) (Just (StrokeStyle (tpBackground pal) 1.0)))
   in if n <= 0 then [] else mapMaybe mkCell [0 .. n - 1]
 
--- | Phase 28 (Ch10 EDA): geom_count (= ggplot @geom_count()@ / @stat_sum@)。
--- x/y はともにカテゴリ列。 各 (x,y) セルの観測件数を集計し、 cell 中心に
--- **面積 ∝ 件数** (= 半径 ∝ √件数) の点を打つ。 最大件数のセルが半径 maxR (px)、
--- 件数 0 のセルは描かない。 maxR は lySize で上書き可 (既定 18 → 半径 9)。
--- heatmap と同じカテゴリ軸 (lpX/YCategoryLabels) を用いるので両軸自動でカテゴリ化。
+-- | [日本語]: geom_count (Ch10 EDA、 = ggplot @geom_count()@ / @stat_sum@)。
+--   x/y はともにカテゴリ列。 各 (x,y) セルの観測件数を集計し、 cell 中心に
+--   __面積 ∝ 件数__ (= 半径 ∝ √件数) の点を打つ。 最大件数のセルが半径 maxR (px)、
+--   件数 0 のセルは描かない。 maxR は lySize で上書き可 (既定 18 → 半径 9)。
+--   heatmap と同じカテゴリ軸 (lpX/YCategoryLabels) を用いるので両軸自動でカテゴリ化。
+--   [English]: geom_count (Ch10 EDA, ggplot's @geom_count()@ / @stat_sum@).
+--   Both x and y are categorical columns. Tallies the observation count per
+--   (x,y) cell and plots a point at each cell center, sized so
+--   __area is proportional to count__ (radius proportional to √count). The
+--   highest-count cell gets radius maxR (px); cells with count 0 are not
+--   drawn. maxR can be overridden via lySize (default 18, giving radius 9).
+--   Uses the same categorical axes as heatmap (lpX/YCategoryLabels), so both
+--   axes become categorical automatically.
 renderCount :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderCount r layout pal ly =
   let toLabels mcr = case getLast mcr of
@@ -201,17 +231,35 @@ renderCount r layout pal ly =
                    (FillStyle c a) (Just (StrokeStyle c 1.0)) Nothing
   in if n <= 0 then [] else map mkPt counts
 
--- | contour (= 等高線図、 marching squares)。 連続 x/y/z を正則格子に再標本化
--- (inverse-distance weighting で散布点 → ノード) し、 z 範囲を等分した nLev 段の
--- **等値線**を marching squares で描く。 各等値線は z 値で連続色 (Viridis)。
--- 旧実装は binned heatmap だったが、 「contour = 等高線」 の名に合わせ isolines に
--- (binned heatmap が要るなら 'bin2d')。 HS=PS 同式 (PS renderContour も同型)。
+-- | [日本語]: contour (= 等高線図、 marching squares)。 連続 x/y/z を正則格子に再標本化
+--   (inverse-distance weighting で散布点 → ノード) し、 z 範囲を等分した nLev 段の
+--   __等値線__を marching squares で描く。 各等値線は z 値で連続色 (Viridis)。
+--   旧実装は binned heatmap だったが、 「contour = 等高線」 の名に合わせ isolines に
+--   (binned heatmap が要るなら 'Graphics.Hgg.Spec.Constructors.bin2d')。 HS=PS 同式 (PS renderContour も同型)。
 --
--- TODO (Phase 14 繰越、 2026-06-04): 等値線が**ガタつく**。 原因 = ① IDW は各データ点で
--- 尖る (cusp) ため格子データでも滑らかにならない、 ② 32×32 再標本化が粗い、 ③ marching
--- squares の線形補間で階段状になりやすい。 改善案 = (a) IDW を**双線形補間** (元が格子なら
--- 格子直引き) に置換、 (b) 再標本化後に軽い Gaussian smoothing、 (c) 解像度↑。
--- HS/PS 両方に同じ修正が要る (parity 維持)。
+--   TODO (繰越、 2026-06-04): 等値線が__ガタつく__。 原因 = ① IDW は各データ点で
+--   尖る (cusp) ため格子データでも滑らかにならない、 ② 32×32 再標本化が粗い、 ③ marching
+--   squares の線形補間で階段状になりやすい。 改善案 = (a) IDW を__双線形補間__ (元が格子なら
+--   格子直引き) に置換、 (b) 再標本化後に軽い Gaussian smoothing、 (c) 解像度↑。
+--   HS/PS 両方に同じ修正が要る (parity 維持)。
+--   [English]: A contour plot (isolines via marching squares). Resamples
+--   continuous x/y/z onto a regular grid (scattered points to nodes, via
+--   inverse-distance weighting) and draws __isolines__ at nLev levels evenly
+--   spaced across the z range, using marching squares. Each isoline is
+--   colored continuously (Viridis) by its z value. The previous
+--   implementation was a binned heatmap, but this was changed to isolines to
+--   match the name "contour" (use 'Graphics.Hgg.Spec.Constructors.bin2d' if a binned heatmap is needed).
+--   HS and PS share the same formulas (PS's renderContour is structurally
+--   identical).
+--
+--   TODO (carried over, 2026-06-04): the isolines are __jagged__. Causes: (1)
+--   IDW cusps at each data point, so even gridded data does not smooth out;
+--   (2) the 32×32 resampling is coarse; (3) marching squares' linear
+--   interpolation tends to look stair-stepped. Possible fixes: (a) replace
+--   IDW with __bilinear interpolation__ (reading the grid directly when the
+--   source is already gridded), (b) light Gaussian smoothing after
+--   resampling, (c) higher resolution. The same fix is needed in both HS and
+--   PS (to keep parity).
 renderContour :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderContour r layout _pal ly =
   case contourInput r ly of
@@ -228,11 +276,19 @@ renderContour r layout _pal ly =
             | ((ax,ay),(bx,by)) <- marchingSegments xNodes yNodes gridL lv ]
       in if zmax <= zmin then [] else concatMap drawLevel levels
 
--- | Phase 24 A4: contour / filled contour の共通入力 — (x,y,z) triple を
--- 'gridOf' で格子化する。 ★規則 grid 入力 (計画格子・linspace 由来) は
--- **補間せず直入力** (旧実装は常に全点 IDW で 32x32 再標本化しており、
--- 規則 grid でも等値線が歪む + 隅に偽輪郭が出るバグだった)。
--- 散布入力のみ k 近傍 IDW で 32x32 へ。 格子の向きは grid!!j!!i (行 = y)。
+-- | [日本語]: contour / filled contour の共通入力 — (x,y,z) triple を
+--   'gridOf' で格子化する。 ★規則 grid 入力 (計画格子・linspace 由来) は
+--   __補間せず直入力__ (旧実装は常に全点 IDW で 32x32 再標本化しており、
+--   規則 grid でも等値線が歪む + 隅に偽輪郭が出るバグだった)。
+--   散布入力のみ k 近傍 IDW で 32x32 へ。 格子の向きは grid!!j!!i (行 = y)。
+--   [English]: The shared input for contour / filled contour — grids
+--   (x,y,z) triples via 'gridOf'. A regular grid input (a planned grid,
+--   e.g. from linspace) is __used directly, without interpolation__ (the
+--   old implementation always resampled all points to 32x32 via IDW, which
+--   distorted the isolines and produced spurious contours at the corners
+--   even for an already-regular grid). Only scattered input goes through
+--   k-nearest-neighbor IDW to 32x32. Grid orientation is grid!!j!!i (rows
+--   are y).
 contourInput :: Resolver -> Layer
              -> Maybe ([Double], [Double], V.Vector (V.Vector Double), Double, Double)
 contourInput r ly =
@@ -250,10 +306,16 @@ contourInput r ly =
            allZ  = concat grid
        in Just (xNodes, yNodes, gridV, minimum allZ, maximum allZ)
 
--- | Phase 24 A4: 等高線レベル。 明示 breaks ('contourBreaks') > 本数指定
--- ('contourLevels'、 既定 8)。 既定は (zmin, zmax) の**内側等間隔**
--- (lv_k = zmin + (zmax-zmin)·k/(n+1)) — 端値ちょうどの退化等値線を避ける
--- (旧実装の 15%-95% クランプは廃止 = 端近くのレベルも出る)。
+-- | [日本語]: 等高線レベル。 明示 breaks ('Graphics.Hgg.Spec.Constructors.contourBreaks') > 本数指定
+--   ('Graphics.Hgg.Spec.Constructors.contourLevels'、 既定 8)。 既定は (zmin, zmax) の__内側等間隔__
+--   (lv_k = zmin + (zmax-zmin)·k/(n+1)) — 端値ちょうどの退化等値線を避ける
+--   (旧実装の 15%-95% クランプは廃止 = 端近くのレベルも出る)。
+--   [English]: Contour levels. Explicit breaks ('Graphics.Hgg.Spec.Constructors.contourBreaks') take
+--   priority over a count ('Graphics.Hgg.Spec.Constructors.contourLevels', default 8). The default is
+--   __evenly spaced strictly inside__ (zmin, zmax)
+--   (lv_k = zmin + (zmax-zmin)·k/(n+1)) — this avoids a degenerate isoline
+--   exactly at an endpoint (the old 15%-95% clamp has been removed, so
+--   levels near the edges are also produced).
 contourLevelsFor :: Layer -> Double -> Double -> [Double]
 contourLevelsFor ly zmin zmax =
   case getLast (lyContourBreaks ly) of
@@ -261,10 +323,18 @@ contourLevelsFor ly zmin zmax =
     Nothing ->
       innerLevels (max 1 (fromMaybe 8 (getLast (lyContourLevels ly)))) zmin zmax
 
--- | Phase 24 A4: filled contour (等値帯の塗り)。 各セルを「最下帯の色で全塗り →
--- level 昇順に z >= lv の部分多角形を上塗り」 の累積方式で塗る (セル内は
--- marching squares と同じ線形補間の境界 = 'contour' の線と整合)。
--- saddle セル (対角ケース) は頂点巡回順の単一多角形で近似 (v1 既知の限界)。
+-- | [日本語]: filled contour (等値帯の塗り)。 各セルを「最下帯の色で全塗り →
+--   level 昇順に z >= lv の部分多角形を上塗り」 の累積方式で塗る (セル内は
+--   marching squares と同じ線形補間の境界 = 'Graphics.Hgg.Spec.Constructors.contour' の線と整合)。
+--   saddle セル (対角ケース) は頂点巡回順の単一多角形で近似 (v1 既知の限界)。
+--   [English]: A filled contour (painting the isobands). Each cell is
+--   painted by an accumulation method: fill the whole cell with the lowest
+--   band's color, then overpaint the sub-polygon where z >= lv for each
+--   level in ascending order (the boundary within a cell uses the same
+--   linear interpolation as marching squares, so it stays consistent with
+--   the lines drawn by 'Graphics.Hgg.Spec.Constructors.contour'). Saddle cells (the diagonal case) are
+--   approximated as a single polygon following vertex traversal order (a
+--   known limitation of v1).
 renderContourFilled :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderContourFilled r layout _pal ly =
   case contourInput r ly of
@@ -317,10 +387,17 @@ renderContourFilled r layout _pal ly =
             in base ++ ups
       in concat [ cellPrims i j | i <- [0 .. nx - 2], j <- [0 .. ny - 2] ]
 
--- | binned heatmap (= ggplot geom_bin2d)。 連続 x/y/z を nBins×nBins の grid に
--- binning し、 各セルの z 平均を連続色 (Viridis) で塗る。 'renderContour' (等高線) の
--- 塗り版。 セルは生 data 範囲 [xLo,xHi]×[yLo,yHi] を等分し projectRectData で投影
--- (flip 自動追従)。 空セルは描かない。 PS と同一式。
+-- | [日本語]: binned heatmap (= ggplot geom_bin2d)。 連続 x/y/z を nBins×nBins の grid に
+--   binning し、 各セルの z 平均を連続色 (Viridis) で塗る。 'renderContour' (等高線) の
+--   塗り版。 セルは生 data 範囲 [xLo,xHi]×[yLo,yHi] を等分し projectRectData で投影
+--   (flip 自動追従)。 空セルは描かない。 PS と同一式。
+--   [English]: A binned heatmap (ggplot's geom_bin2d). Bins continuous x/y/z
+--   onto an nBins×nBins grid and paints each cell's z average as a
+--   continuous color (Viridis). The filled counterpart of 'renderContour'
+--   (isolines). Cells evenly divide the raw data range
+--   [xLo,xHi]×[yLo,yHi] and are projected via projectRectData (flip is
+--   handled automatically). Empty cells are not drawn. Uses the same
+--   formula as PS.
 renderBin2d :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBin2d r layout _pal ly =
   let xs = V.toList (vecOr (lyEncX ly) r)
@@ -363,12 +440,23 @@ renderBin2d r layout _pal ly =
                in [ PRect rc (FillStyle col 1.0) (Just (StrokeStyle "#ffffff" 0.3)) ]
        in if null means then [] else concatMap drawCell cells
 
--- | geom_tile / geom_raster 相当 (Phase 60)。 __1 行 = 1 セル__。 連続 x/y をセル中心とし、
--- fill (colorBy = 'ColorByCol' 離散 / 'ColorByContinuous' 連続) の色で矩形をベタ塗りする。
--- bin2d と違い**再ビニングしない** (事前計算済みグリッドをそのまま塗る)。 セル幅/高さは
--- sorted unique x/y の隣接差分の最小 = 格子間隔から自動 (ggplot @resolution()@ 相当・隙間なし)。
--- 決定境界の res×res グリッド塗り (縞解消) が主用途。 色/凡例は 'colorVector' + color-enc 駆動
--- guide が自動処理 (categorical なら離散パレット + 離散凡例)。 枠線なし = seamless。
+-- | [日本語]: geom_tile / geom_raster 相当。 __1 行 = 1 セル__。 連続 x/y をセル中心とし、
+--   fill (colorBy = 'ColorByCol' 離散 / 'ColorByContinuous' 連続) の色で矩形をベタ塗りする。
+--   bin2d と違い__再ビニングしない__ (事前計算済みグリッドをそのまま塗る)。 セル幅/高さは
+--   sorted unique x/y の隣接差分の最小 = 格子間隔から自動 (ggplot @resolution()@ 相当・隙間なし)。
+--   決定境界の res×res グリッド塗り (縞解消) が主用途。 色/凡例は 'Graphics.Hgg.Render.Common.colorVector' + color-enc 駆動
+--   guide が自動処理 (categorical なら離散パレット + 離散凡例)。 枠線なし = seamless。
+--   [English]: The equivalent of geom_tile / geom_raster.
+--   __Each row is one cell__. Treats continuous x/y as cell centers and
+--   flat-fills each rectangle with the fill color (colorBy: discrete via
+--   'ColorByCol' or continuous via 'ColorByContinuous'). Unlike bin2d, it
+--   __does not rebin__ (it paints the precomputed grid as-is). Cell width/height are
+--   derived automatically from the grid spacing — the minimum adjacent
+--   difference among sorted unique x/y values (equivalent to ggplot's
+--   @resolution()@, with no gaps). Its main use is painting a res×res
+--   decision-boundary grid (to remove banding). Color/legend handling is
+--   automatic via 'Graphics.Hgg.Render.Common.colorVector' plus the color-enc-driven guide (a discrete
+--   palette and discrete legend for categorical data). No border, i.e. seamless.
 renderTile :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderTile r layout pal ly =
   let xs = V.toList (vecOr (lyEncX ly) r)
@@ -386,18 +474,28 @@ renderTile r layout pal ly =
         in PRect rc (FillStyle c a) Nothing   -- 隙間なし = 枠線なし (seamless)
   in if n <= 0 then [] else map mkCell [0 .. n - 1]
 
--- | sorted unique 値の隣接差分の最小を格子間隔とする (ggplot @resolution()@)。
--- 単一値 / 差分無しは 1.0 fallback。
+-- | [日本語]: sorted unique 値の隣接差分の最小を格子間隔とする (ggplot @resolution()@)。
+--   単一値 / 差分無しは 1.0 fallback。
+--   [English]: Takes the minimum adjacent difference among sorted unique
+--   values as the grid spacing (ggplot's @resolution()@). Falls back to
+--   1.0 for a single value or when there is no difference.
 gridStep :: [Double] -> Double
 gridStep vs =
   let us    = map head (groupBy (==) (sort vs))   -- sorted unique
       diffs = [ b - x | (x, b) <- zip us (drop 1 us), b > x ]
   in if null diffs then 1.0 else minimum diffs
 
--- | Phase 40: hexbin (= ggplot @geom_hex@ / matplotlib @hexbin@)。 連続 x/y を六角格子に
---   binning し、 各セルの**件数**を連続色 (Viridis) の pointy-top 六角形で塗る。 セル分割数は
---   'lyBinCount' (既定 30)。 binning は純関数 'hexbinCells' (d3-hexbin)、 描画はその 6 頂点を
+-- | [日本語]: hexbin (= ggplot @geom_hex@ / matplotlib @hexbin@)。 連続 x/y を六角格子に
+--   binning し、 各セルの__件数__を連続色 (Viridis) の pointy-top 六角形で塗る。 セル分割数は
+--   'lyBinCount' (既定 30)。 binning は純関数 'Graphics.Hgg.Spec.Constructors.hexbinCells' (d3-hexbin)、 描画はその 6 頂点を
 --   'projectPoint' で screen へ投影して 'PPath' で塗る。 colorbar は count guide (別途) が出す。
+--   [English]: A hexbin (ggplot's @geom_hex@ / matplotlib's @hexbin@). Bins
+--   continuous x/y onto a hexagonal grid and paints each cell's __count__ as
+--   a pointy-top hexagon in a continuous color (Viridis). The number of
+--   cells is controlled by 'lyBinCount' (default 30). Binning is the pure
+--   function 'Graphics.Hgg.Spec.Constructors.hexbinCells' (d3-hexbin); drawing projects its 6 vertices to
+--   screen space via 'projectPoint' and paints them as a 'PPath'. The
+--   colorbar is emitted separately by the count guide.
 renderHexbin :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderHexbin r layout _pal ly =
   case hexbinLayerCells r ly of
@@ -432,12 +530,21 @@ renderStatLine r layout pal ly statF =
     in [ PLine (Point (rX a) (sy v)) (Point (rX a + rW a) (sy v))
                (solid c w) ]
 
--- | Density plot (= Gaussian KDE 簡易版)。 lyEncX = 値ベクター。
--- bandwidth は Silverman の経験則、 100 grid 点で評価して PPath で曲線描画。
+-- | [日本語]: Density plot (= Gaussian KDE 簡易版)。 lyEncX = 値ベクター。
+--   bandwidth は Silverman の経験則、 100 grid 点で評価して PPath で曲線描画。
 --
--- color/fill aesthetic (= 'ColorByCol') があるときは群ごとに分割し、 各群を
--- 独立に正規化した KDE 曲線を群色で重ねて描く (= ggplot @geom_density(aes(color=g))@)。
--- 各群の peak が異なるので y domain も群対応 (RangeOf.densityYRange と整合)。
+--   color/fill aesthetic (= 'ColorByCol') があるときは群ごとに分割し、 各群を
+--   独立に正規化した KDE 曲線を群色で重ねて描く (= ggplot @geom_density(aes(color=g))@)。
+--   各群の peak が異なるので y domain も群対応 (RangeOf.densityYRange と整合)。
+--   [English]: A density plot (a simplified Gaussian KDE). lyEncX is the
+--   value vector. Bandwidth follows Silverman's rule of thumb, evaluated at
+--   100 grid points and drawn as a curve via 'PPath'.
+--
+--   When a color/fill aesthetic ('ColorByCol') is present, splits by group
+--   and overlays each group's independently normalized KDE curve in its
+--   group color (ggplot's @geom_density(aes(color=g))@). Since each group's
+--   peak differs, the y domain is also group-aware (consistent with
+--   RangeOf.densityYRange).
 renderDensity :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderDensity r layout pal ly =
   let xsFull = V.toList (vecOrFull (lyEncX ly) r)   -- 長さ保持 (群キーと整列するため)
@@ -533,12 +640,21 @@ renderDensity r layout pal ly =
                       in [ PPath (segs ++ [LineTo baseR, LineTo baseL]) (FillStyle c fillA) Nothing ]
             in fillPrim ++ [ PPath segs (FillStyle "" 0) (Just (StrokeStyle c w)) ]
 
--- | 頻度多角形 (Ch10 EDA, Phase 28): @geom_freqpoly@。 histogram と同じ bin 化
--- ('histBinning') で各 bin の count を求め、 bin 中心 @origin+(i+0.5)*binW@ と count を
--- 折れ線で結ぶ (KDE の 'renderDensity' とは別物 = ビン頻度の生の折れ線)。 空 bin は
--- count 0 として線が底に落ちる (ggplot geom_freqpoly と同じ)。 'lyHistDensity' True で
--- after_stat(density) = count/(群N*binW) に正規化 (面積 1)。 color 群分割
--- (lyColor = ColorByCol) は 'renderDensity' と同方式で群ごとに別色の折れ線を重ねる。
+-- | [日本語]: 頻度多角形 (Ch10 EDA): @geom_freqpoly@。 histogram と同じ bin 化
+--   ('histBinning') で各 bin の count を求め、 bin 中心 @origin+(i+0.5)*binW@ と count を
+--   折れ線で結ぶ (KDE の 'renderDensity' とは別物 = ビン頻度の生の折れ線)。 空 bin は
+--   count 0 として線が底に落ちる (ggplot geom_freqpoly と同じ)。 'lyHistDensity' True で
+--   after_stat(density) = count/(群N*binW) に正規化 (面積 1)。 color 群分割
+--   (lyColor = ColorByCol) は 'renderDensity' と同方式で群ごとに別色の折れ線を重ねる。
+--   [English]: A frequency polygon (Ch10 EDA): @geom_freqpoly@. Uses the same
+--   binning as histogram ('histBinning') to get each bin's count, then
+--   connects the bin center @origin+(i+0.5)*binW@ and count with a line
+--   (distinct from the KDE-based 'renderDensity' — this is the raw polyline
+--   of bin frequencies). Empty bins fall to count 0, so the line drops to
+--   the baseline (same as ggplot's geom_freqpoly). With 'lyHistDensity' set
+--   to True, normalizes to after_stat(density) = count/(groupN*binW) (area
+--   1). Color-based grouping (lyColor = ColorByCol) overlays a differently
+--   colored line per group, the same way as 'renderDensity'.
 renderFreqPoly :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderFreqPoly r layout pal ly =
   let xs        = V.toList (vecOr (lyEncX ly) r)

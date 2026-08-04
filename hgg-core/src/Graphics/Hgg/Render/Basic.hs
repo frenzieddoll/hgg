@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.Basic
--- Description : 基本 mark (scatter/line/bar/histogram/band/step/stem)
+-- Description : Basic marks: scatter, line, bar, histogram, band, step, stem
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+--   [English]: Split out from the Render monolith (an output-neutral, pure move).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -63,10 +64,13 @@ import           Graphics.Hgg.Primitive
 import           Graphics.Hgg.Render.Common
 
 
--- | TODO-11 (2026-05-27): area band (= 信頼区間 / 予測帯)。
--- |   encX  = 共通 x、 encY = 下境界、 encY2 = 上境界
--- | PPath fill 1 枚 (= forward x-yLow + backward x-yHigh + close)。
--- | alpha は layer modifier (default 0.2)。
+-- | [日本語]: TODO-11 (2026-05-27): area band (= 信頼区間 / 予測帯)。
+--   encX = 共通 x、 encY = 下境界、 encY2 = 上境界。 PPath fill 1 枚 (= forward
+--   x-yLow + backward x-yHigh + close)。 alpha は layer modifier (default 0.2)。
+--   [English]: TODO-11 (2026-05-27): an area band (a confidence interval /
+--   prediction band). encX is the shared x, encY the lower bound, encY2 the
+--   upper bound. Drawn as a single filled 'PPath' (forward along x-yLow,
+--   backward along x-yHigh, then close). alpha is a layer modifier (default 0.2).
 renderBand :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBand r layout pal ly =
   let xs   = V.toList (vecOr (lyEncX ly) r)
@@ -97,10 +101,17 @@ renderBand r layout pal ly =
        in if null segs then []
           else [ PPath segs (FillStyle c a) Nothing ]
 
--- | Phase 52.D2: streamgraph (= 中心化積層 area、 ThemeRiver 風)。 color aes で系列分割し
--- (= 'renderBarGrouped' と同型の群キー取得)、 各 x 値で系列 y を積層、 baseline を
--- -(Σy)/2 から開始 (silhouette 中心化) して各系列を塗り polygon ('renderBand' と同型の
--- forward 下境界 + backward 上境界 + close) で描く。 wiggle 最小化 (ThemeRiver) は行わない。
+-- | [日本語]: streamgraph (= 中心化積層 area、 ThemeRiver 風)。 color aes で系列分割し
+--   (= 'renderBarGrouped' と同型の群キー取得)、 各 x 値で系列 y を積層、 baseline を
+--   -(Σy)/2 から開始 (silhouette 中心化) して各系列を塗り polygon ('renderBand' と同型の
+--   forward 下境界 + backward 上境界 + close) で描く。 wiggle 最小化 (ThemeRiver) は行わない。
+--   [English]: A streamgraph (a centered stacked area, ThemeRiver-style). Splits
+--   series by the color aesthetic (using the same group-key extraction as
+--   'renderBarGrouped'), stacks each series' y value at every x, and starts the
+--   baseline at -(Σy)/2 (silhouette centering) before filling each series as a
+--   polygon (a forward lower boundary plus a backward upper boundary plus
+--   close, the same shape as 'renderBand'). Wiggle minimization (as in
+--   ThemeRiver) is not performed.
 renderStream :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderStream r layout pal ly =
   let xsAll = V.toList (vecOr (lyEncX ly) r)
@@ -144,7 +155,8 @@ renderStream r layout pal ly =
   in if n < 2 || length xUniq < 2 || null groups then []
      else concat [ mkSeries gi | gi <- [0 .. length groups - 1] ]
 
--- | Scatter: 各 (x, y) を PCircle に。
+-- | [日本語]: Scatter: 各 (x, y) を PCircle に。
+--   [English]: Scatter: renders each (x, y) as a 'PCircle'.
 renderScatter :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderScatter r layout pal ly =
   -- NA 行を整列したまま落とすため vecOrFull (= 長さ保持) を使い、 点生成時に
@@ -256,11 +268,17 @@ renderScatter r layout pal ly =
 -- Phase 26 A2: vector field (quiver)
 -- ===========================================================================
 
--- | 各 (x,y) に成分 (u,v) の矢印を描く (= matplotlib @quiver@)。 矢印長は
--- autoscale (= 最長矢印がデータ対角の 8%) に 'lyArrowScale' 倍を掛けた長さ。
--- 'lyArrowMagnitude' で magnitude (√(u²+v²)) の連続色マップ (viridis)。 矢印は
--- 始点 (x,y) を根元に置く (pivot=tail・matplotlib 既定)。 magnitude 0 の矢印は
--- 退化して描かれない。
+-- | [日本語]: 各 (x,y) に成分 (u,v) の矢印を描く (= matplotlib @quiver@)。 矢印長は
+--   autoscale (= 最長矢印がデータ対角の 8%) に 'lyArrowScale' 倍を掛けた長さ。
+--   'lyArrowMagnitude' で magnitude (√(u²+v²)) の連続色マップ (viridis)。 矢印は
+--   始点 (x,y) を根元に置く (pivot=tail・matplotlib 既定)。 magnitude 0 の矢印は
+--   退化して描かれない。
+--   [English]: Draws an arrow with components (u,v) at each (x,y) (matplotlib's
+--   @quiver@). Arrow length is the autoscaled length (the longest arrow spans 8%
+--   of the data diagonal) multiplied by 'lyArrowScale'. 'lyArrowMagnitude' maps
+--   magnitude (√(u²+v²)) to a continuous color scale (viridis). Arrows are
+--   anchored at the start point (x,y) (pivot=tail, matplotlib's default). Arrows
+--   with magnitude 0 degenerate and are not drawn.
 renderQuiver :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderQuiver r layout pal ly =
   let xs = vecOr (lyEncX ly) r
@@ -299,8 +317,11 @@ renderQuiver r layout pal ly =
   --   plotArea でクリップする (端の矢印は途切れる)。 = ドメイン拡張より自然。
   in PClipPush (lpPlotArea layout) : concatMap arrow idxs ++ [PClipPop]
 
--- | Phase 26 A2: 始点 from → 終点 to の矢印 (本線 + 2 本の矢じり)。 矢じり形状は
--- 'AnnArrow' (Render/Layer.hs) と同じ (長さ 2.5mm・開き比 0.5)。
+-- | [日本語]: 始点 from → 終点 to の矢印 (本線 + 2 本の矢じり)。 矢じり形状は
+--   'AnnArrow' (Render/Layer.hs) と同じ (長さ 2.5mm・開き比 0.5)。
+--   [English]: An arrow from the start point to the end point (a shaft plus two
+--   barbs). The barb shape matches 'AnnArrow' (Render/Layer.hs): length 2.5mm,
+--   opening ratio 0.5.
 drawArrow2D :: Point -> Point -> LineStyle -> [Primitive]
 drawArrow2D (Point px1 py1) (Point px2 py2) ls =
   let dx = px2 - px1; dy = py2 - py1
@@ -333,7 +354,7 @@ renderLine r layout pal ly =
   in case getLast (lyColor ly) of
        -- Phase 52.A10: ColorByCol は群ごとに色付き線 (= ggplot color=group)。 単一カテゴリ
        -- (statLabel 1 本) なら 1 本を該当カテゴリ色で描く。 旧実装は ColorByCol を staticColorOr
-       -- が拾えず default 単色に潰れ、 異モデル重畳の色分けが効かなかった。 色は 'colorVector'
+       -- が拾えず default 単色に潰れ、 異モデル重畳の色分けが効かなかった。 色は 'Graphics.Hgg.Render.Common.colorVector'
        -- (scale_color_manual 辞書→palette index) を流用し各群代表点 (=同カテゴリゆえ同色) を採る。
        Just (ColorByCol cr) | Just keys <- groupKeysOf r cr ->
          let cs     = V.toList (colorVector r layout pal ly (length xs))
@@ -357,10 +378,14 @@ renderLine r layout pal ly =
                           | (i, (_, gpts)) <- zip [0 ..] (orderedGroups keys (zip xs ys)) ]
               Nothing   -> seg c fixedDash (zip xs ys)
 
--- | Phase 9 B: position adjustment 対応 dispatcher。
+-- | [日本語]: position adjustment 対応 dispatcher。
 --   既定 (position identity) または群分け (color aesthetic) 無しは従来の単色 bar
 --   ('renderBarSimple')。 dodge/stack/fill かつ categorical x かつ ColorByCol 群分けあり
 --   のとき 'renderBarGrouped' で系列を並べる。
+--   [English]: The position-adjustment dispatcher. With the default (position
+--   identity) or no grouping (color aesthetic), falls back to the plain
+--   single-color bar ('renderBarSimple'). With dodge/stack/fill, categorical x,
+--   and a 'ColorByCol' grouping, arranges series with 'renderBarGrouped'.
 renderBar :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBar r layout pal ly =
   let pos = maybe PosIdentity id (getLast (lyPosition ly))
@@ -376,9 +401,13 @@ renderBar r layout pal ly =
        (_, Just keys) | isCat -> renderBarGrouped pos keys r layout pal ly
        _                      -> renderBarSimple r layout pal ly
 
--- | position identity / 群分けなしの bar。 ★Phase 19 A2: 色は 'colorVector' に
--- 委譲 (ColorByCol で per-bar 色分け = ggplot の identity + fill aesthetic 同型。
--- ColorStatic / 色指定なしは colorVector が単色を返すので従来挙動不変)。
+-- | [日本語]: position identity / 群分けなしの bar。 色は 'Graphics.Hgg.Render.Common.colorVector' に
+--   委譲 (ColorByCol で per-bar 色分け = ggplot の identity + fill aesthetic 同型。
+--   ColorStatic / 色指定なしは colorVector が単色を返すので従来挙動不変)。
+--   [English]: The bar for position identity / no grouping. Color delegates to
+--   'Graphics.Hgg.Render.Common.colorVector' ('ColorByCol' gives per-bar coloring, matching ggplot's
+--   identity + fill aesthetic; with 'ColorStatic' or no color specified,
+--   'Graphics.Hgg.Render.Common.colorVector' returns a single color, so the previous behavior is unchanged).
 renderBarSimple :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBarSimple r layout pal ly =
   -- categorical x: 各 row の label を xCats (= x 軸のカテゴリ列) の index へ。
@@ -535,8 +564,10 @@ renderHistogram r layout pal ly =
        , cnt > 0  -- 高さ 0 bin はスキップ (= 軸線 artifact 防止)
        ]
 
--- | Step plot (Phase 6+ C-3): lyEncX = x、 lyEncY = y、 階段折れ線。
--- 各 segment は (x_i, y_i) → (x_{i+1}, y_i) → (x_{i+1}, y_{i+1})。
+-- | [日本語]: Step plot: lyEncX = x、 lyEncY = y、 階段折れ線。
+--   各 segment は (x_i, y_i) → (x_{i+1}, y_i) → (x_{i+1}, y_{i+1})。
+--   [English]: A step plot: lyEncX is x, lyEncY is y, drawn as a staircase
+--   line. Each segment goes (x_i, y_i) to (x_{i+1}, y_i) to (x_{i+1}, y_{i+1}).
 renderStep :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderStep r layout pal ly =
   let xs = V.toList (vecOr (lyEncX ly) r)
@@ -556,7 +587,9 @@ renderStep r layout pal ly =
         ] ++ mkSegs ((x2, y2) : rest)
   in mkSegs pts
 
--- | Stem / lollipop plot (Phase 6+ C-3): 縦棒 + 上端 circle marker。
+-- | [日本語]: Stem / lollipop plot: 縦棒 + 上端 circle marker。
+--   [English]: A stem / lollipop plot: a vertical bar with a circle marker at
+--   the top.
 renderStem :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderStem r layout pal ly =
   let xs = V.toList (vecOr (lyEncX ly) r)

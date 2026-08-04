@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.Special
--- Description : 特殊 mark (pie/waterfall/parallel/text/DAG)
+-- Description : Special marks (pie, waterfall, parallel coordinates, text, DAG)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+--   [English]: Split off from the Render monolith (output-neutral, pure move).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -68,13 +69,24 @@ import           Graphics.Hgg.Render.EdgeRoute (EdgeRoute (..), routeEdge,
                                       dagLabelFs)
 
 
--- | Phase 42 sub B: pt 空間への写像 'toScreen' (= node 実寸から graphviz 風自然
--- アスペクトを算出)。 render と routing bake で共有する純関数。area 非依存。
---   * LayoutHierarchical: dnX = raw point x、 dnY = rank index。 x は 1:1、
---     y = rank index × rankPitch (= maxNodeH + ranksep)。 = 完全忠実 point pipeline。
---   * LayoutManual: dnX/dnY は正規化 [0,1]²。 各 rank 内の最小 x gap から横潰れしない
---     wpt を逆算し wpt/hpt で point 空間へ展開 (graphviz 風)。
--- 最終 'fitPrimsToArea' が両経路ともアスペクト保持で area へ一様 fit。
+-- | [日本語]: pt 空間への写像 @toScreen@ (= node 実寸から graphviz 風自然
+--   アスペクトを算出)。 render と routing bake で共有する純関数。area 非依存。
+--     * LayoutHierarchical: dnX = raw point x、 dnY = rank index。 x は 1:1、
+--       y = rank index × rankPitch (= maxNodeH + ranksep)。 = 完全忠実 point pipeline。
+--     * LayoutManual: dnX/dnY は正規化 [0,1]²。 各 rank 内の最小 x gap から横潰れしない
+--       wpt を逆算し wpt/hpt で point 空間へ展開 (graphviz 風)。
+--   最終 'fitPrimsToArea' が両経路ともアスペクト保持で area へ一様 fit。
+--   [English]: Maps into pt space via @toScreen@ (computes a graphviz-style
+--   natural aspect ratio from each node's actual size). A pure function
+--   shared between rendering and routing bake; independent of area.
+--     * LayoutHierarchical: dnX is the raw point x and dnY is the rank index.
+--       x maps 1:1, and y = rank index times rankPitch (that is,
+--       maxNodeH + ranksep) — a fully faithful point pipeline.
+--     * LayoutManual: dnX/dnY are normalized to [0,1]^2. wpt is back-derived
+--       from the minimum x gap within each rank so it does not collapse
+--       horizontally, then expanded into pt space via wpt/hpt (graphviz-style).
+--   The final 'fitPrimsToArea' uniformly fits either path into the area
+--   while preserving the aspect ratio.
 dagToScreen :: Double -> [DAGNode] -> DAGLayoutAlgorithm -> (Double -> Double -> Point)
 dagToScreen radius nodes algo = toScreen
   where
@@ -99,11 +111,18 @@ dagToScreen radius nodes algo = toScreen
       | isManual  = Point (x * wpt) (y * hpt)
       | otherwise = Point x (y * rankPitch)
 
--- | Phase 42 sub B: layer の DAG edge に pt 空間 routing を焼き込む (= 'deRoute' 充填)。
--- 'renderDAGStandalone' の edge routing pipeline (toScreen + obstacles + 並列 index +
--- routeEdge) と同一手順で計算するため、 baked route は live routing と byte-identical。
--- size は layer の 'lySize' (既定 径11mm)。 端点ノードが無い edge は 'Nothing' のまま。
--- 結果 spec を JSON 化すると PS が同 routing を描ける (= HS/PS parity)。
+-- | [日本語]: layer の DAG edge に pt 空間 routing を焼き込む (= 'deRoute' 充填)。
+--   'renderDAGStandalone' の edge routing pipeline (toScreen + obstacles + 並列 index +
+--   routeEdge) と同一手順で計算するため、 baked route は live routing と byte-identical。
+--   size は layer の 'lySize' (既定 径11mm)。 端点ノードが無い edge は 'Nothing' のまま。
+--   結果 spec を JSON 化すると PS が同 routing を描ける (= HS/PS parity)。
+--   [English]: Bakes pt-space routing into the layer's DAG edges (filling in
+--   'deRoute'). Computed with the exact same steps as the edge routing
+--   pipeline in 'renderDAGStandalone' (toScreen + obstacles + parallel index +
+--   routeEdge), so the baked route is byte-identical to live routing. Size
+--   comes from the layer's 'lySize' (default diameter 11 mm). An edge whose
+--   endpoint node is missing is left as 'Nothing'. Once the resulting spec is
+--   serialized to JSON, PS can draw the same routing (HS/PS parity).
 dagBakeRoutes :: Layer -> Layer
 dagBakeRoutes ly = case getLast (lyDAG ly) of
   Nothing -> ly
@@ -142,13 +161,19 @@ dagBakeRoutes ly = case getLast (lyDAG ly) of
         es' = stitch withIx mrs rts
     in ly { lyDAG = Last (Just (DAGSpec nodes es' algo plates)) }
 
--- | Phase 42 sub B: 'VisualSpec' 内の全 DAG layer に 'dagBakeRoutes' を適用。
--- HS で図を生成し PS 用 JSON を吐く直前に呼ぶ (= routing を spec へ焼き込む境界)。
+-- | [日本語]: 'Graphics.Hgg.Spec.VisualSpec' 内の全 DAG layer に 'dagBakeRoutes' を適用。
+--   HS で図を生成し PS 用 JSON を吐く直前に呼ぶ (= routing を spec へ焼き込む境界)。
+--   [English]: Applies 'dagBakeRoutes' to every DAG layer in a 'Graphics.Hgg.Spec.VisualSpec'.
+--   Call this right before HS generates the figure and emits JSON for PS
+--   (the boundary where routing gets baked into the spec).
 bakeDAGRoutesInSpec :: VisualSpec -> VisualSpec
 bakeDAGRoutesInSpec vs = vs { vsLayers = map dagBakeRoutes (vsLayers vs) }
 
--- | DAG 専用 (= axis 不要)。 0..1 domain 座標を area 内に直接 mapping。
--- 描画順序: plate (= 背景) → edge → node。
+-- | [日本語]: DAG 専用 (= axis 不要)。 0..1 domain 座標を area 内に直接 mapping。
+--   描画順序: plate (= 背景) → edge → node。
+--   [English]: DAG-only rendering (no axis needed). Maps 0..1 domain
+--   coordinates directly into the area. Draw order: plate (background),
+--   then edge, then node.
 renderDAGStandalone :: Rect -> ThemePalette -> Layer -> [Primitive]
 renderDAGStandalone area pal ly = case getLast (lyDAG ly) of
   Nothing -> []
@@ -185,7 +210,7 @@ renderDAGStandalone area pal ly = case getLast (lyDAG ly) of
           (Map.empty, [])
           es
         -- ★ Phase 42 sub C: edge に baked 'deRoute' があればそれを描画 (HS/PS で同一)、
-        -- 無ければ従来どおり live 'routeEdge' で routing。 baked は同 pipeline 産なので
+        -- 無ければ従来どおり live 'Graphics.Hgg.Render.EdgeRoute.routeEdge' で routing。 baked は同 pipeline 産なので
         -- HS 出力は byte-identical。
         -- ★ Phase 52 A6: 全 route 確定後に port 分散 ('spreadPorts')。 bake 済み route は
         -- bake 時に分散済 → cluster を成さず no-op (= 冪等) なので二重適用しない。
@@ -210,9 +235,14 @@ renderDAGStandalone area pal ly = case getLast (lyDAG ly) of
     -- 縮小も拡大もし (一様スケール・中央寄せ)、 はみ出しゼロを最優先。
     in fitPrimsToArea area (platePrims <> edgePrims <> nodePrims)
 
--- | Phase 39 A1: DAG プリミティブ全体の bounding box (xlo, ylo, xhi, yhi)。
--- 'PText' は 'textWidthEm' × fontSize で幅、 fontSize で高さを見積もり anchor で
--- 左右配分する (実フォント計測は不可ゆえ凡例/タイトルと同じ近似を流用)。
+-- | [日本語]: DAG プリミティブ全体の bounding box (xlo, ylo, xhi, yhi)。
+--   'PText' は 'textWidthEm' × fontSize で幅、 fontSize で高さを見積もり anchor で
+--   左右配分する (実フォント計測は不可ゆえ凡例/タイトルと同じ近似を流用)。
+--   [English]: The bounding box (xlo, ylo, xhi, yhi) of the entire set of DAG
+--   primitives. For 'PText', width is estimated as 'textWidthEm' times
+--   fontSize and height as fontSize, then split left/right by anchor (actual
+--   font measurement isn't available, so the same approximation used for the
+--   legend/title is reused).
 primsBBoxDAG :: [Primitive] -> Maybe (Double, Double, Double, Double)
 primsBBoxDAG prims =
   case concatMap extents prims of
@@ -248,10 +278,16 @@ primsBBoxDAG prims =
         in [(xl, y - asc, xr, y + dsc)]
       _ -> []
 
--- | Phase 39 A1: プリミティブ一式を指定 area 内に一括 scale+translate でフィット。
--- アスペクト比を保つ一様スケール (= min ratio・中央寄せ)。 figure が area より小さければ
--- 拡大して余白を埋め (graphviz `ratio=expand` 相当)、 大きければ縮小する。 内側 pad を
--- 取りストロークやラベル端が縁に触れないようにする。 フォント/線幅も s 倍。
+-- | [日本語]: プリミティブ一式を指定 area 内に一括 scale+translate でフィット。
+--   アスペクト比を保つ一様スケール (= min ratio・中央寄せ)。 figure が area より小さければ
+--   拡大して余白を埋め (graphviz `ratio=expand` 相当)、 大きければ縮小する。 内側 pad を
+--   取りストロークやラベル端が縁に触れないようにする。 フォント/線幅も s 倍。
+--   [English]: Fits an entire set of primitives into the given area with a
+--   single scale+translate. Uses a uniform, aspect-preserving scale (min
+--   ratio, centered). If the figure is smaller than the area it is enlarged
+--   to fill the space (equivalent to graphviz's `ratio=expand`); if larger,
+--   it is shrunk. Takes an inner pad so strokes and label edges don't touch
+--   the border. Font size and line width are scaled by the same factor s.
 fitPrimsToArea :: Rect -> [Primitive] -> [Primitive]
 fitPrimsToArea area prims = case primsBBoxDAG prims of
   Nothing -> prims
@@ -268,8 +304,11 @@ fitPrimsToArea area prims = case primsBBoxDAG prims of
         ty = rY area + (rH area - newH) / 2 - ylo * s
     in map (affinePrim s tx ty) prims
 
--- | x' = s·x + tx, y' = s·y + ty。 座標・半径・線幅・font size を一様に s 倍する
--- ('scalePrimitives' の dpi スケールに translate を加えた DAG fit 専用版)。
+-- | [日本語]: x' = s·x + tx, y' = s·y + ty。 座標・半径・線幅・font size を一様に s 倍する
+--   ('scalePrimitives' の dpi スケールに translate を加えた DAG fit 専用版)。
+--   [English]: x' = s*x + tx, y' = s*y + ty. Uniformly scales coordinates,
+--   radius, line width, and font size by s (a DAG-fit-only variant of
+--   'scalePrimitives' with translation added to its dpi scaling).
 affinePrim :: Double -> Double -> Double -> Primitive -> Primitive
 affinePrim s tx ty = go
   where
@@ -294,28 +333,38 @@ affinePrim s tx ty = go
       PTransformPush tr      -> PTransformPush tr
       PTransformPop          -> PTransformPop
 
--- | Phase 1 A5/A7/parallel: dePath で straight / spline 切替、 端点は A7 で node 形状との
--- 正確な交点へ snap、 'parIx' / 'parCount' で並列 edge の perpendicular bend を付与。
+-- | [日本語]: dePath で straight / spline 切替、 端点は node 形状との
+--   正確な交点へ snap、 @parIx@ / @parCount@ で並列 edge の perpendicular bend を付与。
 --
---   * 'parCount' = 1: 通常描画 (= bend 無し)
---   * 'parCount' > 1: 各 edge を ((parIx - (N-1)/2) * spacing) perpendicular ずらして
---     重ならない曲線群にする (= graphviz dot の parallel edge 表現)
+--     * @parCount@ = 1: 通常描画 (= bend 無し)
+--     * @parCount@ > 1: 各 edge を ((parIx - (N-1)/2) * spacing) perpendicular ずらして
+--       重ならない曲線群にする (= graphviz dot の parallel edge 表現)
+--   [English]: Switches between straight and spline via dePath; endpoints are
+--   snapped to the exact intersection with the node shape. @parIx@ /
+--   @parCount@ add a perpendicular bend for parallel edges.
+--
+--     * @parCount@ = 1: normal drawing (no bend).
+--     * @parCount@ > 1: each edge is offset perpendicular by
+--       ((parIx - (N-1)/2) * spacing) so they form a set of non-overlapping
+--       curves (the same representation graphviz dot uses for parallel edges).
 renderEdge
   :: (Double -> Double -> Point)
-  -> Obstacles                           -- ^ Phase 39 A-1: node + plate 障害物 (pt)
+  -> Obstacles                           -- ^ [日本語]: node + plate 障害物 (pt)。 [English]: Node and plate obstacles (pt).
   -> DAGNode -> DAGNode -> DAGEdge
   -> Double -> ThemePalette
   -> Int -> Int  -- ^ parIx, parCount
   -> [Primitive]
 renderEdge toScreen obs from to e radius pal parIx parCount =
   -- Phase 39 B2 / 42 sub C: routing 幾何は baked 'deRoute' があればそれを使い、
-  -- 無ければ live 'routeEdge' (Render.EdgeRoute) で決定。 ここは制御点列 + style を
+  -- 無ければ live 'Graphics.Hgg.Render.EdgeRoute.routeEdge' (Render.EdgeRoute) で決定。 ここは制御点列 + style を
   -- ThemePalette 付きで描画 primitive へ落とすだけ。
   drawEdgeRoute pal $ case deRoute e of
     Just re -> routedToEdgeRoute re
     Nothing -> routeEdge toScreen obs from to (dePath e) radius parIx parCount
 
--- | Phase 42 sub C: 'EdgeRoute' (制御点列 + 形状) を描画 primitive へ。
+-- | [日本語]: 'EdgeRoute' (制御点列 + 形状) を描画 primitive へ。
+--   [English]: Turns an 'EdgeRoute' (control points plus shape) into
+--   rendering primitives.
 drawEdgeRoute :: ThemePalette -> EdgeRoute -> [Primitive]
 drawEdgeRoute pal route = case route of
   StraightArrow a b -> arrowEdgeFromPorts a b pal
@@ -326,7 +375,8 @@ drawEdgeRoute pal route = case route of
   -- R3 (Step6 P7a): graphviz Proutespline の cubic Bézier 制御点列 (始点 + 3 点ずつ)。
   CubicPath ctrl    -> cubicEdgeFromControls ctrl pal
 
--- | Phase 42 sub B/C: 焼き込んだ 'RoutedEdge' を 'EdgeRoute' へ復元 (pt 空間)。
+-- | [日本語]: 焼き込んだ 'RoutedEdge' を 'EdgeRoute' へ復元 (pt 空間)。
+--   [English]: Restores a baked 'RoutedEdge' back into an 'EdgeRoute' (pt space).
 routedToEdgeRoute :: RoutedEdge -> EdgeRoute
 routedToEdgeRoute (RoutedEdge k ps) =
   let pts = [ Point x y | (x, y) <- ps ]
@@ -338,7 +388,9 @@ routedToEdgeRoute (RoutedEdge k ps) =
        EShBezier   -> BezierPath pts
        EShCubic    -> CubicPath pts
 
--- | Phase 42 sub B/C: 'EdgeRoute' を spec 焼き込み用 'RoutedEdge' (pt 空間) へ。
+-- | [日本語]: 'EdgeRoute' を spec 焼き込み用 'RoutedEdge' (pt 空間) へ。
+--   [English]: Converts an 'EdgeRoute' into a 'RoutedEdge' (pt space) for
+--   baking into a spec.
 edgeRouteToRouted :: EdgeRoute -> RoutedEdge
 edgeRouteToRouted route = case route of
   StraightArrow a b -> RoutedEdge EShStraight (map p2 [a, b])
@@ -347,9 +399,14 @@ edgeRouteToRouted route = case route of
   CubicPath ctrl    -> RoutedEdge EShCubic (map p2 ctrl)
   where p2 (Point x y) = (x, y)
 
--- | 1 node を kind に応じた形状で描画 + label (+ 分布名 sub-label)。
--- ★A15: サイズは label に合わせ可変 ('nodeExtent')。 形状は PyMC 慣例 = latent/observed は楕円、
--- deterministic/data/other は四角。 deterministic は name のみ (dist 非表示)。
+-- | [日本語]: 1 node を kind に応じた形状で描画 + label (+ 分布名 sub-label)。
+--   ★ サイズは label に合わせ可変 ('Graphics.Hgg.Render.EdgeRoute.nodeExtent')。 形状は PyMC 慣例 = latent/observed は楕円、
+--   deterministic/data/other は四角。 deterministic は name のみ (dist 非表示)。
+--   [English]: Draws a single node with a kind-appropriate shape plus its
+--   label (and an optional distribution sub-label). Size varies to fit the
+--   label ('Graphics.Hgg.Render.EdgeRoute.nodeExtent'). Shape follows PyMC convention: latent/observed use
+--   an ellipse, deterministic/data/other use a rectangle. A deterministic
+--   node shows only its name (no distribution).
 renderNode :: (Double -> Double -> Point) -> Double -> ThemePalette
            -> DAGNode -> [Primitive]
 renderNode toScreen radius pal n =
@@ -390,7 +447,8 @@ renderNode toScreen radius pal n =
           [ PText (Point cx (cy + baseAdj)) (dnLabel n) ts ]
   in shape : textPrims
 
--- | 楕円を Bezier 近似で path に。
+-- | [日本語]: 楕円を Bezier 近似で path に。
+--   [English]: Turns an ellipse into a path via Bezier approximation.
 ellipsePath :: Double -> Double -> Double -> Double -> [PathSegment]
 ellipsePath cx cy rx ry =
   let k = 0.5522847498  -- magic for circle approximation
@@ -404,11 +462,18 @@ ellipsePath cx cy rx ry =
      , ClosePath
      ]
 
--- | plate を node 群の bounding box + label で描画。
+-- | [日本語]: plate を node 群の bounding box + label で描画。
 --
--- Phase 23: bbox はノード中心でなく **glyph bbox (中心 ± 'nodeExtent')**。
--- 固定 pad (radius*1.6) だと label の長いノード (rx > pad) が plate の
--- 水平端で枠を超える (analyze Phase 63.2 で実測確定)。
+--   bbox はノード中心でなく __glyph bbox (中心 ± 'Graphics.Hgg.Render.EdgeRoute.nodeExtent')__。
+--   固定 pad (radius*1.6) だと label の長いノード (rx > pad) が plate の
+--   水平端で枠を超える (実測で確定)。
+--   [English]: Draws a plate as the bounding box of its node group plus a
+--   label.
+--
+--   The bbox is not the node centers but the
+--   __glyph bbox (center plus/minus 'Graphics.Hgg.Render.EdgeRoute.nodeExtent')__. With a fixed pad
+--   (radius*1.6), a node with a long label (rx > pad) would overflow the
+--   plate's horizontal edge (confirmed by measurement).
 renderPlate :: (Double -> Double -> Point) -> Double -> ThemePalette
             -> [(Text, DAGNode)] -> [DAGPlate] -> DAGPlate -> [Primitive]
 renderPlate toScreen radius pal nodeMap allPlates plate =
@@ -417,7 +482,7 @@ renderPlate toScreen radius pal nodeMap allPlates plate =
     Just (xlo, boxTop, xhi, yhi) ->
       let rw = xhi - xlo
           -- label を枠の **下端・右寄せ** に置く (graphviz labelloc=b labeljust=r 同型)。
-          -- label 帯は 'plateBoxPt' が box 下端に labelH ぶん確保済。
+          -- label 帯は 'Graphics.Hgg.Render.EdgeRoute.plateBoxPt' が box 下端に labelH ぶん確保済。
           rh = yhi - boxTop
           labelTS = mkFontTS Nothing pal LegendItemF AnchorEnd 0
       in [ PRect (Rect xlo boxTop rw rh)
@@ -427,7 +492,9 @@ renderPlate toScreen radius pal nodeMap allPlates plate =
                  (dpLabel plate) labelTS
          ]
 
--- | Phase 1 A7: 端点が既に node 形状端に snap 済の前提で直線 + 矢印ヘッド描画。
+-- | [日本語]: 端点が既に node 形状端に snap 済の前提で直線 + 矢印ヘッド描画。
+--   [English]: Draws a straight line plus arrowhead, assuming the endpoints
+--   are already snapped to the node shape's edge.
 arrowEdgeFromPorts :: Point -> Point -> ThemePalette -> [Primitive]
 arrowEdgeFromPorts (Point sx sy) (Point ex ey) pal =
   let dx = ex - sx; dy = ey - sy
@@ -452,18 +519,38 @@ arrowEdgeFromPorts (Point sx sy) (Point ex ey) pal =
         (FillStyle (tpAxis pal) 1.0) Nothing
   in [line_, headPath]
 
--- | Phase 1 A5+A7: 始終点 snap 済 control 点列を Catmull-Rom spline + 矢印で描画。
--- 中間制御点には corner-cutting smoothing (= 内部点を隣接 3 点の (1,2,1)/4 平均で置換) を
--- 2 pass 適用してから Catmull-Rom に渡す。 これで dummy 経由の「棚 / 2 山」 を緩和し、
--- 真の B-spline に近い視覚を直線パスのまま得る。 端点は保持されるので port snap は崩れない。
+-- | [日本語]: 始終点 snap 済 control 点列を Catmull-Rom spline + 矢印で描画。
+--   中間制御点には corner-cutting smoothing (= 内部点を隣接 3 点の (1,2,1)/4 平均で置換) を
+--   2 pass 適用してから Catmull-Rom に渡す。 これで dummy 経由の「棚 / 2 山」 を緩和し、
+--   真の B-spline に近い視覚を直線パスのまま得る。 端点は保持されるので port snap は崩れない。
 --
--- Phase 39 A2-4: ただし内部点が **1 個だけ** (= 制御点 3 個、 dummy 1 個の短い skip)
--- の場合は smoothing を掛けない。 2-pass 平均は唯一の内部点を始終点の中点へ強く
--- 引き戻すため、 routeLongEdgeDummies が plate 箱の外へ出した bulge が潰れて edge が
--- 箱へ再侵入してしまう。 棚は内部点 2 個以上 (長い chain) でしか生じないので、
--- 短い chain では bulge をそのまま活かす。
--- | Phase 39 A2-8: 制御点列を **そのまま** Catmull-Rom で通す (= 平滑化なし)。
--- 箱角 waypoint を中央へ引き戻さないため、 迂回経路の描画に使う。
+--   ただし内部点が __1 個だけ__ (= 制御点 3 個、 dummy 1 個の短い skip)
+--   の場合は smoothing を掛けない。 2-pass 平均は唯一の内部点を始終点の中点へ強く
+--   引き戻すため、 routeLongEdgeDummies が plate 箱の外へ出した bulge が潰れて edge が
+--   箱へ再侵入してしまう。 棚は内部点 2 個以上 (長い chain) でしか生じないので、
+--   短い chain では bulge をそのまま活かす。
+--   [English]: Draws a Catmull-Rom spline plus arrowhead from a control-point
+--   list whose start/end points are already snapped. Applies two passes of
+--   corner-cutting smoothing to the interior control points (each interior
+--   point is replaced by the (1,2,1)/4 average of itself and its two
+--   neighbors) before handing them to Catmull-Rom. This softens the
+--   "shelf / double-hump" artifact that comes from routing through dummy
+--   points, yielding a look close to a true B-spline while staying a
+--   straight-line path. Endpoints are preserved, so port snapping is not
+--   disturbed.
+--
+--   However, when there is only __one__ interior point (three control points
+--   total — a short skip with a single dummy), smoothing is skipped. The
+--   two-pass average would pull that lone interior point strongly toward the
+--   midpoint of the start and end, collapsing the bulge that
+--   routeLongEdgeDummies pushed outside the plate box and letting the edge
+--   re-enter the box. The shelf artifact only occurs with two or more
+--   interior points (a long chain), so short chains keep the bulge as-is.
+-- | [日本語]: 制御点列を __そのまま__ Catmull-Rom で通す (= 平滑化なし)。
+--   箱角 waypoint を中央へ引き戻さないため、 迂回経路の描画に使う。
+--   [English]: Passes the control-point list straight through Catmull-Rom,
+--   unchanged (no smoothing). Used for drawing detour routes, since it must
+--   not pull box-corner waypoints back toward the center.
 bezierThroughPorts :: [Point] -> ThemePalette -> [Primitive]
 bezierThroughPorts = drawCatmullRom
 
@@ -472,7 +559,9 @@ splineEdgeFromPorts ptsRaw pal =
   let pts = if length ptsRaw >= 4 then smoothInterior 2 ptsRaw else ptsRaw
   in drawCatmullRom pts pal
 
--- | Catmull-Rom spline + 矢印ヘッドを制御点列から描画 (平滑化は呼出側責務)。
+-- | [日本語]: Catmull-Rom spline + 矢印ヘッドを制御点列から描画 (平滑化は呼出側責務)。
+--   [English]: Draws a Catmull-Rom spline plus arrowhead from a control-point
+--   list (smoothing is the caller's responsibility).
 drawCatmullRom :: [Point] -> ThemePalette -> [Primitive]
 drawCatmullRom pts pal =
   let n = length pts
@@ -484,13 +573,19 @@ drawCatmullRom pts pal =
                        (Just (StrokeStyle (tpAxis pal) 1.5))
   in [edgePath, arrowHeadPrim basePt apex u pal]
 
--- | 矢じり寸法 (graphviz 較正: 長 10 × 底辺 7 = headWid*2)。 全 edge 描画で共有。
+-- | [日本語]: 矢じり寸法 (graphviz 較正: 長 10 × 底辺 7 = headWid*2)。 全 edge 描画で共有。
+--   [English]: Arrowhead dimensions (calibrated against graphviz: length 10,
+--   base 7 = headWid*2). Shared across all edge rendering.
 dagHeadLen, dagHeadWid :: Double
 dagHeadLen = 10.0
 dagHeadWid = 3.5
 
--- | 鏃 (塗り三角) primitive。 base = 底辺中心 (= 線の終端・曲線上)、 apex = 元終点
--- (= ノード port = tip)、 u = tip 方向単位ベクトル。 ★ Phase 44.8。
+-- | [日本語]: 鏃 (塗り三角) primitive。 base = 底辺中心 (= 線の終端・曲線上)、 apex = 元終点
+--   (= ノード port = tip)、 u = tip 方向単位ベクトル。
+--   [English]: The arrowhead (filled triangle) primitive. base is the center
+--   of its base edge (the line's endpoint, on the curve), apex is the
+--   original endpoint (the node port, i.e. the tip), and u is the unit
+--   vector pointing toward the tip.
 arrowHeadPrim :: Point -> Point -> (Double, Double) -> ThemePalette -> Primitive
 arrowHeadPrim (Point bx by) apex (ux, uy) pal =
   let (perpx, perpy) = (-uy, ux)
@@ -499,11 +594,20 @@ arrowHeadPrim (Point bx by) apex (ux, uy) pal =
   in PPath [ MoveTo apex, LineTo h1, LineTo h2, ClosePath ]
            (FillStyle (tpAxis pal) 1.0) Nothing
 
--- | 描画パス末尾の cubic セグメントを **終点側へ弧長 ~headLen 分 de Casteljau 分割**し、
--- 線を曲線上の base 点で滑らかに止める (= 鏃が tip を担う)。 終点だけ差し替えると
--- 制御点据え置きで曲線が変形し base で折れるため、 正しく分割して曲線形状を保つ
--- (graphviz の arrow clip と同型)。 戻り = (分割後セグ列, base 点(曲線上),
--- apex(=元終点), 単位 tip 方向)。 ★ Phase 44.8。
+-- | [日本語]: 描画パス末尾の cubic セグメントを __終点側へ弧長 ~headLen 分 de Casteljau 分割__し、
+--   線を曲線上の base 点で滑らかに止める (= 鏃が tip を担う)。 終点だけ差し替えると
+--   制御点据え置きで曲線が変形し base で折れるため、 正しく分割して曲線形状を保つ
+--   (graphviz の arrow clip と同型)。 戻り = (分割後セグ列, base 点(曲線上),
+--   apex(=元終点), 単位 tip 方向)。
+--   [English]: Splits the last cubic segment of the drawn path via de
+--   Casteljau, __trimming arc-length ~headLen back from the endpoint__, so
+--   the line stops smoothly at a base point on the curve (the arrowhead
+--   then covers the tip). Simply replacing the endpoint would deform the
+--   curve while leaving the control points fixed, producing a kink at base;
+--   splitting it properly preserves the curve shape (the same technique as
+--   graphviz's arrow clip). Returns (the split segment list, the base point
+--   on the curve, the apex — the original endpoint, and the unit tip
+--   direction).
 trimLastCubic
   :: Double -> Point -> [PathSegment]
   -> ([PathSegment], Point, Point, (Double, Double))
@@ -528,7 +632,9 @@ trimLastCubic headLen p0 segs = case reverse segs of
     segEndOf (MoveTo q)      = q
     segEndOf ClosePath       = p0
 
--- | cubic (p0,c1,c2,p3) を媒介変数 t で de Casteljau 分割し、 左半分の制御点を返す。
+-- | [日本語]: cubic (p0,c1,c2,p3) を媒介変数 t で de Casteljau 分割し、 左半分の制御点を返す。
+--   [English]: Splits the cubic (p0,c1,c2,p3) at parameter t via de
+--   Casteljau, returning the control points of the left half.
 splitCubicLeft :: Double -> (Point, Point, Point, Point) -> (Point, Point, Point, Point)
 splitCubicLeft t (p0, c1, c2, p3) =
   let lp (Point ax ay) (Point bx by) = Point (ax + (bx - ax) * t) (ay + (by - ay) * t)
@@ -537,12 +643,18 @@ splitCubicLeft t (p0, c1, c2, p3) =
       m = lp d e
   in (p0, a, d, m)
 
--- | cubic 上の点 B(t)。
+-- | [日本語]: cubic 上の点 B(t)。
+--   [English]: The point B(t) on the cubic.
 cubicAt :: Double -> (Point, Point, Point, Point) -> Point
 cubicAt t cub = let (_, _, _, m) = splitCubicLeft t cub in m
 
--- | 終点 p3 から弧長 ~target だけ手前の媒介変数 t を二分法で求める (chord 近似)。
--- |B(t) - p3| は t→1 で 0 へ単調減少。 末尾セグ全長が target 未満なら 0 を返す。
+-- | [日本語]: 終点 p3 から弧長 ~target だけ手前の媒介変数 t を二分法で求める
+--   (chord 近似)。 距離 |B(t) - p3| は t→1 で 0 へ単調減少する。 末尾セグ全長が
+--   target 未満なら 0 を返す。
+--   [English]: Binary-searches for the parameter t that is arc-length ~target
+--   back from the endpoint p3 (chord approximation). The distance |B(t) -
+--   p3| decreases monotonically to 0 as t approaches 1. Returns 0 if the
+--   entire final segment is shorter than target.
 trimParamForLen :: Double -> (Point, Point, Point, Point) -> Double
 trimParamForLen target cub@(_, _, _, p3) =
   let dist t = let Point mx my = cubicAt t cub; Point px py = p3
@@ -553,8 +665,12 @@ trimParamForLen target cub@(_, _, _, p3) =
                                            else go lo mid (k - 1)
   in if dist 0 <= target then 0 else go 0 1 32
 
--- | R3 (Step6 P7a): graphviz Proutespline の制御点列 ([始点, c1, c2, 終点, c1, c2, ...])
--- を cubic Bézier path + 矢印で描画。 矢印方向は最終 segment の (c2→終点) 接線。
+-- | [日本語]: graphviz Proutespline の制御点列 ([始点, c1, c2, 終点, c1, c2, ...])
+--   を cubic Bézier path + 矢印で描画。 矢印方向は最終 segment の (c2→終点) 接線。
+--   [English]: Draws graphviz's Proutespline control-point list
+--   ([start, c1, c2, end, c1, c2, ...]) as a cubic Bezier path plus
+--   arrowhead. The arrow direction is the tangent of the final segment's
+--   (c2 to end) leg.
 cubicEdgeFromControls :: [Point] -> ThemePalette -> [Primitive]
 cubicEdgeFromControls ctrl pal
   | length ctrl < 4 = case ctrl of
@@ -575,9 +691,13 @@ cubicEdgeFromControls ctrl pal
     chunk3 (a : b : c : rest) = [a, b, c] : chunk3 rest
     chunk3 _                  = []
 
--- | Corner-cutting smoothing: 内部点 P[i] (i ∉ {0, n-1}) を
--- (P[i-1] + 2 P[i] + P[i+1]) / 4 で置換し 'k' 回繰り返す。 端点は不変。
--- 'splineEdgeFromPorts' で dummy 経由制御点列の「棚」 を緩和するために使う。
+-- | [日本語]: Corner-cutting smoothing: 内部点 P[i] (i ∉ {0, n-1}) を
+--   (P[i-1] + 2 P[i] + P[i+1]) / 4 で置換し @k@ 回繰り返す。 端点は不変。
+--   'splineEdgeFromPorts' で dummy 経由制御点列の「棚」 を緩和するために使う。
+--   [English]: Corner-cutting smoothing: replaces each interior point P[i]
+--   (i not in {0, n-1}) with (P[i-1] + 2 P[i] + P[i+1]) / 4, repeated @k@
+--   times. Endpoints are left unchanged. Used by 'splineEdgeFromPorts' to
+--   soften the "shelf" artifact of dummy-routed control-point lists.
 smoothInterior :: Int -> [Point] -> [Point]
 smoothInterior k ps
   | k <= 0 || length ps < 3 = ps
@@ -589,14 +709,26 @@ smoothInterior k ps
       let middle = zipWith3 avg3 xs (drop 1 xs) (drop 2 xs)
       in head xs : middle ++ [last xs]
 
--- | Catmull-Rom control 列 → cubic Bezier segments。 端点は ghost (= 自分自身)
--- で扱う (= natural spline、 端で直線に近づく)。
+-- | [日本語]: Catmull-Rom control 列 → cubic Bezier segments。 端点は ghost (= 自分自身)
+--   で扱う (= natural spline、 端で直線に近づく)。
 --
--- ★ Phase 39 (2026-06-24): 制御点オフセットを **セグメント長でクランプ** する。
--- knot 間隔が極端に不均一だと (= 例: 迂回 waypoint 不足で長 edge が 3 点になる場合)、
--- tangent (b-prev)/6 が遠い prev に引っ張られ制御点が segment 外へ大きく overshoot し、
--- 末端に「フック」が出ていた。 均等間隔での標準オフセットは segLen/3 ゆえ上限 0.5·segLen
--- なら通常曲線は不変、 過大時のみ抑制される (graphviz が box 内拘束で防ぐのと同趣旨)。
+--   ★ 制御点オフセットを __セグメント長でクランプ__ する。
+--   knot 間隔が極端に不均一だと (= 例: 迂回 waypoint 不足で長 edge が 3 点になる場合)、
+--   tangent (b-prev)/6 が遠い prev に引っ張られ制御点が segment 外へ大きく overshoot し、
+--   末端に「フック」が出ていた。 均等間隔での標準オフセットは segLen/3 ゆえ上限 0.5·segLen
+--   なら通常曲線は不変、 過大時のみ抑制される (graphviz が box 内拘束で防ぐのと同趣旨)。
+--   [English]: Converts a Catmull-Rom control-point list into cubic Bezier
+--   segments. Endpoints are handled as their own ghost points (a natural
+--   spline that approaches a straight line at the ends).
+--
+--   ★ __Clamps the control-point offset to the segment length__. When knot
+--   spacing is extremely uneven (for example, a long edge reduced to three
+--   points due to insufficient detour waypoints), the tangent (b-prev)/6
+--   gets pulled by a distant prev and the control point overshoots far
+--   outside the segment, producing a "hook" at the end. Since the standard
+--   offset for evenly spaced knots is segLen/3, clamping at 0.5*segLen
+--   leaves ordinary curves unchanged and only suppresses the excessive case
+--   (the same idea graphviz uses when it constrains points inside the box).
 catmullRomToBezier :: [Point] -> [PathSegment]
 catmullRomToBezier ps = go (0 :: Int) ps
   where
@@ -627,9 +759,14 @@ catmullRomToBezier ps = go (0 :: Int) ps
       where
         _unused = n  -- silence unused if any
 
--- | Phase 11 A6: geom_text / geom_label。 各 (x,y) 点に lyLabel 列の文字を描く。
--- withBox=True (= geom_label) は文字の背後に角丸風の矩形を敷く。 色は static color
--- 指定 (= 固定色 color) があればそれ、 無ければ tpText。 font サイズは lySize (default 11)。
+-- | [日本語]: geom_text / geom_label。 各 (x,y) 点に lyLabel 列の文字を描く。
+--   withBox=True (= geom_label) は文字の背後に角丸風の矩形を敷く。 色は static color
+--   指定 (= 固定色 color) があればそれ、 無ければ tpText。 font サイズは lySize (default 11)。
+--   [English]: geom_text / geom_label. Draws the text from the lyLabel column
+--   at each (x,y) point. withBox=True (geom_label) lays a rounded-rect-like
+--   background behind the text. Color uses a static color (a fixed color) if
+--   one is specified, otherwise falls back to tpText. Font size is lySize
+--   (default 11).
 renderText :: Resolver -> Layout -> ThemePalette -> Layer -> Bool -> [Primitive]
 renderText r layout pal ly withBox =
   let xs   = V.toList (vecOr (lyEncX ly) r)
@@ -662,21 +799,39 @@ renderText r layout pal ly withBox =
         in (if withBox then box else []) <> textP
   in if n <= 0 then [] else concatMap mkOne [0 .. n - 1]
 
--- | Phase 26 §E-6: HBM ModelGraph DAG 描画。
--- node 位置 (dnX, dnY) は domain 座標として scale 適用、 node = PCircle +
--- PText、 edge = PLine。 layout 計算は外部 (= hanalyze / frontend) で。
--- | embedded DAG (= MDAG レイヤを他 geom と同一軸に重ねた退化ケース)。
--- ★ Phase 44.2: 旧実装は node 座標を [0,1] に潰す `nrm` shim + 軸 scale で
--- 直線のみ (矢印/plate 箱/迂回 routing 無し) を描く間に合わせだった。 本格
--- 'renderDAGStandalone' (矢印・plate・routing・fit 完備) が landing 済のため、
--- shim を撤去して standalone を panel 矩形 ('lpPlotArea') 上で呼ぶ委譲に統一する。
--- これで mixed ケースでも DAG 専用経路 (renderDAGOnly) と同一品質で描画される。
+-- | [日本語]: HBM ModelGraph DAG 描画。
+--   node 位置 (dnX, dnY) は domain 座標として scale 適用、 node = PCircle +
+--   PText、 edge = PLine。 layout 計算は外部 (= hanalyze / frontend) で。
+--   [English]: Draws an HBM ModelGraph DAG. Node positions (dnX, dnY) are
+--   scaled as domain coordinates; a node becomes PCircle + PText, an edge
+--   becomes PLine. Layout computation happens externally (in hanalyze
+--   / the frontend).
+-- | [日本語]: embedded DAG (= MDAG レイヤを他 geom と同一軸に重ねた退化ケース)。
+--   ★ 旧実装は node 座標を [0,1] に潰す `nrm` shim + 軸 scale で
+--   直線のみ (矢印/plate 箱/迂回 routing 無し) を描く間に合わせだった。 本格
+--   'renderDAGStandalone' (矢印・plate・routing・fit 完備) が landing 済のため、
+--   shim を撤去して standalone を panel 矩形 ('lpPlotArea') 上で呼ぶ委譲に統一する。
+--   これで mixed ケースでも DAG 専用経路 (renderDAGOnly) と同一品質で描画される。
+--   [English]: An embedded DAG (the degenerate case where an MDAG layer is
+--   overlaid on the same axes as other geoms).
+--   ★ The old implementation was a stopgap that collapsed node coordinates
+--   into [0,1] via an `nrm` shim plus axis scaling, drawing only straight
+--   lines (no arrowheads, plate boxes, or detour routing). Now that the
+--   full-featured 'renderDAGStandalone' (arrowheads, plates, routing, and
+--   fitting all included) has landed, the shim is removed and delegation is
+--   unified to call standalone on the panel rectangle ('lpPlotArea'). As a
+--   result, the mixed case now renders at the same quality as the dedicated
+--   DAG path (renderDAGOnly).
 renderDAG :: Layout -> ThemePalette -> Layer -> [Primitive]
 renderDAG layout = renderDAGStandalone (lpPlotArea layout)
 
--- | Phase 26 §C-2 #13: parallel coordinates。 lyHover で渡された N 列を
--- 等間隔の縦軸として並べ、 row 毎に折線を引く。 placeholder 実装: data の
--- 各列を [0, 1] に正規化、 polyline で描画。
+-- | [日本語]: parallel coordinates。 lyHover で渡された N 列を
+--   等間隔の縦軸として並べ、 row 毎に折線を引く。 placeholder 実装: data の
+--   各列を [0, 1] に正規化、 polyline で描画。
+--   [English]: Parallel coordinates. Lays out the N columns passed via
+--   lyHover as equally spaced vertical axes and draws a polyline per row.
+--   Placeholder implementation: normalizes each column of data to [0, 1]
+--   and draws it as a polyline.
 renderParallel :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderParallel r layout pal ly =
   let cols = lyHover ly
@@ -721,8 +876,11 @@ renderParallel r layout pal ly =
           | i <- [0 .. nCols - 1], labelTextOf i /= "" ]
     in axisLines <> concatMap rowSegs [0 .. n - 1] <> labels_
 
--- | Pie chart (Phase 6+ C-2): lyEncX = categorical labels、 lyEncY = values。
--- plotArea 中央に円描画、 各 slice は categorical palette で着色。 軸 / tick 非表示前提。
+-- | [日本語]: Pie chart: lyEncX = categorical labels、 lyEncY = values。
+--   plotArea 中央に円描画、 各 slice は categorical palette で着色。 軸 / tick 非表示前提。
+--   [English]: Pie chart: lyEncX gives the categorical labels, lyEncY gives
+--   the values. Draws the circle centered in the plotArea, coloring each
+--   slice from the categorical palette. Assumes axes and ticks are hidden.
 renderPie :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderPie r layout thePal ly =
   let area    = lpPlotArea layout
@@ -763,9 +921,13 @@ renderPie r layout thePal ly =
   in concat [ mkSlice i (v, lbl) s
             | (i, (v, lbl, s)) <- zip [0..] (zip3 values paddedLabels starts) ]
 
--- | Waterfall chart (Phase 6+ C-2): lyEncX = categorical labels、 lyEncY = delta values。
--- 各 bar は前 bar の累積値から start、 + delta だけ移動。
--- 正 = positive 色、 負 = negative 色。
+-- | [日本語]: Waterfall chart: lyEncX = categorical labels、 lyEncY = delta values。
+--   各 bar は前 bar の累積値から start、 + delta だけ移動。
+--   正 = positive 色、 負 = negative 色。
+--   [English]: Waterfall chart: lyEncX gives the categorical labels, lyEncY
+--   gives the delta values. Each bar starts from the previous bar's
+--   cumulative value and moves by + delta. Positive deltas use the positive
+--   color, negative deltas use the negative color.
 renderWaterfall :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderWaterfall r layout pal ly =
   let xCats = lpXCategoryLabels layout

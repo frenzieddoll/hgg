@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.Common
--- Description : 共通基盤 (型・theme・projection・axis/grid/tick・color・shape・stat helper)
+-- Description : Core types, theme, projection, axis/grid/tick, color, shape, and stat helpers
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+-- [English]: Split out from the Render monolith (output-neutral, pure relocation only).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -73,13 +74,19 @@ import           Numeric             (showEFloat, showFFloat)
 -- Phase 51: Point/Rect/style/PathSegment/Transform/Primitive/solid/scalePrimitives は
 -- 'Graphics.Hgg.Primitive' (leaf) へ移設 (循環回避)。 本 module は import 済 (下記)。
 
--- | TODO-10 (2026-05-29) PS port: どの font slot を引くか
--- (= spec の titleFont / axisLabelFont / tickFont / legendFont)。
+-- | [日本語]: TODO-10 (2026-05-29) PS port: どの font slot を引くか
+--   (= spec の titleFont / axisLabelFont / tickFont / legendFont)。
+--   [English]: TODO-10 (2026-05-29) PS port: which font slot to pull (that is,
+--   the spec's titleFont / axisLabelFont / tickFont / legendFont).
 data FontKind = TitleF | AxisLabelF | TickF | LegendTitleF | LegendItemF
   deriving (Show, Eq)
 
--- | TODO-10 (2026-05-29) PS port: spec の font 設定 + theme default を merge して TextStyle を生成。
--- spec を取れない場所 (= layer helper 内など) では Nothing を渡すと slot default に fallback。
+-- | [日本語]: TODO-10 (2026-05-29) PS port: spec の font 設定 + theme default を merge して TextStyle を生成。
+--   spec を取れない場所 (= layer helper 内など) では Nothing を渡すと slot default に fallback。
+--   [English]: TODO-10 (2026-05-29) PS port: merges the spec's font settings with
+--   the theme default to build a 'TextStyle'. Where the spec is unavailable
+--   (for example, inside a layer helper), pass 'Nothing' to fall back to the
+--   slot default.
 mkFontTS :: Maybe VisualSpec -> ThemePalette -> FontKind -> TextAnchor -> Double -> TextStyle
 mkFontTS mSpec pal fk anchor rot =
   let -- Phase 34: ggplot theme_grey の base_size + 相対比に較正 (R theme_grey() 実測)。
@@ -141,39 +148,67 @@ mkFontTS mSpec pal fk anchor rot =
 
 -- Phase 51: Transform / PathSegment / Primitive は 'Graphics.Hgg.Primitive' へ移設。
 
--- | mm → pt 変換 (Phase 33 B7)。 mark 既定 (point/line/半径/cap/矢じり) を物理 mm で
--- 書くためのヘルパ。 layout/Primitive は純 pt なので、 既定もここで pt に解決する。
--- backend が dpi 係数 (k) を最後に一律適用する ('scalePrimitives')。
+-- | [日本語]: mm → pt 変換。 mark 既定 (point/line/半径/cap/矢じり) を物理 mm で
+--   書くためのヘルパ。 layout/Primitive は純 pt なので、 既定もここで pt に解決する。
+--   backend が dpi 係数 (k) を最後に一律適用する ('scalePrimitives')。
+--   [English]: Converts mm to pt. A helper for writing mark defaults
+--   (point/line radius, cap, arrowhead) in physical mm. Since layout/Primitive
+--   are in pure pt, defaults are resolved to pt here too; the backend applies
+--   the dpi factor (k) uniformly at the end ('scalePrimitives').
 mmPt :: Double -> Double
 mmPt mm = mm * mmToPt
 
--- | scatter / point マーカーの既定**直径** (pt)。Phase 34 A1 で ggplot
--- @geom_point@ 既定を実測した 1.65mm (= 半径 2.34pt) に較正
--- (`phase-34-measurements/A1-results.md`)。size 意味論は「外接円の直径」
--- (Phase 34 §2.1)。
+-- | [日本語]: scatter / point マーカーの既定__直径__ (pt)。ggplot
+--   @geom_point@ 既定を実測した 1.65mm (= 半径 2.34pt) に較正
+--   (`phase-34-measurements/A1-results.md`)。size 意味論は「外接円の直径」。
+--   [English]: The default __diameter__ (pt) of a scatter/point marker.
+--   Calibrated to the measured 1.65mm (radius 2.34pt) default of ggplot's
+--   @geom_point@ (see `phase-34-measurements/A1-results.md`). The "size"
+--   semantics is "the diameter of the bounding circle".
 defaultMarkerDiameter :: Double
 defaultMarkerDiameter = mmPt 1.65
 
--- | 線 (geom_line/path/step/segment) の既定**線幅** (pt)。Phase 34 A1 で ggplot
--- @linewidth 0.5@ の実描画幅 0.376mm に較正 (解析式 @nominal × .pt/96 × 25.4@ を
--- 太線 bbox 実測で検証)。
+-- | [日本語]: 線 (geom_line/path/step/segment) の既定__線幅__ (pt)。ggplot
+--   @linewidth 0.5@ の実描画幅 0.376mm に較正 (解析式 @nominal × .pt/96 × 25.4@ を
+--   太線 bbox 実測で検証)。
+--   [English]: The default __line width__ (pt) for lines (geom_line/path/step/
+--   segment). Calibrated to the measured 0.376mm rendered width of ggplot's
+--   @linewidth 0.5@ (the formula @nominal × .pt/96 × 25.4@ was verified
+--   against a thick-line bounding-box measurement).
 defaultLineWidth :: Double
 defaultLineWidth = mmPt 0.376
 
--- | geom_smooth 線の既定線幅 (pt)。ggplot は @linewidth = 2 × 既定@ なので line の
--- 2倍 (0.753mm)。Phase 34 A1。
+-- | [日本語]: geom_smooth 線の既定線幅 (pt)。ggplot は @linewidth = 2 × 既定@ なので line の
+--   2倍 (0.753mm)。
+--   [English]: The default line width (pt) for geom_smooth lines. ggplot uses
+--   @linewidth = 2 × default@, so this is twice the plain line width (0.753mm).
 defaultSmoothWidth :: Double
 defaultSmoothWidth = mmPt 0.753
 
--- | Theme 色 palette (= JSON serialize しないので Render module 内に閉じる)。
--- Phase 9 A-1: 色に加え「panel 背景塗り / grid / border 有無フラグ」 を持つ。
---   * tpPanelBg    = panel (plotArea) 背景色。 tpShowPanel が True のとき塗る。
---   * tpShowPanel  = panel 矩形を塗るか (theme_grey / ブランドは True、 従来 preset は False)。
---   * tpShowGrid   = theme レベルの grid master (False で全 grid 抑制。 軸ごと axShowGrid と AND)。
---   * tpShowBorder = axisFrame の 4 辺枠を描くか (従来 preset True、 panel 塗り系は False)。
---   * tpShowBackground = plot 全面背景 (tpBackground) を塗るか (★ Phase 63 A18。
---     False = 塗らない = 透過。 tpBackground の色自体は geom_label 箱や bar 縁取り等の
---     「背景色」 参照用に残る)。
+-- | [日本語]: Theme 色 palette (= JSON serialize しないので Render module 内に閉じる)。
+--   色に加え「panel 背景塗り / grid / border 有無フラグ」 を持つ。
+--     * tpPanelBg    = panel (plotArea) 背景色。 tpShowPanel が True のとき塗る。
+--     * tpShowPanel  = panel 矩形を塗るか (theme_grey / ブランドは True、 従来 preset は False)。
+--     * tpShowGrid   = theme レベルの grid master (False で全 grid 抑制。 軸ごと axShowGrid と AND)。
+--     * tpShowBorder = axisFrame の 4 辺枠を描くか (従来 preset True、 panel 塗り系は False)。
+--     * tpShowBackground = plot 全面背景 (tpBackground) を塗るか。
+--       False = 塗らない = 透過。 tpBackground の色自体は geom_label 箱や bar 縁取り等の
+--       「背景色」 参照用に残る。
+--   [English]: The theme color palette (kept inside the Render module because
+--   it is not JSON-serialized). Besides the colors themselves, it carries
+--   on/off flags for panel background fill, grid, and border:
+--     * tpPanelBg    = the panel (plot area) background color, painted when
+--       tpShowPanel is True.
+--     * tpShowPanel  = whether to paint the panel rectangle (True for
+--       theme_grey / brand themes, False for the legacy presets).
+--     * tpShowGrid   = the theme-level grid master switch (False suppresses
+--       all grid lines; ANDed with the per-axis axShowGrid).
+--     * tpShowBorder = whether to draw the 4-sided axisFrame border (True for
+--       the legacy presets, False for panel-filled themes).
+--     * tpShowBackground = whether to paint the plot's full background
+--       (tpBackground). False means no fill (transparent); the tpBackground
+--       color itself is still kept for other uses, such as the geom_label box
+--       or bar outline "background color".
 data ThemePalette = ThemePalette
   { tpBackground :: !Text
   , tpShowBackground :: !Bool
@@ -295,8 +330,11 @@ themePalette t = case t of
     , tpShowGridMajor = True, tpShowGridMinor = True, tpShowBackground = True
     , tpTitleColor = "#1a1a1a", tpTitleHjust = 0.0, tpTickLineColor = "#000000", tpLegendKeyBg = "" }
 
--- | Phase 9 A-2: preset palette に ThemeOverride を合成 (element 単位上書き)。
--- 各 override field が Just なら preset 値を差し替える。 描画は合成後の値のみ参照。
+-- | [日本語]: preset palette に ThemeOverride を合成 (element 単位上書き)。
+--   各 override field が Just なら preset 値を差し替える。 描画は合成後の値のみ参照。
+--   [English]: Merges a 'ThemeOverride' onto the preset palette (per-element
+--   override). Each Just override field replaces the corresponding preset
+--   value; rendering only ever consults the merged result.
 resolveTheme :: Graphics.Hgg.Spec.ThemeName -> ThemeOverride -> ThemePalette
 resolveTheme name ov =
   let base = themePalette name
@@ -327,15 +365,22 @@ resolveTheme name ov =
     ovB f d = fromMaybe d (getLast (f ov))
     ovD f d = fromMaybe d (getLast (f ov))
 
--- | spec の theme + override を解決して ThemePalette を得る (全 render 経路の入口)。
+-- | [日本語]: spec の theme + override を解決して ThemePalette を得る (全 render 経路の入口)。
+--   [English]: Resolves the spec's theme plus its override into a
+--   'ThemePalette' (the entry point used by every render path).
 specThemePalette :: VisualSpec -> ThemePalette
 specThemePalette spec =
   resolveTheme (fromMaybe Graphics.Hgg.Spec.ThemeDefault (getLast (vsTheme spec)))
                (vsThemeOverride spec)
 
--- | Phase 9 A-4: facet strip.background の (塗り色, 表示) を解決。 ggplot は殆どの preset で
--- 灰矩形 (grey85 #d9d9d9)、 theme_minimal / theme_void は strip 矩形なし。 panel 塗り系
--- (dark/noir/canvas-dark) は panel より少し明るい/暗い帯。 override (toStripBg/toShowStrip) 優先。
+-- | [日本語]: facet strip.background の (塗り色, 表示) を解決。 ggplot は殆どの preset で
+--   灰矩形 (grey85 #d9d9d9)、 theme_minimal / theme_void は strip 矩形なし。 panel 塗り系
+--   (dark/noir/canvas-dark) は panel より少し明るい/暗い帯。 override (toStripBg/toShowStrip) 優先。
+--   [English]: Resolves the facet strip.background (fill color, visibility).
+--   Most ggplot presets use a grey rectangle (grey85 #d9d9d9); theme_minimal /
+--   theme_void draw no strip rectangle at all. Panel-filled themes
+--   (dark/noir/canvas-dark) use a band slightly lighter/darker than the panel.
+--   The override (toStripBg/toShowStrip) takes priority when present.
 themeStripStyle :: VisualSpec -> (Text, Bool)
 themeStripStyle spec =
   let name = fromMaybe Graphics.Hgg.Spec.ThemeDefault (getLast (vsTheme spec))
@@ -354,10 +399,16 @@ themeStripStyle spec =
       shw = fromMaybe dshow (getLast (toShowStrip ov))
   in (bg, shw)
 
--- | Scale の range (= pixel 出力域) を別 Rect に合わせて作り直す。 domain は不変。
--- plot area を縮める時 (subplot / marginal) は plotArea だけでなく scale の range も
--- 必ず合わせないと、 mark の位置が古い枠基準のまま描かれて軸枠からはみ出す
--- (= ggplot で panel が動けば座標変換も追従するのと同じ原則)。
+-- | [日本語]: Scale の range (= pixel 出力域) を別 Rect に合わせて作り直す。 domain は不変。
+--   plot area を縮める時 (subplot / marginal) は plotArea だけでなく scale の range も
+--   必ず合わせないと、 mark の位置が古い枠基準のまま描かれて軸枠からはみ出す
+--   (= ggplot で panel が動けば座標変換も追従するのと同じ原則)。
+--   [English]: Rebuilds a scale's range (the pixel output extent) to match a
+--   different Rect; the domain is unchanged. When shrinking the plot area
+--   (subplots / marginal panels), the scale's range must be re-matched along
+--   with plotArea — otherwise marks keep the old frame's positions and spill
+--   outside the axis frame (the same principle as ggplot's coordinate
+--   transform following the panel whenever it moves).
 scaleRetargetX :: Graphics.Hgg.Layout.Scale -> Rect -> Graphics.Hgg.Layout.Scale
 scaleRetargetX scale rect = case scale of
   LinearScale lo hi _ _ -> LinearScale lo hi (rX rect) (rX rect + rW rect)
@@ -372,9 +423,13 @@ scaleRetargetY scale rect = case scale of
   SqrtScale lo hi _ _   -> SqrtScale   lo hi (rY rect + rH rect) (rY rect)
   TimeScale lo hi _ _   -> TimeScale   lo hi (rY rect + rH rect) (rY rect)
 
--- | TODO-3b (2026-05-29): C-5 grid line 描画。 PS Render.purs:gridLines を
--- HS に port。 vsXAxis / vsYAxis の axShowGrid が True なら x/y tick 位置に
--- 薄い grid line を描く。 default false (= 旧 HS 挙動と互換)。
+-- | [日本語]: TODO-3b (2026-05-29): C-5 grid line 描画。 PS Render.purs:gridLines を
+--   HS に port。 vsXAxis / vsYAxis の axShowGrid が True なら x/y tick 位置に
+--   薄い grid line を描く。 default false (= 旧 HS 挙動と互換)。
+--   [English]: TODO-3b (2026-05-29): draws C-5 grid lines. Ported from PS
+--   Render.purs:gridLines to Haskell. When axShowGrid is True on vsXAxis /
+--   vsYAxis, faint grid lines are drawn at the x/y tick positions. Defaults to
+--   false (compatible with the previous Haskell behavior).
 gridLines :: Layout -> VisualSpec -> ThemePalette -> [Primitive]
 gridLines layout spec pal =
   let area = lpPlotArea layout
@@ -457,10 +512,16 @@ gridLines layout spec pal =
       (a : b : _) -> let step = b - a in [ t - step / 2 | t <- ts ] ++ [ last ts + step / 2 ]
       _           -> []
 
--- | Phase 11 A7-c: 極座標の grid + 軸 (= 直交 gridLines/axisFrame/tickMarks の代わり)。
+-- | [日本語]: 極座標の grid + 軸 (= 直交 gridLines/axisFrame/tickMarks の代わり)。
 --   半径方向 = 同心円 (rad tick ごと) + 中心からの r 軸ラベル (上スポーク沿い)。
 --   角度方向 = 放射スポーク (theta tick ごと) + 外周の角度ラベル。
 --   theta 軸は PolarX なら x、 PolarY なら y。
+--   [English]: Polar-coordinate grid + axes (replacing the Cartesian
+--   gridLines/axisFrame/tickMarks). The radial direction draws concentric
+--   circles (one per radius tick) plus r-axis labels along the top spoke; the
+--   angular direction draws radial spokes (one per theta tick) plus angle
+--   labels around the perimeter. The theta axis is x for PolarX and y for
+--   PolarY.
 polarGrid :: VisualSpec -> Layout -> ThemePalette -> [Primitive]
 polarGrid spec layout pal =
   let coord = coordOf spec
@@ -510,8 +571,12 @@ fromMaybe _ (Just v) = v
 -- 軸 / tick
 -- ---------------------------------------------------------------------------
 
--- | plot 全面背景。 ★ Phase 63 A18: tpShowBackground が False なら塗らない (= 透過。
--- SVG/PDF は背景 rect 自体が消えて自然に透過、 raster は backend が init 色を切り替える)。
+-- | [日本語]: plot 全面背景。 tpShowBackground が False なら塗らない (= 透過。
+--   SVG/PDF は背景 rect 自体が消えて自然に透過、 raster は backend が init 色を切り替える)。
+--   [English]: The plot's full background. When tpShowBackground is False,
+--   nothing is painted (transparent): for SVG/PDF the background rect simply
+--   disappears, naturally leaving it transparent; for raster output the
+--   backend switches its init color instead.
 background :: Layout -> ThemePalette -> [Primitive]
 background layout pal
   | not (tpShowBackground pal) = []
@@ -521,18 +586,29 @@ background layout pal
                  (FillStyle (tpBackground pal) 1.0)
                  Nothing ]
 
--- | Phase 9 A-1: panel (plotArea) 背景の塗り経路。 theme_grey / ブランドは灰/暗の
--- panel 矩形を塗り、 その上に白/淡色 grid を重ねる (ggplot theme_grey 構造)。
--- tpShowPanel が False の preset では何も描かない (= 従来の白背景挙動を温存)。
+-- | [日本語]: panel (plotArea) 背景の塗り経路。 theme_grey / ブランドは灰/暗の
+--   panel 矩形を塗り、 その上に白/淡色 grid を重ねる (ggplot theme_grey 構造)。
+--   tpShowPanel が False の preset では何も描かない (= 従来の白背景挙動を温存)。
+--   [English]: The paint path for the panel (plot area) background.
+--   theme_grey and brand themes paint a grey/dark panel rectangle and layer
+--   white/pale grid lines on top of it (the ggplot theme_grey structure).
+--   Presets with tpShowPanel False draw nothing, preserving the legacy white
+--   background behavior.
 panelBackground :: Layout -> ThemePalette -> [Primitive]
 panelBackground layout pal
   | tpShowPanel pal = [ PRect (lpPlotArea layout) (FillStyle (tpPanelBg pal) 1.0) Nothing ]
   | otherwise       = []
 
--- | axisFrame: panel の 4 辺枠。 tpShowBorder が False の theme (grey / ブランド) では
--- 枠を描かない (= ggplot theme_grey は border なし)。
--- axisLine (下辺=x軸 + 左辺=y軸 の 2 本) は theme_classic 用に tpShowAxisLine で出す。
--- border と axisLine は排他ではないが、 classic は border なし + axisLine ありの組合せ。
+-- | [日本語]: axisFrame: panel の 4 辺枠。 tpShowBorder が False の theme (grey / ブランド) では
+--   枠を描かない (= ggplot theme_grey は border なし)。
+--   axisLine (下辺=x軸 + 左辺=y軸 の 2 本) は theme_classic 用に tpShowAxisLine で出す。
+--   border と axisLine は排他ではないが、 classic は border なし + axisLine ありの組合せ。
+--   [English]: axisFrame: the panel's 4-sided border. Themes with
+--   tpShowBorder False (grey / brand) draw no border (ggplot theme_grey has
+--   none). The axisLine (2 lines: bottom = x axis, left = y axis) is emitted
+--   via tpShowAxisLine for theme_classic. border and axisLine are not
+--   mutually exclusive, but classic uses the combination of no border plus an
+--   axisLine.
 axisFrame :: Layout -> ThemePalette -> [Primitive]
 axisFrame layout pal = border ++ axisLine
   where
@@ -545,9 +621,14 @@ axisFrame layout pal = border ++ axisLine
                  , PLine (Point (rX a) (rY a)) (Point (rX a) (rY a + rH a)) (solid (tpAxis pal) 1.0) ]
              | otherwise = []
 
--- | TODO-3 (2026-05-29): axRotate / axShowTicks 対応 (= PS Render.tickMarksWithShow port)。
--- TODO-10 (2026-05-29): mSpec を thread して tick font (= spec.tickFont) を反映。
--- rotX/rotY は度数 (0 = 水平、 90 = 縦)。 showX/showY が False の軸は tick line + label を省略。
+-- | [日本語]: TODO-3 (2026-05-29): axRotate / axShowTicks 対応 (= PS Render.tickMarksWithShow port)。
+--   TODO-10 (2026-05-29): mSpec を thread して tick font (= spec.tickFont) を反映。
+--   rotX/rotY は度数 (0 = 水平、 90 = 縦)。 showX/showY が False の軸は tick line + label を省略。
+--   [English]: TODO-3 (2026-05-29): supports axRotate / axShowTicks (ported
+--   from PS Render.tickMarksWithShow). TODO-10 (2026-05-29): threads mSpec
+--   through to apply the tick font (spec.tickFont). rotX/rotY are in degrees
+--   (0 = horizontal, 90 = vertical). Axes with showX/showY False omit both
+--   the tick line and the label.
 tickMarks :: Maybe VisualSpec -> Layout -> ThemePalette
           -> Maybe AxisFormat -> Maybe AxisFormat
           -> Double -> Double -> Bool -> Bool -> [Primitive]
@@ -658,10 +739,13 @@ tickMarks mSpec layout pal fmtX fmtY rotX rotY showX showY =
       yPrims = if showY && not (isPolar coord) then concatMap yMarkF (lpYTicks layout) else []
   in xPrims <> yPrims
 
--- | AxisFormat に応じて Double を表示文字列に。 Nothing = auto。
---
--- Phase 6 A7: 'AxisTimeFmt' は Double を unix epoch (= seconds since 1970 UTC) と
--- 解釈し、 Data.Time.formatTime で format 文字列を適用。
+-- | [日本語]: AxisFormat に応じて Double を表示文字列に。 Nothing = auto。
+--   'AxisTimeFmt' は Double を unix epoch (= seconds since 1970 UTC) と
+--   解釈し、 Data.Time.formatTime で format 文字列を適用。
+--   [English]: Formats a Double as a display string according to the
+--   'AxisFormat'. 'Nothing' means auto. 'AxisTimeFmt' interprets the Double
+--   as a Unix epoch (seconds since 1970 UTC) and applies the format string
+--   via Data.Time.formatTime.
 formatTick :: Maybe AxisFormat -> Double -> Text
 formatTick fmt v = case fmt of
   Nothing                  -> numToText v
@@ -755,8 +839,11 @@ labels layout spec pal =
 
 -- ★ Phase 38: numToText は Layout へ集約 (Layout import 経由で使用)。
 
--- | Phase 8 B22: lpYScaleRight が Just のとき plotArea 右端に Y 軸線 + tick を描画
--- (= PS renderRightYAxis と同方式)。 Nothing なら何も描かない。
+-- | [日本語]: lpYScaleRight が Just のとき plotArea 右端に Y 軸線 + tick を描画
+--   (= PS renderRightYAxis と同方式)。 Nothing なら何も描かない。
+--   [English]: When lpYScaleRight is Just, draws a Y axis line plus ticks at
+--   the right edge of the plot area (same approach as PS renderRightYAxis).
+--   Draws nothing when Nothing.
 renderRightYAxis :: Layout -> ThemePalette -> Maybe AxisFormat -> [Primitive]
 renderRightYAxis layout pal fmtYR = case lpYScaleRight layout of
   Nothing -> []
@@ -772,18 +859,31 @@ renderRightYAxis layout pal fmtYR = case lpYScaleRight layout of
              , PText (Point (xR + 8) (py + 4)) (formatTick fmtYR v) ts ]
     in axisLine <> concatMap tickPrim (lpYTicksRight layout)
 
--- | Phase 10 A2: データ空間 (dx, dy) を coord に従い px の 'Point' に写す薄いラッパ。
--- projectXY は生 tuple を返す (Layout は Render の Point に依存できない) ので、
--- mark renderer 側はこのラッパで Point に包む。 coord = lpCoord layout を渡す前提で、
--- Cartesian では `Point (scaleApply (lpXScale l) dx) (scaleApply (lpYScale l) dy)` と
--- bit 一致する (= 従来の `Point (sx x) (sy y)` と同値 → ゼロ diff)。
+-- | [日本語]: データ空間 (dx, dy) を coord に従い px の 'Point' に写す薄いラッパ。
+--   projectXY は生 tuple を返す (Layout は Render の Point に依存できない) ので、
+--   mark renderer 側はこのラッパで Point に包む。 coord = lpCoord layout を渡す前提で、
+--   Cartesian では `Point (scaleApply (lpXScale l) dx) (scaleApply (lpYScale l) dy)` と
+--   bit 一致する (= 従来の `Point (sx x) (sy y)` と同値 → ゼロ diff)。
+--   [English]: A thin wrapper that maps data space (dx, dy) to a pixel-space
+--   'Point' according to the coordinate system. projectXY returns a raw
+--   tuple (Layout cannot depend on Render's Point), so mark renderers wrap it
+--   into a Point via this helper. Given coord = lpCoord layout, the Cartesian
+--   case is bit-identical to
+--   `Point (scaleApply (lpXScale l) dx) (scaleApply (lpYScale l) dy)` (the
+--   same as the previous `Point (sx x) (sy y)`, so it produces zero diff).
 projectPoint :: Coord -> Layout -> Double -> Double -> Point
 projectPoint c l dx dy = let (px, py) = projectXY c l dx dy in Point px py
 
--- | Phase 11 A7-c: 極座標を解さない standalone renderer (ess/autocorr/forest/funnel/
+-- | [日本語]: 極座標を解さない standalone renderer (ess/autocorr/forest/funnel/
 --   box/violin/strip/swarm/waterfall = 直交/flip 専用 2-way 分岐) 用に coord を
 --   {Cartesian, Flip} に正規化する (= polar はそれらの mark では Cartesian 扱い)。
 --   polar は座標系として点/線/扇形 bar に意味があり、 これらの統計 mark には適用しない。
+--   [English]: Normalizes coord to {Cartesian, Flip} for standalone renderers
+--   that don't understand polar coordinates (ess/autocorr/forest/funnel/
+--   box/violin/strip/swarm/waterfall, which only branch two ways between
+--   Cartesian and Flip); polar is treated as Cartesian for these marks. The
+--   polar coordinate system is meaningful for points/lines/sector bars, but
+--   is not applicable to these statistical marks.
 flipOnly :: Coord -> Coord
 flipOnly CoordFlip = CoordFlip
 flipOnly _         = CoordCartesian
@@ -800,21 +900,29 @@ median xs =
   in if odd n then s !! (n `div` 2)
      else (s !! (n `div` 2 - 1) + s !! (n `div` 2)) / 2
 
--- | Phase 11 A4-b: categorical 列を群キー列 [Text] に解決 (linetypeBy 用)。
+-- | [日本語]: categorical 列を群キー列 [Text] に解決 (linetypeBy 用)。
+--   [English]: Resolves a categorical column into a list of group keys
+--   [Text] (used by linetypeBy).
 groupKeysOf :: Resolver -> ColRef -> Maybe [Text]
 groupKeysOf r cr = case resolveCol r cr of
   Just (TxtData v) -> Just (V.toList v)
   Just (NumData v) -> Just (map (T.pack . show) (V.toList v))
   _                -> Nothing
 
--- | キー列と値列を zip し、 キー初出順を保ったまま群ごとにまとめる (= group split)。
+-- | [日本語]: キー列と値列を zip し、 キー初出順を保ったまま群ごとにまとめる (= group split)。
+--   [English]: Zips a key column with a value column and groups values by
+--   key, preserving the key's first-occurrence order (a group split).
 orderedGroups :: Eq a => [a] -> [b] -> [(a, [b])]
 orderedGroups keys vals =
   let paired = zip keys vals
   in [ (k, [ v | (k', v) <- paired, k' == k ]) | k <- nub keys ]
 
--- | Phase 26 §C-2 #5: scatter 上に「点を結ぶ線」 を生成。 group 列があれば
--- group 内のみで連結、 order 列があればソート後に連結。
+-- | [日本語]: scatter 上に「点を結ぶ線」 を生成。 group 列があれば
+--   group 内のみで連結、 order 列があればソート後に連結。
+--   [English]: Generates "lines connecting the points" on top of a scatter.
+--   When a group column is present, points are connected only within their
+--   group; when an order column is present, points are connected after
+--   sorting by it.
 renderConnect :: Resolver -> Layout -> ThemePalette -> Layer -> ConnectSpec
               -> V.Vector Double -> V.Vector Double -> Int -> [Primitive]
 renderConnect r layout pal ly cs xs ys n =
@@ -854,11 +962,19 @@ renderConnect r layout pal ly cs xs ys n =
         | (a, b) <- zip is (drop 1 is) ]
   in concatMap segsForGroup groupedSorted
 
--- | Phase 26 §C-2 #3: plot area 内に参照線 1 本を描画。
--- domain (= scale の dLo/dHi) を直接見て 2 端点を計算。
--- | ★ Phase 33 B6: 参照線も 'resolvePosX'/'resolvePosY' (UCtx) 経由に統一。
--- 値は PNative、panel 端は PNpc 0/1 で表す (出力は旧実装と bit 一致)。dpi は
--- PAbs Px 用 (参照線は使わないが UCtx 一貫のため受ける)。
+-- | [日本語]: plot area 内に参照線 1 本を描画。
+--   domain (= scale の dLo/dHi) を直接見て 2 端点を計算。
+--   [English]: Draws a single reference line inside the plot area. The two
+--   endpoints are computed by reading the domain (the scale's dLo/dHi)
+--   directly.
+-- | [日本語]: ★ 参照線も 'resolvePosX'/'resolvePosY' (UCtx) 経由に統一。
+--   値は PNative、panel 端は PNpc 0/1 で表す (出力は旧実装と bit 一致)。dpi は
+--   PAbs Px 用 (参照線は使わないが UCtx 一貫のため受ける)。
+--   [English]: Reference lines are also unified to go through
+--   'resolvePosX'/'resolvePosY' (UCtx). Values use PNative and panel edges
+--   use PNpc 0/1 (the output is bit-identical to the previous
+--   implementation). dpi is for PAbs Px (reference lines don't use it, but it
+--   is accepted for consistency with UCtx).
 renderRefLine :: Double -> Layout -> ThemePalette -> ReferenceLine -> [Primitive]
 renderRefLine dpi layout pal rl =
   let uc = UCtx dpi (lpPlotArea layout) (lpXScale layout) (lpYScale layout)
@@ -891,29 +1007,47 @@ renderRefLine dpi layout pal rl =
 -- 共通 helper
 -- ---------------------------------------------------------------------------
 
--- | 列を数値 Vector に解決。 **NA (NaN) を落とす** (nullable 列対応・ggplot na.rm
+-- | [日本語]: 列を数値 Vector に解決。 __NA (NaN) を落とす__ (nullable 列対応・ggplot na.rm
 --   相当)。 単一列 geom (histogram/freqpoly/density/box/ecdf 等) はこれで欠損を内部処理。
 --   非 NULL 列 (NaN を含まない) には no-op なので従来挙動と同一。
+--   [English]: Resolves a column to a numeric Vector, __dropping NA (NaN)__
+--   (supports nullable columns; equivalent to ggplot's na.rm). Single-column
+--   geoms (histogram/freqpoly/density/box/ecdf, etc.) handle missing values
+--   internally this way. It is a no-op on non-null columns (containing no
+--   NaN), so behavior is unchanged from before.
 vecOr :: Last ColRef -> Resolver -> V.Vector Double
 vecOr lc = V.filter (not . isNaN) . vecOrFull lc
 
--- | 'vecOr' の NaN 保持版 (= 長さを保つ)。 **多列 geom (scatter/line) が x/y を
---   行整列したまま欠損対を落とす**ために使う (per-column drop だと x/y がズレるため)。
+-- | [日本語]: 'vecOr' の NaN 保持版 (= 長さを保つ)。
+--   __多列 geom (scatter/line) が行整列を保って欠損対を落とす__ために使う
+--   (per-column drop だと x/y がズレるため)。
+--   [English]: The NaN-preserving variant of 'vecOr' (keeps the length
+--   unchanged). Used so that
+--   __multi-column geoms (scatter/line) can drop missing pairs while keeping x/y row-aligned__
+--   (dropping per-column would throw x/y out of sync).
 vecOrFull :: Last ColRef -> Resolver -> V.Vector Double
 vecOrFull lc r = case getLast lc of
   Nothing -> V.empty
   Just cr -> maybe V.empty id (resolveNum r cr)
 
--- | Okabe-Ito 8 色 categorical palette (= 色覚多様性配慮)。
+-- | [日本語]: Okabe-Ito 8 色 categorical palette (= 色覚多様性配慮)。
+--   [English]: The 8-color Okabe-Ito categorical palette (chosen for color-
+--   vision-deficiency accessibility).
 okabeIto :: [Text]
 okabeIto =
   [ "#E69F00", "#56B4E9", "#009E73", "#F0E442"
   , "#0072B2", "#D55E00", "#CC79A7", "#000000" ]
 
--- | layer の color encoding を point 数 n の Vector に展開。
---   * 'ColorStatic'  → 全 point 同色
---   * 'ColorByCol'   → 列 (txt or num) を distinct 値ごとに palette index 割当
---   * encoding 無し  → theme の default 色
+-- | [日本語]: layer の color encoding を point 数 n の Vector に展開。
+--     * 'ColorStatic'  → 全 point 同色
+--     * 'ColorByCol'   → 列 (txt or num) を distinct 値ごとに palette index 割当
+--     * encoding 無し  → theme の default 色
+--   [English]: Expands a layer's color encoding into a Vector of n colors,
+--   one per point.
+--     * 'ColorStatic'  gives every point the same color.
+--     * 'ColorByCol'   assigns a palette index per distinct value of the
+--       column (text or numeric).
+--     * No encoding    falls back to the theme's default color.
 colorVector :: Resolver -> Layout -> ThemePalette -> Layer -> Int -> V.Vector Text
 colorVector r layout pal ly n =
   case getLast (lyColor ly) of
@@ -964,14 +1098,19 @@ colorVector r layout pal ly n =
           in V.fromList filled
     Nothing -> V.replicate n (tpDefault pal)
 
--- | Viridis 風 5-stop gradient (= 簡易版、 perceptually uniform に近い)。
--- t in [0, 1]。
+-- | [日本語]: Viridis 風 5-stop gradient (= 簡易版、 perceptually uniform に近い)。
+--   t in [0, 1]。
+--   [English]: A Viridis-like 5-stop gradient (a simplified version, close to
+--   perceptually uniform). t is in [0, 1].
 viridis :: Double -> Text
 viridis = continuousColor
   ["#440154", "#3B528B", "#21918C", "#5EC962", "#FDE725"]
 
--- | P17: 任意 hex 配列の N-stop palette を t ∈ [0,1] で線形補間。
+-- | [日本語]: P17: 任意 hex 配列の N-stop palette を t ∈ [0,1] で線形補間。
 --   layout.lpContinuousPalette を渡せば spec 指定の sequential が反映される。
+--   [English]: P17: linearly interpolates an arbitrary N-stop hex-color
+--   palette at t ∈ [0,1]. Passing layout.lpContinuousPalette applies the
+--   spec-specified sequential palette.
 continuousColor :: [Text] -> Double -> Text
 continuousColor palArr t =
   let n = length palArr
@@ -1033,23 +1172,31 @@ staticColorOr ly defaultC = case getLast (lyColor ly) of
 -- TODO-3c (2026-05-29): jitter / shape / sizeBy helpers (= PS Render port)
 -- ---------------------------------------------------------------------------
 
--- | P14 PS port: deterministic pseudo-random ∈ [0,1) from Int seed。
--- sin-hash トリック (= classic JS shadertoy)。 同 seed で常に同値。
+-- | [日本語]: P14 PS port: deterministic pseudo-random ∈ [0,1) from Int seed。
+--   sin-hash トリック (= classic JS shadertoy)。 同 seed で常に同値。
+--   [English]: P14 PS port: a deterministic pseudo-random value in [0,1) from
+--   an Int seed, using the classic sin-hash trick (as seen in JS shadertoy
+--   code). The same seed always yields the same value.
 hashRand :: Int -> Double
 hashRand i =
   let s = sin (fromIntegral i * 12.9898) * 43758.5453
       f = fromIntegral (floor s :: Int)
   in s - f
 
--- | C-6 PS port: shape を Primitive (PCircle or PPath) に変換。
--- MShCircle は PCircle (= hover label 付き)、 他は PPath。
+-- | [日本語]: C-6 PS port: shape を Primitive (PCircle or PPath) に変換。
+--   MShCircle は PCircle (= hover label 付き)、 他は PPath。
+--   [English]: C-6 PS port: converts a shape into a Primitive (PCircle or
+--   PPath). MShCircle becomes a PCircle (with a hover label); every other
+--   shape becomes a PPath.
 shapeToPrim :: MarkShape -> Point -> Double -> FillStyle -> Maybe StrokeStyle
             -> Maybe Text -> Primitive
 shapeToPrim sh pt sz fs ms label = case sh of
   MShCircle -> PCircle pt sz fs ms label
   _         -> PPath (shapePath sh pt sz) fs ms
 
--- | C-6 PS port: shape 別 path 構築 (= PathSegment 列、 bezier 近似含む)。
+-- | [日本語]: C-6 PS port: shape 別 path 構築 (= PathSegment 列、 bezier 近似含む)。
+--   [English]: C-6 PS port: builds a per-shape path (a list of PathSegment,
+--   including Bezier approximations).
 shapePath :: MarkShape -> Point -> Double -> [PathSegment]
 shapePath sh (Point cx cy) r = case sh of
   MShCircle -> []
@@ -1182,17 +1329,27 @@ shapePath sh (Point cx cy) r = case sh of
        , CurveTo (p (-0.3627) 0.1398) (p 0.0038 0.1398) (p 0.2368 (-0.0932))
        , ClosePath ]
 
--- | ggplot 同型のマーカー塗り (色 + alpha)。 hollow (中抜き) は透明・輪郭のみ。
---   plot 点 (Render.Basic) と凡例キー (Render.Layer) で**同一の装飾規則**を使うための
+-- | [日本語]: ggplot 同型のマーカー塗り (色 + alpha)。 hollow (中抜き) は透明・輪郭のみ。
+--   plot 点 (Render.Basic) と凡例キー (Render.Layer) で__同一の装飾規則__を使うための
 --   単一ソース (= 「凡例マークは plot と揃える」 規律)。
+--   [English]: A ggplot-equivalent marker fill (color + alpha). Hollow
+--   markers are transparent, outline only. This is the single source that
+--   lets plotted points (Render.Basic) and legend keys (Render.Layer) share
+--   __the same styling rule__ (the discipline that "legend marks match the
+--   plot").
 markerFillFor :: Layer -> Text -> Double -> FillStyle
 markerFillFor ly c ai
   | getLast (lyHollow ly) == Just True = FillStyle c 0.0
   | otherwise                          = FillStyle c ai
 
--- | ggplot 同型のマーカー縁 (stroke)。 既定は**縁なし** (= 塗り点 shape 19)。
+-- | [日本語]: ggplot 同型のマーカー縁 (stroke)。 既定は__縁なし__ (= 塗り点 shape 19)。
 --   hollow → 点色で輪郭のみ (幅 'lyStroke'|1)。 'lyEdge' 指定時だけ縁を出す
 --   (色 'lyEdgeColor'|点色、 幅 'lyEdgeWidth'|1)。 plot/凡例で共通。
+--   [English]: A ggplot-equivalent marker edge (stroke). The default has
+--   __no edge__ (a filled point, shape 19). hollow draws only an outline in the
+--   point's color (width 'lyStroke' or 1). An edge is drawn only when
+--   'lyEdge' is set (color 'lyEdgeColor' or the point color, width
+--   'lyEdgeWidth' or 1). Shared by both the plot and the legend.
 markerStrokeFor :: Layer -> Text -> Maybe StrokeStyle
 markerStrokeFor ly c
   | getLast (lyHollow ly) == Just True = Just (StrokeStyle c (doubleOr (lyStroke ly) 1.0))
@@ -1200,10 +1357,17 @@ markerStrokeFor ly c
       Just (StrokeStyle (maybe c id (getLast (lyEdgeColor ly))) (doubleOr (lyEdgeWidth ly) 1.0))
   | otherwise                          = Nothing
 
--- | C-6 PS port: scatter / strip 等の i 番目 data 点に対応する shape を取得。
--- lyShapeBy 列値を data から resolve し、 cat → shape を引く。 明示の lyShapeMap が
--- あればそれを最優先、 無ければカテゴリ初出順の index で 'shapePalette' を巡回割当
--- (= ggplot @aes(shape=factor(g))@ の自動 shape scale。 colorVector の色割当と同思想)。
+-- | [日本語]: C-6 PS port: scatter / strip 等の i 番目 data 点に対応する shape を取得。
+--   lyShapeBy 列値を data から resolve し、 cat → shape を引く。 明示の lyShapeMap が
+--   あればそれを最優先、 無ければカテゴリ初出順の index で 'shapePalette' を巡回割当
+--   (= ggplot @aes(shape=factor(g))@ の自動 shape scale。 colorVector の色割当と同思想)。
+--   [English]: C-6 PS port: gets the shape for the i-th data point in
+--   scatter / strip and similar marks. Resolves the lyShapeBy column value
+--   from the data and looks up shape by category. An explicit lyShapeMap
+--   takes priority when present; otherwise 'shapePalette' is cycled by the
+--   category's first-occurrence index (the automatic shape scale for ggplot
+--   @aes(shape=factor(g))@, following the same idea as colorVector's color
+--   assignment).
 pointShapeAt :: Layer -> Resolver -> Int -> MarkShape
 pointShapeAt ly r i = case getLast (lyShape ly) of
   Just s  -> s                                    -- ★ Phase 30 A3: 固定 shape 最優先
@@ -1222,22 +1386,37 @@ pointShapeAt ly r i = case getLast (lyShape ly) of
                    Just k  -> shapePalette !! (k `mod` length shapePalette)
                    Nothing -> MShCircle
 
--- | 自動 shape scale の巡回パレット (ggplot 風: 丸→三角→四角→…)。
+-- | [日本語]: 自動 shape scale の巡回パレット (ggplot 風: 丸→三角→四角→…)。
+--   [English]: The cyclic palette for the automatic shape scale (ggplot
+--   style: circle to triangle to square and onward).
 shapePalette :: [MarkShape]
 shapePalette =
   [ MShCircle, MShSquare, MShTriangle, MShCross
   , MShSpade, MShHeart, MShClub, MShDiamond ]
 
--- | TODO-3e (2026-05-29): lySizeBy → 各点の半径 (px) Vector。
--- lySizeBy 指定の列値 (= 要 numeric) を min..max → [szLo, szHi] px に線形 map。
--- 指定無しなら lySize (or default 3.0) を全点に適用。
--- | per-point マーカー**半径** (pt) Vector を返す。
+-- | [日本語]: TODO-3e (2026-05-29): lySizeBy → 各点の半径 (px) Vector。
+--   lySizeBy 指定の列値 (= 要 numeric) を min..max → [szLo, szHi] px に線形 map。
+--   指定無しなら lySize (or default 3.0) を全点に適用。
+--   [English]: TODO-3e (2026-05-29): lySizeBy maps to a per-point radius (px)
+--   Vector. The column value given by lySizeBy (must be numeric) is linearly
+--   mapped from its min..max range to [szLo, szHi] px. Without lySizeBy,
+--   lySize (or the default 3.0) is applied to every point.
+-- | [日本語]: per-point マーカー__半径__ (pt) Vector を返す。
 --
--- ★ Phase 34 A3: 'size' 意味論を「マーカー外接円の**直径** (pt)」に統一
--- (§2.1)。'lySize' は直径として解釈し、shapeToPrim が要求する半径 (= 直径/2) を返す。
--- 既定直径は 'defaultMarkerDiameter' (= ggplot 実測 1.65mm)。
--- sizeBy (連続 size mapping) の範囲 'lpSizeRange' も**直径**範囲 (= scale_size、
--- 既定 (6,20)pt → 半径 3..10pt)。
+--   ★ @size@ 意味論を「マーカー外接円の__直径__ (pt)」に統一。
+--   'lySize' は直径として解釈し、shapeToPrim が要求する半径 (= 直径/2) を返す。
+--   既定直径は 'defaultMarkerDiameter' (= ggplot 実測 1.65mm)。
+--   sizeBy (連続 size mapping) の範囲 'lpSizeRange' も__直径__範囲 (= scale_size、
+--   既定 (6,20)pt → 半径 3..10pt)。
+--   [English]: Returns a Vector of per-point marker __radii__ (pt).
+--
+--   The "size" semantics is unified as "the __diameter__ (pt) of the
+--   marker's bounding circle". 'lySize' is interpreted as a diameter, and
+--   this function returns the radius (diameter / 2) that shapeToPrim
+--   requires. The default diameter is 'defaultMarkerDiameter' (ggplot's
+--   measured 1.65mm). The range for sizeBy (continuous size mapping),
+--   'lpSizeRange', is likewise a __diameter__ range (scale_size, default
+--   (6,20)pt, giving radius 3..10pt).
 sizeVector :: Resolver -> Layout -> Layer -> Int -> V.Vector Double
 sizeVector r layout ly n =
   let baseDiam = doubleOr (lySize ly) defaultMarkerDiameter   -- 直径 (pt)
@@ -1257,10 +1436,15 @@ sizeVector r layout ly n =
                              Nothing -> baseRad
                          | i <- [0 .. n - 1] ]
 
--- | Phase 30 A8: lyAlphaBy → 各点の alpha (不透明度) Vector。
--- lyAlphaBy 指定の列値 (= 要 numeric) を min..max → alpha [0.1, 1.0] に線形 map
--- (= ggplot scale_alpha 既定 range)。 指定無しなら baseAlpha (固定 lyAlpha or 既定値)
--- を全点に適用。
+-- | [日本語]: lyAlphaBy → 各点の alpha (不透明度) Vector。
+--   lyAlphaBy 指定の列値 (= 要 numeric) を min..max → alpha [0.1, 1.0] に線形 map
+--   (= ggplot scale_alpha 既定 range)。 指定無しなら baseAlpha (固定 lyAlpha or 既定値)
+--   を全点に適用。
+--   [English]: lyAlphaBy maps to a per-point alpha (opacity) Vector. The
+--   column value given by lyAlphaBy (must be numeric) is linearly mapped
+--   from its min..max range to alpha [0.1, 1.0] (ggplot's default
+--   scale_alpha range). Without lyAlphaBy, baseAlpha (the fixed lyAlpha, or
+--   the default) is applied to every point.
 alphaVector :: Resolver -> Layer -> Double -> Int -> V.Vector Double
 alphaVector r ly baseAlpha n =
   case getLast (lyAlphaBy ly) of
@@ -1282,7 +1466,9 @@ alphaVector r ly baseAlpha n =
 -- Phase 6+ case C-2 ~ C-5: 基本 / 分布 chart の Render
 -- ===========================================================================
 
--- | カテゴリ名 (= ColTxt) を Layer から取得。 categorical bar / pie 等で labels に。
+-- | [日本語]: カテゴリ名 (= ColTxt) を Layer から取得。 categorical bar / pie 等で labels に。
+--   [English]: Gets category names (a ColTxt column) from a Layer, used as
+--   labels for categorical bar / pie and similar marks.
 catLabelsOf :: Resolver -> Layer -> [Text]
 catLabelsOf r ly = case getLast (lyEncX ly) of
   Just cr -> case resolveCol r cr of
@@ -1294,9 +1480,13 @@ catLabelsOf r ly = case getLast (lyEncX ly) of
 -- 分布 chart (group × value)
 -- ===========================================================================
 
--- | group 列 (lyEncX ?? colorBy 列) と value 列 (lyEncY) を resolve。 group は
--- categorical (= ColTxt) が普通、 ColNum でも対応 (= ColNum を distinct 値で group)。
--- 戻り値: [(group_label, [value])]
+-- | [日本語]: group 列 (lyEncX ?? colorBy 列) と value 列 (lyEncY) を resolve。 group は
+--   categorical (= ColTxt) が普通、 ColNum でも対応 (= ColNum を distinct 値で group)。
+--   戻り値: [(group_label, [value])]
+--   [English]: Resolves the group column (lyEncX or the colorBy column) and
+--   the value column (lyEncY). The group column is usually categorical
+--   (ColTxt), but ColNum is also supported (ColNum is grouped by its
+--   distinct values). Returns [(group_label, [value])].
 groupedValues :: Resolver -> Layer -> [(Text, [Double])]
 groupedValues r ly = case distGroupRef ly of
   Just crX -> case resolveCol r crX of
@@ -1317,12 +1507,21 @@ groupedValues r ly = case distGroupRef ly of
     Nothing -> []
   Nothing -> []
 
--- | Phase 28: 'groupedValues' を x カテゴリ軸順 ('lpXCategoryLabels') に整列する。
+-- | [日本語]: 'groupedValues' を x カテゴリ軸順 ('lpXCategoryLabels') に整列する。
 --   box / violin / strip / swarm / ridge は群を @zip [0..]@ で x 位置に並べるが、
 --   x 軸ラベルは 'lpXCategoryLabels' (既定アルファベット順 / discrete-limits override)
 --   から来る。 両者の順を一致させないと「箱は Gentoo だがラベルは Chinstrap」 のような
 --   ズレが出る (= categorical 既定をアルファベット順にした際の回帰)。 軸ラベルが無い
 --   (数値 x 等) ときは 'groupedValues' の順をそのまま返す。
+--   [English]: Sorts 'groupedValues' into x-category axis order
+--   ('lpXCategoryLabels'). box / violin / strip / swarm / ridge lay out
+--   groups at x positions via @zip [0..]@, while the x-axis labels come from
+--   'lpXCategoryLabels' (default alphabetical order, or a discrete-limits
+--   override). If the two orders don't match, a mismatch results — for
+--   example, a box drawn for Gentoo but labeled Chinstrap (a regression from
+--   defaulting categorical order to alphabetical). When there is no axis
+--   label (for example, a numeric x), 'groupedValues' order is returned
+--   as-is.
 groupedValuesOrdered :: Layout -> Resolver -> Layer -> [(Text, [Double])]
 groupedValuesOrdered layout r ly =
   let gv  = groupedValues r ly
@@ -1330,10 +1529,16 @@ groupedValuesOrdered layout r ly =
   in if null xls then gv
      else [ (g, vs) | g <- xls, Just vs <- [lookup g gv] ]
 
--- | Phase 36 B1c: distribution mark (violin/strip/swarm/raincloud) の群リスト。
+-- | [日本語]: distribution mark (violin/strip/swarm/raincloud) の群リスト。
 --   群列 ('distGroupRef' = encX ?? colorBy) があれば 'groupedValuesOrdered'、 無ければ
 --   encY 全体を単一群 ("") にする (= boxplot の単一群挙動と統一)。 これにより 1 引数
 --   @violin "v"@ (群なし) でも空にならず 1 つ描ける。
+--   [English]: The group list for distribution marks (violin/strip/swarm/
+--   raincloud). When a group column ('distGroupRef' = encX or colorBy) is
+--   present, uses 'groupedValuesOrdered'; otherwise treats the whole encY as
+--   a single group ("") — unifying it with boxplot's single-group behavior.
+--   This means even a single-argument @violin "v"@ (no group) draws one
+--   group instead of nothing.
 distGroupsOrdered :: Layout -> Resolver -> Layer -> [(Text, [Double])]
 distGroupsOrdered layout r ly = case distGroupRef ly of
   Just _  -> groupedValuesOrdered layout r ly
@@ -1347,12 +1552,22 @@ distGroupsOrdered layout r ly = case distGroupRef ly of
 --   カテゴリ内に色サブグループを横並びにする (= ggplot @position_dodge@)。
 -- ---------------------------------------------------------------------------
 
--- | dodge cell 化: (位置列, 色列) について各 (位置 index, 色 index) の値リストを作る。
+-- | [日本語]: dodge cell 化: (位置列, 色列) について各 (位置 index, 色 index) の値リストを作る。
 --   戻り値:
 --     positions = 位置カテゴリ ('lpXCategoryLabels' = 既定アルファベット順)
 --     colorCats = 色カテゴリ ('lyColorCats' 優先、 無ければ色列の出現順 uniq)
 --     cells     = @[(posIx, colIx, [value])]@ (空セルは除外)
 --   値は encY、 NaN (= Maybe 列の Nothing) は行整列を保ったまま除外。
+--   [English]: Builds dodge cells: given a (position column, color column)
+--   pair, builds a value list for each (position index, color index) pair.
+--   Returns:
+--     positions = the position categories ('lpXCategoryLabels', default
+--     alphabetical order)
+--     colorCats = the color categories ('lyColorCats' takes priority,
+--     otherwise the color column's unique values in appearance order)
+--     cells     = @[(posIx, colIx, [value])]@ (empty cells excluded)
+--   Values come from encY; NaN (a Nothing in a nullable column) is excluded
+--   while preserving row alignment.
 dodgeCells :: Layout -> Resolver -> Layer -> ([Text], [Text], [(Int, Int, [Double])])
 dodgeCells layout r ly = case distDodgeRef ly of
   Nothing -> ([], [], [])
@@ -1379,8 +1594,12 @@ dodgeCells layout r ly = case distDodgeRef ly of
                 , let vs = cellAt pix cix, not (null vs) ]
     in (positions, colorCats, cells)
 
--- | dodge sub-cell の data 空間中心 (= bar 'PosDodge' と同式)。 位置カテゴリ @pix@ の
+-- | [日本語]: dodge sub-cell の data 空間中心 (= bar 'PosDodge' と同式)。 位置カテゴリ @pix@ の
 --   slot (幅 0.9) を色数 @nColor@ で等分し、 @cix@ 番目の中心を data 座標で返す。
+--   [English]: The data-space center of a dodge sub-cell (using the same
+--   formula as bar's 'PosDodge'). The position category @pix@'s slot (width
+--   0.9) is divided evenly by the number of colors @nColor@, and the center
+--   of the @cix@-th sub-cell is returned in data coordinates.
 dodgeCenterD :: Int -> Int -> Int -> Double
 dodgeCenterD pix cix nColor =
   fromIntegral pix - 0.45
@@ -1392,16 +1611,25 @@ dodgeCenterD pix cix nColor =
 --   stat_density / stat_boxplot 相当を 1 箇所に集約 (= 各 geom が再利用)。
 -- ---------------------------------------------------------------------------
 
--- | Gaussian KDE (Silverman bandwidth) を nGrid 点で評価し [(y, density)] を返す。
--- 戻り値は y 昇順。 violin/raincloud/density/ridge が共有。 grid は vals の min..max。
+-- | [日本語]: Gaussian KDE (Silverman bandwidth) を nGrid 点で評価し [(y, density)] を返す。
+--   戻り値は y 昇順。 violin/raincloud/density/ridge が共有。 grid は vals の min..max。
+--   [English]: Evaluates a Gaussian KDE (Silverman bandwidth) at nGrid points
+--   and returns [(y, density)]. The result is in ascending y order. Shared by
+--   violin/raincloud/density/ridge. The grid spans vals' min..max.
 kdeGrid :: Int -> [Double] -> [(Double, Double)]
 kdeGrid nGrid vals
   | length vals < 2 = []
   | otherwise       = kdeGridOver (minimum vals) (maximum vals) nGrid vals
 
--- | Phase 8 B23-fix: grid 範囲を明示する版。 ridge は全群共通の値域 [gLo, gHi] で各群を
--- 評価し、 群データ端の外でも KDE 裾を滑らかに減衰させる (= 各群自前 min/max だと裾が
--- 打ち切られて横線にならない、 PS renderRidgeLayer と同方式)。 bw は群自身の vals から。
+-- | [日本語]: grid 範囲を明示する版。 ridge は全群共通の値域 [gLo, gHi] で各群を
+--   評価し、 群データ端の外でも KDE 裾を滑らかに減衰させる (= 各群自前 min/max だと裾が
+--   打ち切られて横線にならない、 PS renderRidgeLayer と同方式)。 bw は群自身の vals から。
+--   [English]: A variant that takes an explicit grid range. ridge evaluates
+--   every group over the shared value range [gLo, gHi], letting the KDE tail
+--   decay smoothly even beyond each group's own data extent (using each
+--   group's own min/max would truncate the tail instead of tapering it off,
+--   the same approach as PS renderRidgeLayer). The bandwidth (bw) is still
+--   computed from each group's own vals.
 kdeGridOver :: Double -> Double -> Int -> [Double] -> [(Double, Double)]
 kdeGridOver gLo gHi nGrid vals
   | length vals < 2 = []
@@ -1417,8 +1645,11 @@ kdeGridOver gLo gHi nGrid vals
           stepG = (gHi - gLo) / fromIntegral nGrid
       in [ (v, kdeAt v) | k <- [0..nGrid], let v = gLo + fromIntegral k * stepG ]
 
--- | 5 数要約 (Tukey)。 q1/median/q3 + whisker 端 (1.5×IQR 内の最遠データ点)。
--- box / raincloud が共有。 vals はソート不要 (内部で sort)。
+-- | [日本語]: 5 数要約 (Tukey)。 q1/median/q3 + whisker 端 (1.5×IQR 内の最遠データ点)。
+--   box / raincloud が共有。 vals はソート不要 (内部で sort)。
+--   [English]: The Tukey five-number summary: q1/median/q3 plus the whisker
+--   ends (the farthest data point within 1.5×IQR). Shared by box and
+--   raincloud. vals need not be pre-sorted (sorted internally).
 data FiveNum = FiveNum
   { fnQ1 :: !Double, fnMed :: !Double, fnQ3 :: !Double
   , fnLoW :: !Double, fnHiW :: !Double }
@@ -1444,8 +1675,12 @@ fiveNum vals =
       hiV = case reverse (takeWhile (<= q3 + 1.5 * iqr) sorted) of (x:_) -> x; [] -> q3
   in Just (FiveNum { fnQ1 = q1, fnMed = q2, fnQ3 = q3, fnLoW = loV, fnHiW = hiV })
 
--- | 細い箱ひげ (= raincloud 中央 / 単群 box 用)。 中心 x = cx、 半幅 hw px。
--- 共通 'fiveNum' を使い whisker 足 + IQR 箱 + median 白線を返す。
+-- | [日本語]: 細い箱ひげ (= raincloud 中央 / 単群 box 用)。 中心 x = cx、 半幅 hw px。
+--   共通 'fiveNum' を使い whisker 足 + IQR 箱 + median 白線を返す。
+--   [English]: A thin box-and-whisker (used for the raincloud center / a
+--   single-group box). Centered at x = cx, with half-width hw px. Uses the
+--   shared 'fiveNum' to return the whisker legs, the IQR box, and the
+--   white median line.
 boxAt :: (Double -> Double) -> Double -> Double -> Text -> [Double] -> [Primitive]
 boxAt sy cx hw color vals = case fiveNum vals of
   Nothing -> []
@@ -1460,8 +1695,11 @@ boxAt sy cx hw color vals = case fiveNum vals of
        , PLine (Point (cx - hw) (sy q2)) (Point (cx + hw) (sy q2))
                (solid "#ffffff" 1.5) ]
 
--- | Ridge 用 group 化: encX = 値 (numeric)、 encY = 群 (categorical)。
--- groupedValues は encX を群とするため、 ridge では x/y を入れ替えた版が要る。
+-- | [日本語]: Ridge 用 group 化: encX = 値 (numeric)、 encY = 群 (categorical)。
+--   groupedValues は encX を群とするため、 ridge では x/y を入れ替えた版が要る。
+--   [English]: Grouping for Ridge plots: encX is the value (numeric), encY
+--   is the group (categorical). Since groupedValues treats encX as the
+--   group, ridge needs a variant with x and y swapped.
 ridgeGroups :: Resolver -> Layer -> [(Text, [Double])]
 ridgeGroups r ly = case getLast (lyEncY ly) of
   Just crG -> case resolveCol r crG of
@@ -1478,7 +1716,9 @@ ridgeGroups r ly = case getLast (lyEncY ly) of
     Nothing -> []
   Nothing -> []
 
--- | Backend が実装する interface。 IO は canvas / file write のため。
+-- | [日本語]: Backend が実装する interface。 IO は canvas / file write のため。
+--   [English]: The interface implemented by each backend. IO is needed for
+--   canvas drawing / file writing.
 class Renderer rndr where
   drawPrimitives :: rndr -> [Primitive] -> IO ()
 

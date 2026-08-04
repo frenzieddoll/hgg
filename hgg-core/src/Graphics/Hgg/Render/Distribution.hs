@@ -1,10 +1,11 @@
 -- |
 -- Module      : Graphics.Hgg.Render.Distribution
--- Description : 分布 mark (box/violin/strip/swarm/raincloud/ridge)
+-- Description : Distribution marks: box, violin, strip, swarm, raincloud, ridge
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 7 A4: Render モノリス分割 (出力中立・純粋移動)。
+-- [日本語]: Render モノリス分割 (出力中立・純粋移動)。
+--   [English]: Split out from the Render monolith (an output-neutral, pure move).
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
@@ -206,7 +207,9 @@ renderBoxDodge r layout _pal ly =
                   (colorFor cix) (if isHollow then colorFor cix else stroke)
      | (pix, cix, vs) <- cells ]
 
--- | Phase 36 B2: dodge violin。 位置列 × 色列で各位置内に色サブグループの violin を横並び。
+-- | [日本語]: dodge violin。 位置列 × 色列で各位置内に色サブグループの violin を横並び。
+--   [English]: A dodge violin. Given a position column and a color column,
+--   arranges color sub-group violins side by side within each position.
 renderViolinDodge :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderViolinDodge r layout _ ly =
   let (_positions, colorCats, cells) = dodgeCells layout r ly
@@ -235,7 +238,8 @@ renderViolinDodge r layout _ ly =
                             (FillStyle color a) (Just (StrokeStyle color 1.0))
   in map mkViolin cells
 
--- | Violin (Phase 6+ C-4): group ごとに 縦方向 KDE shape 描画。
+-- | [日本語]: Violin: group ごとに 縦方向 KDE shape 描画。
+--   [English]: A violin: draws a vertically-oriented KDE shape for each group.
 renderViolin :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderViolin r layout pal ly
   | isJust (distDodgeRef ly) = renderViolinDodge r layout pal ly
@@ -289,10 +293,16 @@ renderViolin r layout _ ly =
                             (FillStyle color' a) (Just (StrokeStyle color' 1.0))
   in zipWith mkViolin (laneIndices layout groups) groups
 
--- | Strip plot (Phase 8 B4): group ごとに 縦に scatter、 横 jitter で散らす
--- (= ggplot geom_jitter 流)。 jitter 幅は lyJitterX 指定 > 既定 (slot の 0.4)。
--- | Phase 36 B2: dodge strip。 位置列 × 色列で各位置内に色サブグループの jitter を横並び
+-- | [日本語]: Strip plot: group ごとに 縦に scatter、 横 jitter で散らす
+--   (= ggplot geom_jitter 流)。 jitter 幅は lyJitterX 指定 > 既定 (slot の 0.4)。
+--   [English]: A strip plot: scatters points vertically per group, spread
+--   horizontally with jitter (in the style of ggplot's geom_jitter). Jitter
+--   width follows an explicit lyJitterX, falling back to 0.4 of the slot.
+-- | [日本語]: dodge strip。 位置列 × 色列で各位置内に色サブグループの jitter を横並び
 --   (= ggplot @position_jitterdodge@)。 jitter は sub-slot 幅基準。
+--   [English]: A dodge strip. Given a position column and a color column,
+--   arranges color sub-group jitter side by side within each position
+--   (ggplot's @position_jitterdodge@). Jitter is scaled to the sub-slot width.
 renderStripDodge :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderStripDodge r layout pal ly =
   let (_positions, colorCats, cells) = dodgeCells layout r ly
@@ -350,10 +360,16 @@ renderStrip r layout pal ly =
            , let dx = (hashRand (i * 131 + k * 71) - 0.5) * jw ]
   in concat (zipWith mkPts (laneIndices layout groups) groups)
 
--- | Beeswarm の横 offset 計算 (Phase 8 B5): 値を pixel y にマップ後、 点直径ごとに
--- y ビンを切り、 各ビン内で点を中央から左右対称に並べる (= 1,-1,2,-2,... 列)。
--- N に対し安定で、 横幅は maxOff で clamp (= はみ出さない)。 戻り値は各点の dx (px)。
--- HS/PS 共通アルゴリズム。 入力 ys は pixel y 値 (sy 適用後)。
+-- | [日本語]: Beeswarm の横 offset 計算: 値を pixel y にマップ後、 点直径ごとに
+--   y ビンを切り、 各ビン内で点を中央から左右対称に並べる (= 1,-1,2,-2,... 列)。
+--   N に対し安定で、 横幅は maxOff で clamp (= はみ出さない)。 戻り値は各点の dx (px)。
+--   HS/PS 共通アルゴリズム。 入力 ys は pixel y 値 (sy 適用後)。
+--   [English]: Computes beeswarm horizontal offsets: after mapping values to
+--   pixel y, cuts y bins one point-diameter wide and, within each bin, arranges
+--   points symmetrically outward from the center (the sequence 1,-1,2,-2,...).
+--   Stable with respect to N, and the width is clamped by maxOff (never
+--   overflows). Returns each point's dx (px). A shared HS/PS algorithm. The
+--   input ys are pixel y values (after applying sy).
 beeswarmOffsets :: Double -> Double -> [Double] -> [Double]
 beeswarmOffsets diameter maxOff ysPix =
   let binH = diameter
@@ -370,9 +386,14 @@ beeswarmOffsets diameter maxOff ysPix =
         in dx : go seen' rest
   in go [] ysPix
 
--- | Swarm plot (Phase 8 B5): strip の衝突回避版 (beeswarm)。 値の近い点を
--- 横方向に左右対称へ押し出して重なりを避ける。 N 大でも横幅 clamp で破綻しない。
--- | Phase 36 B2: dodge swarm。 位置列 × 色列で各位置内に色サブグループの beeswarm を横並び。
+-- | [日本語]: Swarm plot: strip の衝突回避版 (beeswarm)。 値の近い点を
+--   横方向に左右対称へ押し出して重なりを避ける。 N 大でも横幅 clamp で破綻しない。
+--   [English]: A swarm plot: the collision-avoiding variant of strip (a
+--   beeswarm). Points with close values are pushed apart symmetrically to
+--   avoid overlap. Stays well-behaved even for large N thanks to the width clamp.
+-- | [日本語]: dodge swarm。 位置列 × 色列で各位置内に色サブグループの beeswarm を横並び。
+--   [English]: A dodge swarm. Given a position column and a color column,
+--   arranges color sub-group beeswarms side by side within each position.
 renderSwarmDodge :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderSwarmDodge r layout pal ly =
   let (_positions, colorCats, cells) = dodgeCells layout r ly
@@ -433,10 +454,16 @@ renderSwarm r layout pal ly =
            | (v, off) <- zip sortedVals offs ]
   in concat (zipWith mkPts (laneIndices layout groups) groups)
 
--- | Raincloud plot (Phase 8 B2): 群ごとに 右:half-violin + 中央:box + 左:jitter strip。
--- 参照画像 (raincloud_ref.webp) 準拠。 ggplot 流に「3 つの geom を重ねる」 構成とし、
--- KDE/四分位は共通 helper ('kdeGrid' / 'boxAt') を再利用 (= violin/box とロジック重複なし)。
--- box は KDE の baseline (cx) と重ならないよう左にオフセットして配置。
+-- | [日本語]: Raincloud plot: 群ごとに 右:half-violin + 中央:box + 左:jitter strip。
+--   参照画像 (raincloud_ref.webp) 準拠。 ggplot 流に「3 つの geom を重ねる」 構成とし、
+--   KDE/四分位は共通 helper ('kdeGrid' / 'boxAt') を再利用 (= violin/box とロジック重複なし)。
+--   box は KDE の baseline (cx) と重ならないよう左にオフセットして配置。
+--   [English]: A raincloud plot: per group, a half-violin on the right, a box
+--   in the middle, and a jitter strip on the left. Follows the reference image
+--   (raincloud_ref.webp). Built by layering three geoms, ggplot-style; the KDE
+--   and quartiles reuse the shared helpers ('kdeGrid' / 'boxAt') so there is no
+--   logic duplicated with violin/box. The box is offset to the left so it does
+--   not overlap the KDE baseline (cx).
 renderRaincloud :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderRaincloud r layout _ ly =
   let groups    = distGroupsOrdered layout r ly
@@ -478,12 +505,23 @@ renderRaincloud r layout _ ly =
         in violinPrims ++ boxPrims ++ stripPrims
   in concat (zipWith mkOne [0..] groups)
 
--- | Ridge plot / joyplot。 群ごとに density 曲線を描き、 値方向に山を並べて少し重ねる。
--- ★ Phase 36 B1c: 他 distribution mark と統一し encY=値・群=distGroupRef (encX ?? colorBy)。
--- ridge は値→x・群→y の向きが要るため Layout が coord_flip を自動適用 ('ridgeAutoFlip')。
--- よって値→x は 'lpYScaleFlipped'、 群→y baseline は 'lpXScaleFlipped' を使う (box-flip と同機構)。
--- 軸/目盛/群ラベルは標準 path が描き、 ここは glyph (群ごと 1 PPath) のみ。 重なり headroom は
--- Layout が群 (= flip 後 y) カテゴリドメインを上方向へ expand して確保。 KDE は 'kdeGridOver' を共有。
+-- | [日本語]: Ridge plot / joyplot。 群ごとに density 曲線を描き、 値方向に山を並べて少し重ねる。
+--   他 distribution mark と統一し encY=値・群=distGroupRef (encX ?? colorBy)。
+--   ridge は値→x・群→y の向きが要るため Layout が coord_flip を自動適用 ('Graphics.Hgg.Spec.Setters.ridgeAutoFlip')。
+--   よって値→x は 'lpYScaleFlipped'、 群→y baseline は 'lpXScaleFlipped' を使う (box-flip と同機構)。
+--   軸/目盛/群ラベルは標準 path が描き、 ここは glyph (群ごと 1 PPath) のみ。 重なり headroom は
+--   Layout が群 (= flip 後 y) カテゴリドメインを上方向へ expand して確保。 KDE は 'kdeGridOver' を共有。
+--   [English]: A ridge plot / joyplot. Draws a density curve per group and
+--   lines up the peaks along the value axis with a slight overlap. Kept
+--   consistent with the other distribution marks: encY is the value, and the
+--   group is distGroupRef (encX, falling back to colorBy). Because ridge needs
+--   the value going to x and the group going to y, Layout auto-applies
+--   coord_flip ('Graphics.Hgg.Spec.Setters.ridgeAutoFlip'); accordingly value-to-x uses 'lpYScaleFlipped'
+--   and the group-to-y baseline uses 'lpXScaleFlipped' (the same mechanism as
+--   box-flip). The axes/ticks/group labels are drawn by the standard path;
+--   this function draws only the glyphs (one 'PPath' per group). Overlap
+--   headroom is secured by Layout expanding the group (post-flip y) category
+--   domain upward. The KDE evaluation is shared via 'kdeGridOver'.
 renderRidge :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderRidge r layout _thePal ly =
   let vals = V.toList (vecOr (lyEncY ly) r)   -- 値 (encY)
