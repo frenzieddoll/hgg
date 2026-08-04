@@ -3161,6 +3161,26 @@ main = hspec $ do
       eitherDecode (encode (base195 <> themeLegendKeySize 15.4))
         `shouldBe` Right (base195 <> themeLegendKeySize 15.4)
 
+  describe "Phase 63 A20: bottom/top 凡例の keyBg も tpLegendKeyBg へ一本化" $ do
+    -- legendSwatch (bottom/top 経路) の Phase 34 grey95 ハードコードが
+    -- A19.5 の一本化から漏れていた取り残し (実測: cowplot bottom 凡例に
+    -- #f2f2f2 1695px、 右凡例は 0px)
+    let base20 = layer (scatter (inline [1.0, 2.0, 3.0 :: Double])
+                                (inline [2.0, 4.0, 1.0 :: Double])
+                        <> colorBy (inlineCat (["a", "b", "a"] :: [Data.Text.Text])))
+        greyKeys extra =
+          length [ () | PRect _ (FillStyle c o) _
+                          <- renderToPrimitives emptyResolver
+                               (computeLayout emptyResolver (base20 <> extra))
+                               (base20 <> extra)
+                      , c == "#f2f2f2", o == 1.0 ]
+    it "cowplot (tpLegendKeyBg = \"\") の bottom 凡例に grey95 キー箱が出ない" $
+      greyKeys (themeCowplot <> themeLegendPos LegendBottom) `shouldBe` 0
+    it "既定 theme (tpLegendKeyBg = \"\") の bottom 凡例も出ない = 右凡例と整合" $
+      greyKeys (themeLegendPos LegendBottom) `shouldBe` 0
+    it "ThemeGrey の bottom 凡例はキー数ぶんの grey95 (theme 口は生きる)" $
+      greyKeys (theme ThemeGrey <> themeLegendPos LegendBottom) `shouldBe` 2
+
   describe "Phase 65: boxplot outlier の domain 内包 (panel 外打点 fix)" $ do
     let vals65 = [10, 11, 12, 13, 14, 15, 16, 40 :: Double]   -- 40 = 1.5×IQR フェンス外
         sp65 = layer (boxplot (inline vals65)

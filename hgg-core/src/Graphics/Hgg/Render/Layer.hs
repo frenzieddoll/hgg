@@ -989,15 +989,21 @@ legendUsesPoint spec = case filter (\l -> case getLast (lyColor l) of
   []      -> False
 
 -- | legend の色見本 (left,top,key-size 指定)。 ★ Phase 34: ggplot @legend.key@ 同様
--- 各キーに grey95 の背景四角を敷き、 その上にマーカーを描く。 point geom は円
+-- 各キーに背景四角を敷き、 その上にマーカーを描く。 point geom は円
 -- (shapeBy が color と同列なら per-category の ●▲■)、 他は色付き矩形。 マーカー径は
 -- **プロット中の点と同径** (markerDiam = 解決済 lySize / 既定 1.65mm) にして凡例だけ
 -- 大きくならないようにする。
+-- ★ Phase 63 A20: キー背景は 'legendKeyPrim' と同じ theme 口 tpLegendKeyBg
+--   ("" = 塗らない) に一本化。 旧 grey95 ハードコードは bottom/top 凡例だけ
+--   A19.5 の一本化から漏れていた取り残し。
 legendSwatch :: Maybe Layer -> Bool -> Maybe MarkShape -> Double -> ThemePalette
              -> Double -> Double -> Double -> Text -> [Primitive]
 legendSwatch mLayer usePoint mShape markerDiam pal left top sz col =
-  let keyBg = PRect (Rect left top sz sz) (FillStyle legendKeyBgColor 1.0) Nothing
-  in if usePoint
+  let keyBg
+        | tpLegendKeyBg pal == "" = []
+        | otherwise = [ PRect (Rect left top sz sz)
+                              (FillStyle (tpLegendKeyBg pal) 1.0) Nothing ]
+  in (keyBg ++) $ if usePoint
        then let ctr = Point (left + sz / 2) (top + sz / 2)
                 r   = markerDiam / 2
                 -- plot 点と同じ装飾 (既定縁なし)。 旧 1pt 縁ハードコードを廃止。
@@ -1007,13 +1013,8 @@ legendSwatch mLayer usePoint mShape markerDiam pal left top sz col =
                 marker = case mShape of
                   Just sh | sh /= MShCircle -> shapeToPrim sh ctr r fs ms Nothing
                   _                         -> PCircle ctr r fs ms Nothing
-            in [ keyBg, marker ]
-       else [ keyBg
-            , PRect (Rect left top sz sz) (FillStyle col 1.0) (Just (StrokeStyle (tpAxis pal) 0.5)) ]
-
--- | ggplot theme_grey の @legend.key@ 背景色 (grey95)。
-legendKeyBgColor :: Text
-legendKeyBgColor = "#f2f2f2"
+            in [ marker ]
+       else [ PRect (Rect left top sz sz) (FillStyle col 1.0) (Just (StrokeStyle (tpAxis pal) 0.5)) ]
 
 -- ★ Phase 38: legendBaseSize / legendKeyW / legendKeyPitch は Layout へ集約 (単一情報源)。
 --   ここでは Layout から import して使う (定義は Graphics.Hgg.Layout)。
