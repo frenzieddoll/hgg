@@ -301,23 +301,17 @@ renderStripDodge r layout pal ly =
       colorFor cix = if null catPal then tpDefault pal else catPal !! (cix `mod` length catPal)
       a  = doubleOr (lyAlpha ly) 0.7
       sz = doubleOr (lySize ly) (mmPt 1.25)
-      coord  = flipOnly (lpCoord layout)
-      sy     = scaleApply (lpYScale layout)
-      valPxF = scaleApply (lpYScaleFlipped layout)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint に集約 (flipOnly / crossScale 撤去)。
+      --   jitter は視覚 px 量のまま (polar では接線方向 px = 半径不問の等散らし)。
+      coord  = lpCoord layout
       unit   = catUnitPx (lpCoord layout) layout
       subW   = unit * 0.9 / fromIntegral nColor
       jw     = subW * 0.6
-      crossScale d = case coord of
-        CoordFlip -> scaleApply (lpXScaleFlipped layout) d
-        _         -> scaleApply (lpXScale layout) d
-      mkPt cx off v = case coord of
-        CoordCartesian -> Point (cx + off) (sy v)
-        CoordFlip      -> Point (valPxF v) (cx + off)
-        _              -> Point (cx + off) (sy v)
       mkPts (pix, cix, vals) =
-        let cx = crossScale (dodgeCenterD pix cix nColor)
+        let loc = CrossAt (dodgeCenterD pix cix nColor)
             color = colorFor cix
-        in [ PCircle (mkPt cx dx v) (sz/2) (FillStyle color a) Nothing Nothing
+        in [ PCircle (projectCrossPoint coord layout loc dx v) (sz/2)
+                     (FillStyle color a) Nothing Nothing
            | (k, v) <- zip [0 :: Int ..] vals
            , let dx = (hashRand ((pix * 17 + cix) * 131 + k * 71) - 0.5) * jw ]
   in concatMap mkPts cells
@@ -331,8 +325,6 @@ renderStrip r layout pal ly =
       c0 = staticColorOr ly (tpDefault pal)
       a  = doubleOr (lyAlpha ly) 0.7
       sz = doubleOr (lySize ly) (mmPt 1.25)
-      sx = scaleApply (lpXScale layout)
-      sy = scaleApply (lpYScale layout)
       area = lpPlotArea layout
       cats = lpCategoricalPalette layout
       -- ★ Phase 36 B1c: 群なし (単一 strip) は plotArea 中央・幅も plotArea 基準。
@@ -345,16 +337,11 @@ renderStrip r layout pal ly =
       mwS     = doubleOr (lyMarkWidth ly) 0.4
       nudgePx = doubleOr (lyNudge ly) 0 * slotW
       jw = if jx0 > 0 then jx0 * rW area else slotW * mwS
-      -- Phase 10 A4: value 軸 = y、 cross = category i ± jitter px。
-      coord  = flipOnly (lpCoord layout)   -- A7-c: strip は polar 非対象
-      valPxF = scaleApply (lpYScaleFlipped layout)
-      crossPx i = nudgePx + case coord of
-        CoordCartesian -> if hasCats then sx (fromIntegral i) else rX area + rW area / 2
-        CoordFlip      -> if hasCats then scaleApply (lpXScaleFlipped layout) (fromIntegral i)
-                                     else rY area + rH area / 2
-      mkPt i off v = case coord of
-        CoordCartesian -> Point (crossPx i + off) (sy v)
-        CoordFlip      -> Point (valPxF v) (crossPx i + off)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint に集約 (flipOnly 撤去)。
+      --   jitter は視覚 px 量のまま (polar では接線方向 px = 半径不問の等散らし)。
+      coord = lpCoord layout
+      locFor i = if hasCats then CrossAt (fromIntegral i) else CrossMid
+      mkPt i off v = projectCrossPoint coord layout (locFor i) (nudgePx + off) v
       mkPts i (_, vals) =
         let color = if c0 == tpDefault pal then cats !! (i `mod` length cats) else c0
         in [ PCircle (mkPt i dx v) (sz/2)
@@ -394,27 +381,21 @@ renderSwarmDodge r layout pal ly =
       colorFor cix = if null catPal then tpDefault pal else catPal !! (cix `mod` length catPal)
       a  = doubleOr (lyAlpha ly) 0.85
       sz = doubleOr (lySize ly) (mmPt 1.25)
-      coord  = flipOnly (lpCoord layout)
-      sy     = scaleApply (lpYScale layout)
-      valPxF = scaleApply (lpYScaleFlipped layout)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint / valueAxisPx に集約
+      --   (flipOnly / crossScale 撤去)。 beeswarm の押し出しは重なり回避のための
+      --   視覚 px 量なので px のまま (polar では接線方向 px nudge)。
+      coord  = lpCoord layout
       unit   = catUnitPx (lpCoord layout) layout
       subW   = unit * 0.9 / fromIntegral nColor
       maxOff = subW * 0.45
-      valuePx v = case coord of CoordCartesian -> sy v; CoordFlip -> valPxF v; _ -> sy v
-      crossScale d = case coord of
-        CoordFlip -> scaleApply (lpXScaleFlipped layout) d
-        _         -> scaleApply (lpXScale layout) d
-      mkPt cx off v = case coord of
-        CoordCartesian -> Point (cx + off) (sy v)
-        CoordFlip      -> Point (valPxF v) (cx + off)
-        _              -> Point (cx + off) (sy v)
       mkPts (pix, cix, vals) =
-        let cx = crossScale (dodgeCenterD pix cix nColor)
+        let loc = CrossAt (dodgeCenterD pix cix nColor)
             color = colorFor cix
             sortedVals = sort vals
-            ysPix = map valuePx sortedVals
+            ysPix = map (valueAxisPx coord layout) sortedVals
             offs  = beeswarmOffsets sz maxOff ysPix
-        in [ PCircle (mkPt cx off v) (sz/2) (FillStyle color a) Nothing Nothing
+        in [ PCircle (projectCrossPoint coord layout loc off v) (sz/2)
+                     (FillStyle color a) Nothing Nothing
            | (v, off) <- zip sortedVals offs ]
   in concatMap mkPts cells
 
@@ -426,8 +407,6 @@ renderSwarm r layout pal ly =
       c0 = staticColorOr ly (tpDefault pal)
       a  = doubleOr (lyAlpha ly) 0.85
       sz = doubleOr (lySize ly) (mmPt 1.25)
-      sx = scaleApply (lpXScale layout)
-      sy = scaleApply (lpYScale layout)
       area = lpPlotArea layout
       -- ★ Phase 36 B1c: 群なし (単一 swarm) は plotArea 中央・押し出し幅も plotArea 基準。
       hasCats = not (null (lpXCategoryLabels layout))
@@ -438,22 +417,16 @@ renderSwarm r layout pal ly =
       nudgePx = doubleOr (lyNudge ly) 0 * slotW
       maxOff = slotW * mwSw / 2
       cats = lpCategoricalPalette layout
-      -- Phase 10 A4: value 軸 = y (Cartesian 縦 / flip 横)、 cross = category i ± beeswarm off px。
-      -- beeswarm の binning は value 軸 px 上で行う (= flip 時は横軸 px)。
-      coord   = flipOnly (lpCoord layout)   -- A7-c: swarm は polar 非対象
-      valPxF  = scaleApply (lpYScaleFlipped layout)
-      valuePx v = case coord of CoordCartesian -> sy v; CoordFlip -> valPxF v
-      crossPx i = nudgePx + case coord of
-        CoordCartesian -> if hasCats then sx (fromIntegral i) else rX area + rW area / 2
-        CoordFlip      -> if hasCats then scaleApply (lpXScaleFlipped layout) (fromIntegral i)
-                                     else rY area + rH area / 2
-      mkPt i off v = case coord of
-        CoordCartesian -> Point (crossPx i + off) (sy v)
-        CoordFlip      -> Point (valPxF v) (crossPx i + off)
+      -- ★ Phase 64 A3: 座標変換は projectCrossPoint / valueAxisPx に集約 (flipOnly と
+      --   旧非網羅 case (CoordCartesian/CoordFlip のみ) を撤去)。 beeswarm の binning は
+      --   value 軸 px 上 (polar は半径 px / 外周弧長 px)、 押し出しは接線方向 px nudge。
+      coord = lpCoord layout
+      locFor i = if hasCats then CrossAt (fromIntegral i) else CrossMid
+      mkPt i off v = projectCrossPoint coord layout (locFor i) (nudgePx + off) v
       mkPts i (_, vals) =
         let color = if c0 == tpDefault pal then cats !! (i `mod` length cats) else c0
             sortedVals = sort vals
-            ysPix = map valuePx sortedVals
+            ysPix = map (valueAxisPx coord layout) sortedVals
             offs  = beeswarmOffsets sz maxOff ysPix
         in [ PCircle (mkPt i off v) (sz/2)
                     (FillStyle color a) Nothing Nothing
