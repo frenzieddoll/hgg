@@ -4,9 +4,14 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- ggplot2 のように「データフレーム + 列名」 で図を書くための抽象。 Haskell に
--- 統一 df ライブラリが無い事情に対応し、 __df 型に依存しない__ typeclass
--- 'PlotData' で「列名 → 実ベクタ」 (= 既存の 'Resolver') を取り出す。
+-- [日本語]: ggplot2 のように「データフレーム + 列名」 で図を書くための抽象。
+-- Haskell に統一 df ライブラリが無い事情に対応し、 __df 型に依存しない__
+-- typeclass 'PlotData' で「列名 → 実ベクタ」 (= 既存の 'Resolver') を取り出す。
+--
+-- [English]: An abstraction for drawing figures from "a dataframe + column
+-- names", in the style of ggplot2. Since Haskell has no single unified
+-- dataframe library, the __dataframe-type-agnostic__ typeclass 'PlotData'
+-- extracts "column name to actual vector" (that is, the existing 'Resolver').
 --
 -- @
 -- import           Graphics.Hgg.Easy   (scatter, layer)
@@ -17,9 +22,14 @@
 -- -- df |>> layer (scatter \"x\" \"y\")
 -- @
 --
--- 本 module はゼロ依存 instance (assoc-list / 'Data.Map.Map') のみを持つ。
--- Hackage @dataframe@ 等の外部 df 型の instance は各橋 package が所有する
+-- [日本語]: 本 module はゼロ依存 instance (assoc-list / 'Data.Map.Map') のみを
+-- 持つ。 Hackage @dataframe@ 等の外部 df 型の instance は各橋 package が所有する
 -- (orphan 回避、 proposal spec-2 §3.1)。
+--
+-- [English]: This module carries only the zero-dependency instances
+-- (assoc-list / 'Data.Map.Map'). Instances for external dataframe types such
+-- as Hackage @dataframe@ are owned by the respective bridge packages (to
+-- avoid orphans; proposal spec-2 §3.1).
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}

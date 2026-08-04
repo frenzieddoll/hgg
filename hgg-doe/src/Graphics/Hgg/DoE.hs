@@ -4,9 +4,12 @@
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 26 S5-e (2026-05-25): C+ 案。 基盤は hgg-core (= MContour /
--- |   vsSubplots) に置き、 ここでは DoE の意味論 (factor / level / response) を
---   持つ薄い helper のみ。
+-- [日本語]: C+ 案。 基盤は hgg-core (= MContour / vsSubplots) に置き、
+-- ここでは DoE の意味論 (factor / level / response) を持つ薄い helper のみ。
+--
+-- [English]: The C+ approach. The foundations live in hgg-core
+-- (@MContour@ / @vsSubplots@); this module holds only the thin helpers that
+-- carry DoE semantics (factor / level / response).
 module Graphics.Hgg.DoE
   ( module Graphics.Hgg.DoE.MainEffects
   , module Graphics.Hgg.DoE.Interaction

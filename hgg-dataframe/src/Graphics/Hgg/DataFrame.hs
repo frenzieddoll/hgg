@@ -1,8 +1,14 @@
 -- |
 -- Module      : Graphics.Hgg.DataFrame
--- Description : DataFrame ↔ hgg Resolver bridge (Phase 26 §A 拡張)
+-- Description : DataFrame ↔ hgg Resolver bridge
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
+--
+-- [日本語]: Hackage @dataframe@ の DataFrame を hgg の 'Resolver' に
+-- 橋渡しする module。 下は CSV を読んで散布図を SVG に保存する最小例。
+--
+-- [English]: Bridges Hackage @dataframe@'s DataFrame to hgg's
+-- 'Resolver'. The example below reads a CSV and saves a scatter plot as SVG.
 --
 -- @
 -- import qualified DataFrame.IO.CSV            as DF
@@ -21,13 +27,17 @@
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
--- | 'PlotData' instance for Hackage @dataframe@ は orphan (型もクラスも当 package
--- が所有しないが、 spec-2 §3.1/§6 の設計で **橋 package が所有**する正当な配置)。
+-- | [日本語]: 'PlotData' instance for Hackage @dataframe@ は orphan (型もクラスも
+--   当 package が所有しないが、 spec-2 §3.1/§6 の設計で __橋 package が所有__する
+--   正当な配置)。
+--   [English]: The 'PlotData' instance for Hackage @dataframe@ is an orphan
+--   (neither the type nor the class is owned by this package), but per the
+--   spec-2 §3.1/§6 design __the bridge package owns it__ deliberately.
 {-# OPTIONS_GHC -Wno-orphans #-}
 module Graphics.Hgg.DataFrame
   ( dfResolver
   , plotDF
-    -- * Phase 14: PlotData instance (df |>> spec を使えるように)
+    -- * PlotData instance (df |>> spec を使えるように)
     -- $plotdata
   ) where
 
@@ -42,9 +52,13 @@ import qualified DataFrame.Internal.DataFrame as DFI
 import qualified DataFrame.Operations.Core as DF
 import qualified DataFrame.Operators      as DF
 
--- | 'DataFrame' から hgg の 'Resolver' を作る。
--- 列名で `Double` または `Text` の列を抽出、 数値列なら 'NumData' / 文字列列
--- なら 'TxtData' を返す。 失敗 (= 列不在 / 型不一致 / 空 DataFrame) は 'Nothing'。
+-- | [日本語]: 'DFI.DataFrame' から hgg の 'Resolver' を作る。
+--   列名で `Double` または `Text` の列を抽出、 数値列なら 'NumData' / 文字列列
+--   なら 'TxtData' を返す。 失敗 (= 列不在 / 型不一致 / 空 DataFrame) は 'Nothing'。
+--   [English]: Builds an hgg 'Resolver' from a 'DFI.DataFrame'. Extracts
+--   the column named `Double` or `Text`, returning 'NumData' for a numeric
+--   column and 'TxtData' for a textual one. Returns 'Nothing' on failure
+--   (missing column, type mismatch, or empty DataFrame).
 dfResolver :: DFI.DataFrame -> Resolver
 dfResolver df name =
    -- nullable (Maybe) 列対応: 欠損 (NA) は NaN で運び **長さを保つ** (行整列を壊さない・
@@ -65,12 +79,14 @@ tryIntCol :: Text -> DFI.DataFrame -> Maybe (V.Vector Double)
 tryIntCol n df =
   fmap (V.map fromIntegral) (safeColumnAs @Int n df)
 
--- | @Maybe Double@ 列: NA → NaN。
+-- | [日本語]: @Maybe Double@ 列: NA → NaN。
+--   [English]: @Maybe Double@ column: NA becomes NaN.
 tryMaybeDoubleCol :: Text -> DFI.DataFrame -> Maybe (V.Vector Double)
 tryMaybeDoubleCol n df =
   fmap (V.map (maybe (0/0) id)) (safeColumnAs @(Maybe Double) n df)
 
--- | @Maybe Int@ 列: NA → NaN。
+-- | [日本語]: @Maybe Int@ 列: NA → NaN。
+--   [English]: @Maybe Int@ column: NA becomes NaN.
 tryMaybeIntCol :: Text -> DFI.DataFrame -> Maybe (V.Vector Double)
 tryMaybeIntCol n df =
   fmap (V.map (maybe (0/0) fromIntegral)) (safeColumnAs @(Maybe Int) n df)
@@ -78,14 +94,26 @@ tryMaybeIntCol n df =
 tryTextCol :: Text -> DFI.DataFrame -> Maybe (V.Vector Text)
 tryTextCol n df = safeColumnAs @Text n df
 
--- | 列を例外セーフに 'V.Vector' として取り出す (hgg PR #1 = mchav 氏提案の
--- `columnAsVector` 版。 中間 list と unsafePerformIO/try/force を撤去)。
+-- | [日本語]: 列を例外セーフに 'V.Vector' として取り出す (hgg PR #1 = mchav 氏提案の
+--   'DF.columnAsVector' 版。 中間 list と unsafePerformIO/try/force を撤去)。
 --
--- 先頭の `DFI.null` ガードは冗長に見えるが**消してはいけない**: `columnAsVector`
--- は列欠落・型不一致を `Left` で返す一方、 **空 DataFrame だけは `Either` に
--- 載せず純粋例外を投げる** (dataframe-operations-1.1.1.1
--- `Operations/Core.hs:825` = `throw (EmptyDataSetException ...)`)。 ここで先に
--- 'Nothing' を返して従来挙動 (空データ = 空の図、 例外なし) を保つ。
+--   先頭の `DFI.null` ガードは冗長に見えるが __消してはいけない__: 'DF.columnAsVector'
+--   は列欠落・型不一致を `Left` で返す一方、 空 DataFrame の場合だけは
+--   __`Either` に載せず純粋例外を投げる__ (dataframe-operations-1.1.1.1
+--   `Operations/Core.hs:825` = `throw (EmptyDataSetException ...)`)。 ここで先に
+--   'Nothing' を返して従来挙動 (空データ = 空の図、 例外なし) を保つ。
+--   [English]: Extracts a column exception-safely as a 'V.Vector' (hgg PR #1 =
+--   the 'DF.columnAsVector' variant proposed by mchav. Removes the intermediate
+--   list and the unsafePerformIO/try/force wrapping).
+--
+--   The leading `DFI.null` guard looks redundant but __must not be removed__:
+--   'DF.columnAsVector' returns `Left` for a missing column or a type mismatch,
+--   but for an empty DataFrame specifically it
+--   __throws a pure exception instead of using `Either`__
+--   (dataframe-operations-1.1.1.1 `Operations/Core.hs:825` =
+--   `throw (EmptyDataSetException ...)`). Returning 'Nothing' here first
+--   preserves the previous behavior (empty data yields an empty plot, no
+--   exception).
 safeColumnAs
   :: forall a. (DFC.Columnable a)
   => Text -> DFI.DataFrame -> Maybe (V.Vector a)
@@ -93,20 +121,35 @@ safeColumnAs name df
   | DFI.null df = Nothing
   | otherwise   = either (const Nothing) Just (DF.columnAsVector (DF.col @a name) df)
 
--- | DF + spec を 1 行で SVG 出力 (= matplotlib `plt.savefig` 感)。
+-- | [日本語]: DF + spec を 1 行で SVG 出力 (= matplotlib `plt.savefig` 感)。
+--   [English]: Renders a DataFrame + spec to SVG in one call (in the spirit
+--   of matplotlib's `plt.savefig`).
 plotDF :: FilePath -> DFI.DataFrame -> VisualSpec -> IO ()
 plotDF path df spec = saveSVGWith path (dfResolver df) spec
 
 -- $plotdata
--- Phase 14: Hackage @dataframe@ の 'DFI.DataFrame' を 'PlotData' instance に
+-- [日本語]: Hackage @dataframe@ の 'DFI.DataFrame' を 'PlotData' instance に
 -- することで、 @df |>> layer (scatter "x" "y")@ (df-first バインド) が使える。
 -- @toResolver@ は既存 'dfResolver' を再利用、 @columnNames@/@nrows@ は dataframe
 -- の API (@DFI.columnNames@ / @DFI.dataframeDimensions@) で実装する。
-
--- | df-first バインド ('(|>>)') / 列名検証のための instance。
 --
--- * @columnNames@ = @DataFrame.columnNames@ (= 全列名)
--- * @nrows@       = @dataframeDimensions@ の第 1 要素 (= 行数。 実測: @(rows, cols)@)
+-- [English]: Making Hackage @dataframe@'s 'DFI.DataFrame' a 'PlotData'
+-- instance enables @df |>> layer (scatter "x" "y")@ (df-first binding).
+-- @toResolver@ reuses the existing 'dfResolver'; @columnNames@/@nrows@ are
+-- implemented via dataframe's API (@DFI.columnNames@ /
+-- @DFI.dataframeDimensions@).
+
+-- | [日本語]: df-first バインド (@(|>>)@) / 列名検証のための instance。
+--
+--   * @columnNames@ = @DataFrame.columnNames@ (= 全列名)
+--   * @nrows@       = @dataframeDimensions@ の第 1 要素 (= 行数。 実測: @(rows, cols)@)
+--
+--   [English]: The instance backing df-first binding (@(|>>)@) and
+--   column-name validation.
+--
+--   * @columnNames@ = @DataFrame.columnNames@ (all column names)
+--   * @nrows@       = the first element of @dataframeDimensions@ (row count;
+--     measured as @(rows, cols)@)
 instance PlotData DFI.DataFrame where
   toResolver  = dfResolver
   columnNames = DFI.columnNames
