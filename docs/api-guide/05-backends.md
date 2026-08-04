@@ -85,7 +85,7 @@ import Graphics.Hgg.Backend.PDF (savePDF)
 savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 ```
 
-> ⚠️ **v1 limitation: No Japanese labels**. Only PDF standard 14 fonts (Helvetica / Times / Courier = Latin), so non-Latin-1 characters replaced with `?` and warning. For Japanese labels, use PNG backend (`hgg-rasterific` · TrueType reading · next section). Weight/italic maps to 4 variants; `"serif"`/`"monospace"` families map to Times/Courier.
+> ⚠️ **v1 limitation: No Japanese labels**. Only PDF standard 14 fonts (Helvetica / Times / Courier = Latin), so non-Latin-1 characters replaced with `?` and warning. For Japanese labels, use PNG backend (`hgg-rasterific` · TrueType reading · next section). Weight/italic maps to 4 variants; font families round to the standard trio: `"serif"` (or names containing `Times`) → Times, `"monospace"`/`Courier` → Courier, **everything else (including any `themeFontFamily` / `fontFamily` value) → Helvetica**. Use the PNG backend for figures needing an arbitrary TrueType font.
 
 ### PNG — `savePNG` (Rasterific · Japanese supported) {#be-png}
 
@@ -108,7 +108,22 @@ savePNGConfigured defaultPNGConfig { pngFontPath = Just "/path/to/font.ttf"
                   "fig1@2x.png" emptyResolver spec
 ```
 
-> ⚠️ **v1 limitations**: ① `.ttc` (TrueType Collection · Windows meiryo/msgothic etc.) and CFF OTF unreadable (.ttf only). ② Font family not distinguished; regular/bold 2 faces only (weight ≠ "bold" and italic use regular fallback).
+**Font family resolution** (`themeFontFamily` / per-slot `fontFamily`, [04 decoration](04-decoration.md#theme)):
+each family the spec uses is resolved to a font file and switched per text. Rules
+(fontconfig-independent):
+
+- `sans-serif` / unset → default bundle (candidate list above)
+- `serif` / `monospace` → per-genre candidate lists (Noto Serif CJK JP / IPA Mincho /
+  DejaVu Serif · HackGen / DejaVu Sans Mono / Hack)
+- any other family name → normalized (lowercased, spaces/hyphens stripped), then looked up
+  in the search directories as `<name>.ttf` → `<name>-regular.ttf` (bold: `<name>-bold.ttf`)
+  by filename match (e.g. `"DejaVu Sans"` → `dejavusans.ttf`)
+- an unresolved family **warns on stderr and falls back to the default font** (no error);
+  a family without a bold face falls back to that family's regular
+- an explicit `pngFontPath` still applies **one font to all text with top priority**
+  (family resolution is skipped)
+
+> ⚠️ **v1 limitations**: ① `.ttc` (TrueType Collection · Windows meiryo/msgothic etc.) and CFF OTF unreadable (.ttf only). ② Weights limited to regular/bold 2 faces (weight ≠ "bold" and italic use regular fallback). ③ Annotation text (`annotText` etc.) is outside family resolution (stays at the default sans-serif).
 
 ### Low-level output / other {#be-lowlevel}
 

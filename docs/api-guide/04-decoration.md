@@ -53,7 +53,7 @@ purePlot <> layer (scatter xs ys <> size 6)
 | `ThemeDefault` / `ThemeMinimal` | Default / minimal frameless |
 | `ThemeDark` / `ThemeLight` | Dark / light |
 | `ThemeGrey` / `ThemeBW` | Grey panel / black & white |
-| `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` | Axis lines only / frameless / fine lines |
+| `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` | Axis lines only / fully void (no axis lines, ticks, or axis text) / fine lines |
 | `ThemeNoir` / `ThemeLumen` | Brand dark / light |
 | `ThemeCanvas` / `ThemeCanvasDark` | Parchment (light / dark) |
 
@@ -79,16 +79,21 @@ After `theme` preset, override individual elements with `<>` (ggplot `theme(...)
 | `themeGrid` | `Bool -> VisualSpec` | Grid lines on/off (major/minor together) |
 | `themeGridMajor` / `themeGridMinor` | `Bool -> VisualSpec` | **Individual** on/off for major / minor grid lines (individual > combined `themeGrid` > preset) |
 | `gridColor` / `panelFill` / `plotBg` | `Text -> VisualSpec` | Grid color / panel background / overall background (color hex) |
+| `themePlotBg` | `Bool -> VisualSpec` | Whether to **paint** the overall background (plot.background). `False` = transparent (ggplot `plot.background = element_blank()` / cowplot `fill = NA` equivalent; the color itself is set with `plotBg` above) |
 | `axisColor` / `textColor` / `stripFill` | `Text -> VisualSpec` | Axis line color / text color / strip background (color hex) |
 | `themeAxisLine` / `panelBorder` / `themeStrip` | `Bool -> VisualSpec` | Axis lines (bottom/left) / plot frame / facet strip on/off |
+| `themeAxisText` / `themeAxisTitle` | `Bool -> VisualSpec` | Tick label text (axis.text) / axis title (axis.title) on/off (`False` = element_blank equivalent, margin reservation drops too; default is `False` only for `ThemeVoid`) |
 | `themeAxisTextAngle` | `Double -> VisualSpec` | Tick label rotation (degrees, both axes) |
 | `themeAxisTextAngleX` / `themeAxisTextAngleY` | `Double -> VisualSpec` | Rotation for x / y axis only (wins over the shared version; per-axis `axisRotate` wins over both) |
 | `themeTickLength` | `Double -> VisualSpec` | Axis tick mark length in pt (default 2.75 = ggplot `axis.ticks.length`) |
 | `themeTickDir` | `TickDir -> VisualSpec` | Tick direction ([enum](#enum-tables); `TickIn` pulls labels closer to the axis) |
 | `themePlotMargin` | `Double -> Double -> Double -> Double -> VisualSpec` | Outer plot margin t r b l (pt, same order as ggplot `margin(t,r,b,l)`). When set, **replaces** the automatic outer margin (5.5pt per side) |
 | `themeLegendPos` | `LegendPosition -> VisualSpec` | Bake legend position into a theme (figure-level `legendPos` wins if specified) |
+| `themeLegendKeySize` | `Double -> VisualSpec` | Legend key side length (pt, ggplot `legend.key.size` equivalent). Also sets the legend row pitch = line spacing, and propagates to margin reservation (default = 1.2 lines, 17.34pt at base 11) |
 | `titleHjust` | `Double -> VisualSpec` | Plot title horizontal alignment (`0`=left [default] · `0.5`=center · `1`=right) |
 | `titleColor` / `tickColor` / `legendKeyBg` | `Text -> VisualSpec` | Title text color / axis tick mark color / legend key background (color hex; `""` for no fill) |
+| `themeBaseFontSize` | `Double -> VisualSpec` | Base font size (pt, ggplot `base_size` equivalent, default 11). Default sizes of all text slots and spacing derive from it (see note below) |
+| `themeFontFamily` | `Text -> VisualSpec` | Font family for **all text slots at once** (ggplot `theme(text = element_text(family=…))` equivalent; see note below) |
 | `titleFont` / `axisLabelFont` / `tickFont` / `legendFont` | `FontSpec -> VisualSpec` | Font for each text (compose with combinator below) |
 
 **Fonts** are composed with combinators (`fontSize`/`fontFamily`/`fontWeight`/`fontItalic`/`fontColor`) returning `FontSpec` and combined with `<>` to pass to `titleFont` etc. (empty default is `emptyFontSpec`):
@@ -119,6 +124,22 @@ purePlot <> layer (scatter "x" "y" <> colorBy "g") <> facet "g"
 
 > Each font setter has a `ThemeOverride` equivalent via `theme*Font` (`themeTitleFont`/`themeAxisLabelFont`/`themeTickFont`/`themeLegendFont`). In rendering, override (`theme*Font`) takes priority, but **layout character height is only affected by `titleFont` series**, so prefer `titleFont` for standalone use.
 
+> **Default text sizes and spacing derive from the base size**: from `themeBaseFontSize`
+> (default 11pt), default slot sizes derive by relative factors (title ×1.2 · axis.title ×1 ·
+> axis.text ×0.8 · legend.title ×1 · legend.text ×0.8), and spacing such as tick length
+> (base/4 = 2.75pt) and outer margin (half_line = base/2 = 5.5pt) follows the same base
+> (ggplot `theme_grey(base_size=)` equivalent). An explicit `fontSize` on a per-slot font
+> setter wins.
+
+> **Setting the font family in one place**: `themeFontFamily "Noto Sans CJK JP"` applies
+> just the family to all theme text slots (title series / axis.title / axis.text / legend).
+> A per-slot `FontSpec` `fontFamily` wins, and font sizes baked in by presets are left
+> untouched. How the family resolves to an actual font is backend-specific: SVG passes it
+> through to CSS `font-family`, PNG resolves it to a font file (falls back to the default
+> font with a warning if absent, [05 backends](05-backends.md#be-png)), and PDF rounds to
+> the Helvetica/Times/Courier trio ([05 backends](05-backends.md#be-pdf)). Annotation text
+> (`annotText` etc.) is not affected (stays at the default sans-serif).
+
 ### Custom themes and cowplot-style presets {#theme-presets}
 
 Every override setter above returns a `VisualSpec`, so **bundling them with `<>` under a
@@ -131,16 +152,27 @@ myTheme = theme ThemeMinimal <> themeGridMinor False <> titleHjust 0.5
 ```
 
 As worked examples of this pattern, presets equivalent to three themes from the R
-**cowplot** package ship out of the box:
+**cowplot** package ship out of the box. Each preset has a **Sized variant**
+(`Double -> VisualSpec`) taking cowplot's `font_size` argument; the plain name is the
+14pt application (= cowplot default, `themeCowplot = themeCowplotSized 14`):
 
-| preset | Type | Equivalent (cowplot) | Contents |
-|---|---|---|---|
-| `themeCowplot` | `VisualSpec` | `theme_cowplot()` | no grid, black bottom/left axis lines, outward 3.5pt ticks, 7pt outer margin, black text, 16pt bold title |
-| `themeMinimalGrid` | `VisualSpec` | `theme_minimal_grid()` | major grid (grey85) only; no axis lines / frame / ticks |
-| `themeMap` | `VisualSpec` | `theme_map()` | removes axis lines, grid, frame and tick marks (maps, diagrams) |
+| preset / Sized variant | Equivalent (cowplot) | Contents |
+|---|---|---|
+| `themeCowplot` / `themeCowplotSized n` | `theme_cowplot(font_size = n)` | no grid, black bottom/left axis lines, outward ticks, black text, bold title, transparent background |
+| `themeMinimalGrid` / `themeMinimalGridSized n` | `theme_minimal_grid(font_size = n)` | major grid (grey85) only; no axis lines / frame / ticks; transparent background |
+| `themeMap` / `themeMapSized n` | `theme_map(font_size = n)` | removes axis lines, grid, frame, tick marks and **axis text (axis.text / axis.title)** (maps, diagrams); facet strip stays at grey80; transparent background |
+
+> **Sized scaling rule**: from `font_size = n` derive the text sizes — title `n×16/14`
+> bold, axis.title `n`, axis.text / legend `n×12/14` — together with tick length `n/4`,
+> outer margin `n/2` and legend key `1.1×n` (cowplot's explicit `legend.key.size`).
+> **Use the Sized variant to change size** — appending `themeBaseFontSize` after a preset
+> only rescales spacing; the text sizes the preset baked in stay put. Note all three
+> presets set `themePlotBg False` (cowplot's `rect fill = NA`), so the overall background
+> is transparent (append `themePlotBg True` if you need white).
 
 ```haskell
 purePlot <> layer (scatter xs ys) <> themeCowplot
+-- change size with the Sized variant: themeCowplotSized 12
 -- override individually by appending: themeCowplot <> themeTickLength 5 <> themeLegendPos LegendBottom
 ```
 
