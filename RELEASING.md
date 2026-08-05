@@ -10,7 +10,7 @@ Hackage**. The rest stay repository-only (buildable from source via
 |---|---|---|
 | `hgg` | ✅ | umbrella: exact-pins core/frame/svg, one re-export module `Graphics.Hgg`; flags `pdf`/`png`/`latex`/`3d` |
 | `hgg-core` | ✅ | no deps beyond base/vector/text/containers |
-| `hgg-frame` | ✅ | DataFrame integration (`PlotData` / `\|>>`); required by every backend below |
+| `hgg-frame` | ✅ | dataframe-independent abstraction (`PlotData` / `\|>>`); required by every backend below |
 | `hgg-svg` | ✅ | SVG backend |
 | `hgg-pdf` | ✅ | PDF backend |
 | `hgg-rasterific` | ✅ | PNG backend |
@@ -19,16 +19,16 @@ Hackage**. The rest stay repository-only (buildable from source via
 | `hgg-ihaskell` | ✅ | Jupyter (IHaskell) inline display |
 | `hgg-custom` | ✅ | custom marks (dendrogram etc.) |
 | `hgg-analyze-bridge` | ✅ | depends on Hackage `hanalyze >= 0.2` |
+| `hgg-dataframe` | ✅ | `PlotData` instance for the Hackage `dataframe` package |
 | `hgg-semi` | — repo only | |
 | `hgg-doe` | — repo only | |
-| `hgg-dataframe` | — repo only | |
 | `hgg-tutorials` | — repo only | figure generators for the docs, not a library |
 
 Dependency-closure check (library sections only): every published package
 depends only on other published packages plus Hackage. `hgg-frame` is a
 library dependency of svg / pdf / rasterific / latex / 3d / ihaskell /
 analyze-bridge, so it must be part of the publish set. No published package
-depends on the four repo-only packages.
+depends on the three repo-only packages.
 
 ## Upload order
 
@@ -38,7 +38,7 @@ Then, respecting intra-repo dependencies:
 1. `hgg-core`
 2. `hgg-frame`
 3. `hgg-svg`, `hgg-pdf`, `hgg-rasterific`, `hgg-latex`, `hgg-custom`
-4. `hgg-3d`, `hgg-ihaskell`
+4. `hgg-3d`, `hgg-ihaskell`, `hgg-dataframe`
 5. `hgg-analyze-bridge`
 6. `hgg` (umbrella — always last; it exact-pins `hgg-core`/`hgg-frame`/`hgg-svg`
    to the release version, and its optional flags reference `hgg-pdf`/
