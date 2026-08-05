@@ -22,7 +22,9 @@ import           Graphics.Hgg.Layout (numToText,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
-                                      coordXGridIsVertical)
+                                      coordXGridIsVertical,
+                                      -- Phase 64 A4: 参照線を投影層へ通す
+                                      projectSegment)
 import           Graphics.Hgg.Layout.RangeOf (qqPoints, ecdfPoints)  -- Phase 11 A6-2/A6-4
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Time.Format     as Data.Time.Format
@@ -258,16 +260,19 @@ renderForest r layout pal ly =
       sx    = scaleApply (lpXScale layout)
       nullX = maybe 0.0 (fromIntegral) (getLast (lyMaxLag ly))  -- 流用
       area  = lpPlotArea layout
-      -- Phase 10 A4: glyph は projectPoint、 data-x の参照線は xRefLine で flip 追従。
-      coord = flipOnly (lpCoord layout)   -- A7-c: forest は polar 非対象
+      -- ★ Phase 64 A4: glyph も参照線も投影層へ。 参照線は「data x=v を y domain 全長に
+      --   渡す線分」 として 'projectSegment' に通す。 y scale の range は panel 端に
+      --   一致するので直線座標系では旧 px 式と bit 一致し、 polar では radial 線/弧に
+      --   なる (flipOnly を撤去できた根拠)。
+      coord = lpCoord layout
       pp    = projectPoint coord layout
-      -- data x=v の参照線 (Cartesian は縦線 panel 全高、 flip は横線 panel 全幅)。
-      xRefLine v = case coord of
-        CoordCartesian -> (Point (sx v) (rY area), Point (sx v) (rY area + rH area))
-        CoordFlip      -> let yp = scaleApply (lpXScaleFlipped layout) v
-                          in (Point (rX area) yp, Point (rX area + rW area) yp)
+      yLo   = lsDomainLo (lpYScale layout)
+      yHi   = lsDomainHi (lpYScale layout)
+      refLinePrims v col =
+        let pts = projectSegment coord layout (v, yHi) (v, yLo)
+        in [ PLine p q (solid col 1.0) | (p, q) <- zip pts (drop 1 pts) ]
       -- 中央 null line
-      nullLine = let (p1, p2) = xRefLine nullX in [ PLine p1 p2 (solid "#888" 1.0) ]
+      nullLine = refLinePrims nullX "#888"
       -- 各 row: 水平 CI 線 + 点 marker
       rowsP = concat
         [ [ PLine (pp (e - err) yp) (pp (e + err) yp) (solid c 1.5)
@@ -299,17 +304,18 @@ renderFunnel r layout pal ly =
       mu      = if n == 0 then 0 else sum effects / fromIntegral n
       seMax   = if null ses then 1 else maximum ses
       area    = lpPlotArea layout
-      -- Phase 10 A4: 点・envelope 端点は projectPoint、 mu 参照線は xRefLine で flip 追従。
-      coord   = flipOnly (lpCoord layout)   -- A7-c: funnel は polar 非対象
+      -- ★ Phase 64 A4: 点・envelope 端点も mu 参照線も投影層へ (forest と同型)。
+      --   参照線は「data x=mu を y domain 全長に渡す線分」 を 'projectSegment' に通す。
+      --   直線座標系は旧 px 式と bit 一致、 polar では radial 線/弧になる。
+      coord   = lpCoord layout
       pp      = projectPoint coord layout
-      xRefLine v = case coord of
-        CoordCartesian -> (Point (sx v) (rY area), Point (sx v) (rY area + rH area))
-        CoordFlip      -> let yp = scaleApply (lpXScaleFlipped layout) v
-                          in (Point (rX area) yp, Point (rX area + rW area) yp)
+      yLoF    = lsDomainLo (lpYScale layout)
+      yHiF    = lsDomainHi (lpYScale layout)
       points  = [ PCircle (pp eff se) (ptSz / 2)
                           (FillStyle c a) (Just (StrokeStyle c 1.0)) Nothing
                 | (eff, se) <- zip effects ses ]
-      muLine = let (p1, p2) = xRefLine mu in [ PLine p1 p2 (solid "#888" 1.0) ]
+      muLine  = let pts = projectSegment coord layout (mu, yHiF) (mu, yLoF)
+                in [ PLine p q (solid "#888" 1.0) | (p, q) <- zip pts (drop 1 pts) ]
       -- diagonal envelope (= ±1.96 SE)、 plotArea 矩形に Liang-Barsky clip
       clipLine (Point x1 y1) (Point x2 y2) =
         let (xMin, xMax) = (rX area, rX area + rW area)
