@@ -1,14 +1,23 @@
 -- |
 -- Module      : Graphics.Hgg.Spec.Concat
--- Description : 図の合成 (hconcat / vconcat / <-> / <:> + pairs、 patchwork 風)
+-- Description : Composing figures (hconcat / vconcat / <-> / <:> plus pairs), patchwork-style
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 55: 'Graphics.Hgg.Spec' の module 分割で切り出し。 複数 'VisualSpec' を
+-- [日本語]: 'Graphics.Hgg.Spec' の module 分割で切り出し。 複数 'VisualSpec' を
 -- 1 枚に並べる合成 (Vega-Lite hconcat/vconcat 相当・patchwork 風演算子) と
 -- 'pairs' (散布図行列) を持つ。 subplots + subplotCols の純粋な薄ラッパで、
 -- レンダリングは既存 subplots 経路を使う。 公開 API は従来どおり
 -- 'Graphics.Hgg.Spec' (facade) が re-export する。 挙動・出力は完全に不変。
+--
+-- [English]: A module split out of 'Graphics.Hgg.Spec'. Provides
+-- composition that arranges multiple 'VisualSpec' values into one figure
+-- (equivalent to Vega-Lite's hconcat/vconcat, with patchwork-style
+-- operators), plus 'pairs' (a scatterplot matrix). A thin, pure wrapper
+-- over subplots + subplotCols; rendering goes through the existing
+-- subplots path. The public API is still re-exported by the
+-- 'Graphics.Hgg.Spec' facade as before; behavior and output are completely
+-- unchanged.
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Spec.Concat
   ( hconcat
@@ -46,11 +55,15 @@ import           Graphics.Hgg.Spec.Visual
 -- ★演算子の選定: '<->'(横)・'<:>'(縦) は Prelude/標準ライブラリと衝突しない
 --   (旧案 '<|>' は Control.Applicative の Alternative と衝突したため回避した)。
 
--- | 横並び (= Vega-Lite hconcat): n 要素を 1 行 n 列に。
+-- | [日本語]: 横並び (= Vega-Lite hconcat): n 要素を 1 行 n 列に。
+--   [English]: Places elements side by side (equivalent to Vega-Lite's
+--   hconcat): arranges n elements into 1 row of n columns.
 hconcat :: [VisualSpec] -> VisualSpec
 hconcat ss = subplots ss <> subplotCols (length ss)
 
--- | 縦並び (= Vega-Lite vconcat): n 要素を n 行 1 列に。
+-- | [日本語]: 縦並び (= Vega-Lite vconcat): n 要素を n 行 1 列に。
+--   [English]: Stacks elements vertically (equivalent to Vega-Lite's
+--   vconcat): arranges n elements into n rows of 1 column.
 vconcat :: [VisualSpec] -> VisualSpec
 vconcat ss = subplots ss <> subplotCols 1
 
@@ -65,32 +78,44 @@ vconcat ss = subplots ss <> subplotCols 1
 infixl 6 <->
 infixl 6 <:>
 
--- | 横結合演算子 (= hconcat の二項・同方向チェーンを平坦化)。
+-- | [日本語]: 横結合演算子 (= hconcat の二項・同方向チェーンを平坦化)。
+--   [English]: The horizontal-combine operator (the binary form of
+--   hconcat; flattens chains in the same direction).
 (<->) :: VisualSpec -> VisualSpec -> VisualSpec
 a <-> b = case asHGroup a of
   Just xs -> hconcat (xs ++ [b])
   Nothing -> hconcat [a, b]
 
--- | 縦結合演算子 (= vconcat の二項・同方向チェーンを平坦化)。
+-- | [日本語]: 縦結合演算子 (= vconcat の二項・同方向チェーンを平坦化)。
+--   [English]: The vertical-combine operator (the binary form of vconcat;
+--   flattens chains in the same direction).
 (<:>) :: VisualSpec -> VisualSpec -> VisualSpec
 a <:> b = case asVGroup a of
   Just xs -> vconcat (xs ++ [b])
   Nothing -> vconcat [a, b]
 
--- | spec が「純粋な水平グループ (subplots=xs (>1 要素)・cols==要素数)」 なら xs。
+-- | [日本語]: spec が「純粋な水平グループ (subplots=xs (>1 要素)・cols==要素数)」
+--   なら xs。
+--   [English]: If the spec is "a pure horizontal group" (subplots=xs with
+--   more than 1 element, and cols equal to the element count), returns xs.
 asHGroup :: VisualSpec -> Maybe [VisualSpec]
 asHGroup s = case getLast (vsSubplotCols s) of
   Just c | let xs = vsSubplots s, length xs > 1, c == length xs -> Just (vsSubplots s)
   _ -> Nothing
 
--- | spec が「純粋な垂直グループ (subplots=xs (>1 要素)・cols==1)」 なら xs。
+-- | [日本語]: spec が「純粋な垂直グループ (subplots=xs (>1 要素)・cols==1)」 なら xs。
+--   [English]: If the spec is "a pure vertical group" (subplots=xs with
+--   more than 1 element, and cols equal to 1), returns xs.
 asVGroup :: VisualSpec -> Maybe [VisualSpec]
 asVGroup s = case getLast (vsSubplotCols s) of
   Just 1 | length (vsSubplots s) > 1 -> Just (vsSubplots s)
   _ -> Nothing
 
--- | P18: pairs plot (= N 列の posterior 等を N×N grid で対角は density、
--- |   非対角は scatter)。
+-- | [日本語]: pairs plot (= N 列の posterior 等を N×N grid で対角は density、
+--   非対角は scatter)。
+--   [English]: A pairs plot (arranges N columns, such as posterior
+--   samples, into an N×N grid where the diagonal shows density and the
+--   off-diagonal shows scatter).
 pairs :: [ColRef] -> VisualSpec
 pairs cols =
   let n = length cols

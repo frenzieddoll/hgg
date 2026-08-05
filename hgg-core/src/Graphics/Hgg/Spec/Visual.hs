@@ -1,15 +1,25 @@
 -- |
 -- Module      : Graphics.Hgg.Spec.Visual
--- Description : VisualSpec (= 外側 Monoid、 図全体の宣言型 spec) + Inset
+-- Description : VisualSpec, the top-level plot spec aggregating all sub-specs, plus Inset
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 55: 'Graphics.Hgg.Spec' の module 分割で切り出し。 図全体の宣言型 spec
--- 'VisualSpec' と field-wise Monoid 合成 (@design/monoid-semantics.md@)、 および
--- 'Inset' を持つ。 'Inset.inSpec :: VisualSpec' ⇄ 'VisualSpec.vsInsets :: [Inset]'
--- の相互参照ゆえ 2 型は本 module に同居する (Phase 55 A1 実測・唯一の循環ペア)。
--- 公開 API は従来どおり 'Graphics.Hgg.Spec' (facade) が re-export する。
--- 挙動・出力 (JSON 形含む) は完全に不変。
+-- [日本語]: 'Graphics.Hgg.Spec' の module 分割で切り出し。 図全体の宣言型 spec
+--   'VisualSpec' と field-wise Monoid 合成 (@design/monoid-semantics.md@)、 および
+--   'Inset' を持つ。 @inSpec :: VisualSpec@ (= 'Inset' の field) ⇄
+--   @vsInsets :: [Inset]@ (= 'VisualSpec' の field) の相互参照ゆえ、 2 型は本 module に
+--   同居する (実測で確認済みの、 唯一の循環ペア)。 公開 API は従来どおり
+--   'Graphics.Hgg.Spec' (facade) が re-export する。 挙動・出力 (JSON 形含む) は
+--   完全に不変。
+--   [English]: Split out of 'Graphics.Hgg.Spec' when that module was divided up.
+--   Holds 'VisualSpec', the declarative spec type for the whole figure, together
+--   with its field-wise Monoid composition (@design/monoid-semantics.md@), and
+--   'Inset'. Because @inSpec :: VisualSpec@ (a field of 'Inset') and
+--   @vsInsets :: [Inset]@ (a field of 'VisualSpec') reference each other, the two
+--   types live together in this module (confirmed by measurement to be the only
+--   cyclic pair). The public API is still re-exported by the facade module
+--   'Graphics.Hgg.Spec' as before. Behavior and output (including the JSON shape)
+--   are completely unchanged.
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE OverloadedStrings         #-}
 module Graphics.Hgg.Spec.Visual
@@ -34,7 +44,7 @@ import           Graphics.Hgg.Spec.Mark (Coord, FacetScales, FacetSpace)
 import           Graphics.Hgg.Spec.Theme (ThemeName, ThemeOverride)
 
 -- ===========================================================================
--- Inset (= P13、 親 plot に小型 sub-plot を埋込み)
+-- Inset (= 親 plot に小型 sub-plot を埋込み)
 -- ===========================================================================
 
 data Inset = Inset
@@ -47,14 +57,21 @@ instance ToJSON   Inset
 instance FromJSON Inset
 
 -- ===========================================================================
--- TagStyle (= Phase 63 A7、 subplot panel の自動タグ様式)
+-- TagStyle (= subplot panel の自動タグ様式)
 -- ===========================================================================
 
--- | Phase 63 A7: subplot panel の自動タグ様式 (cowplot @plot_grid(labels=)@ の
--- @"AUTO"@ / @"auto"@ / 連番 相当)。 統一グリッドの panel 列挙順に
--- \"A\",\"B\",… \/ \"a\",\"b\",… \/ \"1\",\"2\",… を各 panel の 'vsTag' として注入する
--- (panel 自身の 'vsTag' 明示指定が優先 = 個別 > 一括)。
--- JSON は nullary constructor 名 ('TickDir' と同パターン、 canvas Codec と parity)。
+-- | [日本語]: subplot panel の自動タグ様式 (cowplot @plot_grid(labels=)@ の
+--   @"AUTO"@ / @"auto"@ / 連番 相当)。 統一グリッドの panel 列挙順に
+--   \"A\",\"B\",… \/ \"a\",\"b\",… \/ \"1\",\"2\",… を各 panel の 'vsTag' として注入する
+--   (panel 自身の 'vsTag' 明示指定が優先 = 個別 > 一括)。
+--   JSON は nullary constructor 名 (@TickDir@ と同パターン、 canvas Codec と parity)。
+--   [English]: The automatic tagging style for subplot panels (equivalent to
+--   cowplot's @plot_grid(labels=)@ with @"AUTO"@ / @"auto"@ / sequential
+--   numbering). In the panel enumeration order of the unified grid, injects
+--   \"A\",\"B\",… \/ \"a\",\"b\",… \/ \"1\",\"2\",… as each panel's 'vsTag' (an
+--   explicit 'vsTag' on the panel itself takes priority — per-panel over batch).
+--   The JSON encoding uses the nullary constructor name (the same pattern as
+--   @TickDir@, for parity with the canvas codec).
 data TagStyle = TagUpper | TagLower | TagNumeric
   deriving (Generic, Show, Eq)
 
@@ -65,7 +82,9 @@ instance FromJSON TagStyle
 -- VisualSpec (= 外側 Monoid)
 -- ===========================================================================
 
--- | 図全体の宣言型 spec。 全 field を Monoid 化して field-wise `<>` 合成。
+-- | [日本語]: 図全体の宣言型 spec。 全 field を Monoid 化して field-wise @<>@ 合成。
+--   [English]: The declarative spec type for the whole figure. Every field is a
+--   Monoid, and specs are composed field-wise with @<>@.
 data VisualSpec = VisualSpec
   { vsLayers :: ![Layer]
   , vsTitle  :: !(Last Text)
@@ -73,64 +92,64 @@ data VisualSpec = VisualSpec
   , vsFacet  :: !(Last ColRef)
   , vsXLabel :: !(Last Text)
   , vsYLabel :: !(Last Text)
-  , vsXAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
-  , vsYAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
-  , vsYAxisRight :: !(Last AxisSpec)    -- ★ P5 dual Y 軸 (右側)
-  , vsRefLines :: ![ReferenceLine]      -- ★ Phase 26 §C-2 #3
-  , vsMarginal :: !(Last MarginalSpec)  -- ★ Phase 26 §C-2 #10
-  , vsSubplots :: ![VisualSpec]         -- ★ Phase 26 S5-e-1 panel grid (= facet と独立、 任意の sub-spec 並列)
-  , vsSubplotCols :: !(Last Int)         -- ★ P18 2D grid 折り返し列数
-    -- ★ Phase 63 A6: subplot 列/行の相対サイズ (cowplot plot_grid の rel_widths /
+  , vsXAxis  :: !(Last AxisSpec)
+  , vsYAxis  :: !(Last AxisSpec)
+  , vsYAxisRight :: !(Last AxisSpec)    -- ★ dual Y 軸 (右側)
+  , vsRefLines :: ![ReferenceLine]
+  , vsMarginal :: !(Last MarginalSpec)
+  , vsSubplots :: ![VisualSpec]         -- ★ panel grid (= facet と独立、 任意の sub-spec 並列)
+  , vsSubplotCols :: !(Last Int)         -- ★ 2D grid 折り返し列数
+    -- ★ subplot 列/行の相対サイズ (cowplot plot_grid の rel_widths /
     --   rel_heights 相当)。 統一グリッドの列/行 index 順の重み。 グリッド数に対して
     --   不足分は 1 で埋める (エラーにしない)。 未指定 = 全列/行 1 (= 従来の等分)。
   , vsSubplotWidths  :: !(Last [Double])
   , vsSubplotHeights :: !(Last [Double])
-    -- ★ Phase 63 A7: subplot panel の自動タグ (cowplot plot_grid の labels="AUTO" 相当)。
+    -- ★ subplot panel の自動タグ (cowplot plot_grid の labels="AUTO" 相当)。
     --   panel 列挙順に TagStyle の連番タグを各 panel の vsTag へ注入 (個別 vsTag 優先)。
     --   未指定 = タグ無し (= 従来同一)。
   , vsSubplotTags    :: !(Last TagStyle)
-  , vsLegend   :: !(Last LegendSpec)    -- ★ P8 2026-05-25 凡例設定 (= Nothing なら auto)
-  , vsAnnotations :: ![Annotation]      -- ★ P6 任意 overlay (text/arrow/rect/line)
-  , vsInsets      :: ![Inset]            -- ★ P13 inset axes
-  , vsPalette     :: !(Last [Text])       -- ★ P17 categorical palette (= Nothing なら hggMain F-3)
-  , vsContinuousPal :: !(Last [Text])     -- ★ P17 continuous palette (= Nothing なら viridis5)
+  , vsLegend   :: !(Last LegendSpec)    -- ★ 2026-05-25 凡例設定 (= Nothing なら auto)
+  , vsAnnotations :: ![Annotation]      -- ★ 任意 overlay (text/arrow/rect/line)
+  , vsInsets      :: ![Inset]            -- ★ inset axes
+  , vsPalette     :: !(Last [Text])       -- ★ categorical palette (= Nothing なら hggMain F-3)
+  , vsContinuousPal :: !(Last [Text])     -- ★ continuous palette (= Nothing なら viridis5)
   , vsTitleFont     :: !(Last FontSpec)   -- ★ frontend-settings v0.1 §1.3
   , vsAxisLabelFont :: !(Last FontSpec)   -- ★ 〃
   , vsTickFont      :: !(Last FontSpec)   -- ★ 〃
   , vsLegendFont    :: !(Last FontSpec)   -- ★ 〃
-  , vsWidth  :: !(Last Length)   -- ★ Phase 33: 図幅 (Length・既定 mm)。px=pt×dpi/72。
-  , vsHeight :: !(Last Length)   -- ★ Phase 33: 図高 (Length・既定 mm)。
-    -- ★ Phase 33: 描画 dpi。px backend は px=pt×dpi/72、PDF backend は無視 (pt 直結)。
+  , vsWidth  :: !(Last Length)   -- ★ 図幅 (Length・既定 mm)。px=pt×dpi/72。
+  , vsHeight :: !(Last Length)   -- ★ 図高 (Length・既定 mm)。
+    -- ★ 描画 dpi。px backend は px=pt×dpi/72、PDF backend は無視 (pt 直結)。
     --   未指定 = 96 (web 標準)。
   , vsDpi    :: !(Last Double)
-    -- ★ Phase 8 A2 Step2: coord_fixed(ratio) 相当。 panel の 高/幅 比 (aspect)。
+    -- ★ coord_fixed(ratio) 相当。 panel の 高/幅 比 (aspect)。
     --   Nothing = 可用域を埋める (ggplot 既定 Coord$aspect = NULL)。 Just a (a>0) =
     --   可用域内で aspect を保つ最大 panel を取り中央寄せ。 root: ggplot R/coord-.R。
   , vsAspect :: !(Last Double)
-    -- ★ Phase 8 C G7: facet_wrap の列数 (ncol)。 Nothing = 従来の 1 行 N 列 (非破壊)、
+    -- ★ facet_wrap の列数 (ncol)。 Nothing = 従来の 1 行 N 列 (非破壊)、
     --   Just n = n 列で複数行に折り返し (nrow = ceil(panel 数 / n))。 root: ggplot facet_wrap。
   , vsFacetNcol :: !(Last Int)
-    -- ★ Phase 8 C G7 part-b: facet_grid(row ~ col)。 2 変数 cross 配置。
+    -- ★ facet_grid(row ~ col)。 2 変数 cross 配置。
     --   vsFacetRow = 行を作る変数 (levels が各行、 右側 strip)、 vsFacetCol = 列を作る変数
     --   (levels が各列、 上側 strip)。 両 Nothing = grid 無し (= 従来 facet_wrap 経路)。
     --   片方のみ指定も可 (1 行 or 1 列の grid)。 root: ggplot facet_grid。
   , vsFacetRow :: !(Last ColRef)
   , vsFacetCol :: !(Last ColRef)
-    -- ★ Phase 9 A-2: element 単位 theme override (preset に合成、 resolveTheme で解決)。
+    -- ★ element 単位 theme override (preset に合成、 resolveTheme で解決)。
   , vsThemeOverride :: !ThemeOverride
-    -- ★ Phase 9 C: 座標系 (coord_flip 等)。 Nothing = CoordCartesian (= ggplot 既定)。
+    -- ★ 座標系 (coord_flip 等)。 Nothing = CoordCartesian (= ggplot 既定)。
   , vsCoord :: !(Last Coord)
-    -- ★ Phase 11 A4-a: 軸反転 (= ggplot scale_x_reverse / scale_y_reverse)。
+    -- ★ 軸反転 (= ggplot scale_x_reverse / scale_y_reverse)。
     --   Just True で該当軸の scale range (rLo/rHi) を入替え、 大値が小座標側に。
     --   tick/grid/glyph は scaleApply 経由なので自動追従 (renderer 無変更)。
     --   coord_flip とは独立合成 (= データ軸基準で反転、 flip 後も x/y データ軸を指す)。
   , vsReverseX :: !(Last Bool)
   , vsReverseY :: !(Last Bool)
-    -- ★ Phase 11 A4-c: 明示凡例タイトル (= ggplot scale_color_*(name=) / labs(color=))。
+    -- ★ 明示凡例タイトル (= ggplot scale_color_*(name=) / labs(color=))。
     --   Nothing なら従来通りタイトル非表示 (= legend 項目が自己説明的)。 明示値なので
-    --   bakeSpec (色列 inline 化) 後も保持され HS/PS が同一描画 (Phase 9 A-5 の食い違い回避)。
+    --   bakeSpec (色列 inline 化) 後も保持され HS/PS が同一描画 (食い違い回避)。
   , vsLegendTitle :: !(Last Text)
-    -- ★ Phase 11 A4-e: 色/サイズ scale 拡充。
+    -- ★ 色/サイズ scale 拡充。
     --   vsColorManual = ggplot scale_color_manual(values=)。 カテゴリ名→hex の辞書。
     --     ColorByCol で当該名があれば palette index より優先。 未登録名は従来の palette。
   , vsColorManual :: !(Last [(Text, Text)])
@@ -139,13 +158,13 @@ data VisualSpec = VisualSpec
   , vsColorGradient2 :: !(Last (Text, Text, Text, Double))
     --   vsSizeRange = ggplot scale_size(range=c(min,max))。 sizeBy の px 範囲 (default (3,10))。
   , vsSizeRange :: !(Last (Double, Double))
-    -- ★ Phase 11 A5-a: labs サブシステム (= ggplot labs(subtitle=,caption=,tag=))。
+    -- ★ labs サブシステム (= ggplot labs(subtitle=,caption=,tag=))。
     --   vsSubtitle = title 直下の小見出し。 vsCaption = 図右下の注記。 vsTag = 左上隅のタグ。
     --   いずれも Nothing で従来同一 (= 描画も margin 予約も無し)。
   , vsSubtitle :: !(Last Text)
   , vsCaption  :: !(Last Text)
   , vsTag      :: !(Last Text)
-    -- ★ Phase 11 A5-c: guides サブシステム (= ggplot guide_legend(reverse=, ncol=, nrow=))。
+    -- ★ guides サブシステム (= ggplot guide_legend(reverse=, ncol=, nrow=))。
     --   位置 ('vsLegend') とは独立 (= vsLegendTitle と同じく VisualSpec レベルに置き
     --   LegendSpec Semigroup の position 上書き footgun を回避)。 いずれも Nothing で従来同一。
     --   vsLegendReverse = 凡例キーの表示順を逆に (色は各キーに固定のまま)。
@@ -153,33 +172,33 @@ data VisualSpec = VisualSpec
   , vsLegendReverse :: !(Last Bool)
   , vsLegendNcol    :: !(Last Int)
   , vsLegendNrow    :: !(Last Int)
-    -- ★ Phase 11 A7-a: coord_cartesian(xlim,ylim) = データを落とさない zoom。
+    -- ★ coord_cartesian(xlim,ylim) = データを落とさない zoom。
     --   axisRange (= scale limits、 範囲外データを切る) と別概念で、 scale domain を
     --   指定範囲に上書きするだけ。 stat (regression/density 等) は全データから計算され、
     --   範囲外の glyph は panel に clip される (= ggplot coord_cartesian, expand=FALSE)。
     --   numeric 軸のみ有効 (categorical / funnel 軸は無視)。 Nothing で従来同一。
   , vsCoordXLim :: !(Last (Double, Double))
   , vsCoordYLim :: !(Last (Double, Double))
-    -- ★ Phase 11 A7-b: facet free scales (= ggplot facet_wrap(scales=))。 Nothing =
+    -- ★ facet free scales (= ggplot facet_wrap(scales=))。 Nothing =
     --   FacetFixed (全 panel 共通 domain)。 free な軸は各 panel が自分のデータで domain を
     --   再計算し、 全 panel に軸を表示する (= 値比較より panel 内分布を優先)。 facet_wrap
     --   (renderFaceted) のみ対応 (facet_grid は別途)。
   , vsFacetScales :: !(Last FacetScales)
-    -- ★ Phase 11 A7-b: facet_grid の panel サイズ配分 (= ggplot facet_grid(space=))。
+    -- ★ facet_grid の panel サイズ配分 (= ggplot facet_grid(space=))。
     --   Nothing = SpaceFixed (全 panel 同サイズ)。 free な軸は track 重みを data 範囲比例に。
   , vsFacetSpace :: !(Last FacetSpace)
-    -- ★ Phase 18 A1: subplot panel の名前選択 (= 'repeatFields' の逆方向)。
-    --   Just ws = vsSubplots の子を vsTitle ∈ ws で filter し **ws の列挙順に並べ替え**
+    -- ★ subplot panel の名前選択 (= @repeatFields@ の逆方向)。
+    --   Just ws = vsSubplots の子を vsTitle ∈ ws で filter し __ws の列挙順に並べ替え__
     --   (ggplot discrete limits と同じ「選択 + 順序」 の意味論)。 名前不一致は無視。
     --   Nothing = 従来通り全 panel。 facet panel (データ分割) は対象外 (subplots 専用)。
   , vsPanelSel :: !(Last [Text])
-    -- ★ Phase 18 A2: 離散軸カテゴリの limits (= ggplot @scale_x_discrete(limits=)@ /
-    --   @scale_y_discrete(limits=)@、 連続版 'axisRange' の離散対応)。 Just ws = 当該軸の
-    --   encoding が ColTxt の layer について **カテゴリ行を選択 + ws の列挙順に並べ替え**
+    -- ★ 離散軸カテゴリの limits (= ggplot @scale_x_discrete(limits=)@ /
+    --   @scale_y_discrete(limits=)@、 連続版 @axisRange@ の離散対応)。 Just ws = 当該軸の
+    --   encoding が ColTxt の layer について __カテゴリ行を選択 + ws の列挙順に並べ替え__
     --   (行 filter は全 row-aligned encoding を同 index で間引く)。 aes 基準 (coord_flip と
     --   直交 = flip 後も x/y データ軸を指す、 'vsReverseX' と同思想)。 Nothing = 従来通り。
     --   ★Last-上書き footgun 回避のため AxisSpec でなく VisualSpec 直 field
-    --   ('vsLegendTitle' / Phase 11 A4-c と同じ判断)。
+    --   ('vsLegendTitle' と同じ判断)。
   , vsXDiscreteLimits :: !(Last [Text])
   , vsYDiscreteLimits :: !(Last [Text])
   } deriving (Generic, Show, Eq)
@@ -187,13 +206,23 @@ data VisualSpec = VisualSpec
 instance ToJSON   VisualSpec
 instance FromJSON VisualSpec
 
--- | 図全体の合成。 list 系 (layers/refLines/subplots/annotations/insets) は
--- concat、 残りは 'Last' で後勝ち、 themeOverride は element 単位 Monoid。
--- 合成規則の全体表は @design/monoid-semantics.md@ を参照。
--- ★ Phase 43 A3: レコードフィールド形式 (位置依存撲滅・挙動不変)。49 field の位置揃え
---   (旧 `l1 t1 th1 …`) を撲滅し、 以後の field 追加を「行を 1 本足すだけ」 + `-Wmissing-fields`
---   保護下にする。唯一の特殊合成 'mergeColorManual' (= Phase 52.A10/19 の dedup 合成) のみ
---   名前付きで温存。list 系は `<>`=concat、 残りは `Last` 後勝ち、 themeOverride は element Monoid。
+-- | [日本語]: 図全体の合成。 list 系 (layers/refLines/subplots/annotations/insets) は
+--   concat、 残りは 'Last' で後勝ち、 themeOverride は element 単位 Monoid。
+--   合成規則の全体表は @design/monoid-semantics.md@ を参照。
+--   レコードフィールド形式 (位置依存撲滅・挙動不変)。49 field の位置揃え
+--   (旧 @l1 t1 th1 …@) を撲滅し、 以後の field 追加を「行を 1 本足すだけ」 + @-Wmissing-fields@
+--   保護下にする。唯一の特殊合成 'mergeColorManual' (= dedup 合成) のみ
+--   名前付きで温存。list 系は @<>@=concat、 残りは @Last@ 後勝ち、 themeOverride は element Monoid。
+--   [English]: The composition of the whole figure. List-valued fields
+--   (layers/refLines/subplots/annotations/insets) are concatenated, the rest use
+--   'Last'-style last-wins, and themeOverride is an element-wise Monoid. See
+--   @design/monoid-semantics.md@ for the full composition-rule table. This uses
+--   the record-field form (eliminating positional dependence, behavior
+--   unchanged): it replaces the old positional @l1 t1 th1 …@ style, so that
+--   adding a field is just "add one line", protected by @-Wmissing-fields@. The
+--   only special composition kept under its own name is 'mergeColorManual' (the
+--   dedup composition); list fields use @<>@ = concat, the rest use @Last@
+--   last-wins, and themeOverride uses the element Monoid.
 instance Semigroup VisualSpec where
   a <> b = VisualSpec
     { vsLayers       = vsLayers a       <> vsLayers b
@@ -233,7 +262,7 @@ instance Semigroup VisualSpec where
     , vsReverseX     = vsReverseX a     <> vsReverseX b
     , vsReverseY     = vsReverseY a     <> vsReverseY b
     , vsLegendTitle  = vsLegendTitle a  <> vsLegendTitle b
-      -- ★特殊: 全群の色辞書を concat+dedup (Last 後勝ちだと先頭群が消える・Phase 52.A10/19)
+      -- ★特殊: 全群の色辞書を concat+dedup (Last 後勝ちだと先頭群が消える)
     , vsColorManual  = mergeColorManual (vsColorManual a) (vsColorManual b)
     , vsColorGradient2 = vsColorGradient2 a <> vsColorGradient2 b
     , vsSizeRange    = vsSizeRange a    <> vsSizeRange b
@@ -275,10 +304,18 @@ instance Monoid VisualSpec where
     , vsYDiscreteLimits = mempty
     }
 
--- | Phase 52.A10: scale_color_manual 辞書の合成。 旧実装は Last の最後勝ちで、 異モデル
--- 重畳 (各レイヤが 1 群の ColorByCol + 単一辞書) のとき先頭群の色辞書が捨てられ全線同色化
--- していた。 ここでは両辞書を concat し同じカテゴリ名は後勝ちで dedup する (= 全群の色が
--- 残り各 ColorByCol レイヤが自色を引ける)。 片方 Nothing は他方をそのまま採用。
+-- | [日本語]: scale_color_manual 辞書の合成。 旧実装は Last の最後勝ちで、 異モデル
+--   重畳 (各レイヤが 1 群の ColorByCol + 単一辞書) のとき先頭群の色辞書が捨てられ全線同色化
+--   していた。 ここでは両辞書を concat し同じカテゴリ名は後勝ちで dedup する (= 全群の色が
+--   残り各 ColorByCol レイヤが自色を引ける)。 片方 Nothing は他方をそのまま採用。
+--   [English]: Composes @scale_color_manual@ dictionaries. The old implementation
+--   used 'Last'-style last-wins semantics, so when heterogeneous groups were
+--   overlaid (each layer being one ColorByCol group with a single dictionary),
+--   the first group's color dictionary was discarded and every line ended up
+--   the same color. Here the two dictionaries are concatenated, and duplicate
+--   category names are deduplicated with last-wins (so every group's colors
+--   survive and each ColorByCol layer can look up its own color). If either
+--   side is Nothing, the other is used as-is.
 mergeColorManual :: Last [(Text, Text)] -> Last [(Text, Text)] -> Last [(Text, Text)]
 mergeColorManual (Last Nothing) b = b
 mergeColorManual a (Last Nothing) = a
@@ -288,7 +325,7 @@ mergeColorManual (Last (Just d1)) (Last (Just d2)) =
     -- 同 key (カテゴリ名) は後勝ち = 後方の値を優先。 出現順は最初の出現位置で保存。
     dedupColorManual kvs =
       let lastVal k = last [ v | (k', v) <- kvs, k' == k ]
-          -- ★Phase 19: 旧 foldr 形は interleaved 重複で最終出現順になっていた
+          -- ★旧 foldr 形は interleaved 重複で最終出現順になっていた
           -- (辞書は lookup のみで順序非依存だが、 コメント通り初出順に統一)
           keysInOrder = nubKeep (map fst kvs)
       in [ (k, lastVal k) | k <- keysInOrder ]

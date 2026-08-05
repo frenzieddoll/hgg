@@ -1,14 +1,22 @@
 -- |
 -- Module      : Graphics.Hgg.Spec.Bake
--- Description : Resolver の焼き込み (ColByName → inline 解決、 Phase 8 B16)
+-- Description : Baking the Resolver in (resolving ColByName references to inline data)
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 55: 'Graphics.Hgg.Spec' の module 分割で切り出し。 spec 内の全
+-- [日本語]: 'Graphics.Hgg.Spec' の module 分割で切り出し。 spec 内の全
 -- 'ColByName' を 'Resolver' で inline ('ColNum' / 'ColTxt') 化する 'bakeSpec'
--- を持つ。 'VisualSpec' / 'Layer' 全体を走査する sink (被参照ゼロ・Phase 55 A1
--- 実測) ゆえ分割 module 群の最後段。 公開 API は従来どおり 'Graphics.Hgg.Spec'
--- (facade) が re-export する。 挙動・出力は完全に不変。
+-- を持つ。 'VisualSpec' / 'Layer' 全体を走査する sink (被参照ゼロ) ゆえ分割
+-- module 群の最後段。 公開 API は従来どおり 'Graphics.Hgg.Spec' (facade) が
+-- re-export する。 挙動・出力は完全に不変。
+--
+-- [English]: A module split out of 'Graphics.Hgg.Spec'. Provides
+-- 'bakeSpec', which inlines every 'ColByName' in the spec via the
+-- 'Resolver' (into 'ColNum' / 'ColTxt'). Since it is a sink that walks the
+-- whole 'VisualSpec' / 'Layer' tree (nothing else references it), it sits
+-- last among the split modules. The public API is still re-exported by the
+-- 'Graphics.Hgg.Spec' facade as before; behavior and output are completely
+-- unchanged.
 {-# LANGUAGE OverloadedStrings #-}
 module Graphics.Hgg.Spec.Bake
   ( bakeSpec
@@ -26,7 +34,10 @@ import           Graphics.Hgg.Spec.Visual (VisualSpec (..))
 -- (列名参照) のままだと PS で解決できず描画されない (= pairs/facet/legend が空)。
 -- JSON 出力前に bakeSpec で全 ColRef を inline 化すると PS でも描ける。
 
--- | ColByName を Resolver で解決し ColNum/ColTxt に置換 (解決不能なら元のまま)。
+-- | [日本語]: ColByName を Resolver で解決し ColNum/ColTxt に置換 (解決不能なら
+--   元のまま)。
+--   [English]: Resolves a ColByName via the Resolver and replaces it with
+--   ColNum/ColTxt (left unchanged if it cannot be resolved).
 bakeColRef :: Resolver -> ColRef -> ColRef
 bakeColRef r cr@(ColByName n) = case r n of
   Just (NumData v) -> ColNum v
@@ -58,8 +69,11 @@ bakeLayer r l = l
   , lyOverlay = map (bakeLayer r) (lyOverlay l)   -- ★ Phase 36 D2: sub-mark の inline 列も bake
   }
 
--- | spec 内の全 ColByName を Resolver で inline 化 (layers + facet + subplots 再帰)。
--- JSON 出力前に呼ぶと PS でも Resolver 不要で描ける。
+-- | [日本語]: spec 内の全 ColByName を Resolver で inline 化 (layers + facet +
+--   subplots 再帰)。 JSON 出力前に呼ぶと PS でも Resolver 不要で描ける。
+--   [English]: Inlines every ColByName in the spec via the Resolver
+--   (recursing through layers + facet + subplots). Calling this before
+--   JSON output lets PS draw without needing a Resolver.
 bakeSpec :: Resolver -> VisualSpec -> VisualSpec
 bakeSpec r spec = spec
   { vsLayers   = map (bakeLayer r) (vsLayers spec)

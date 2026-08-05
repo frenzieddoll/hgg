@@ -1,14 +1,21 @@
 -- |
 -- Module      : Graphics.Hgg.Spec.Decoration
--- Description : 図の装飾 spec (ReferenceLine / Annotation / Marginal / Legend / Font)
+-- Description : Decoration specs — reference lines, annotations, marginals, legends, fonts
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 55: 'Graphics.Hgg.Spec' の module 分割で切り出し。 図に載せる装飾の
+-- [日本語]: @Graphics.Hgg.Spec@ の module 分割で切り出し。 図に載せる装飾の
 -- 宣言型 spec 群 ('ReferenceLine' / 'Annotation' / 'MarginalSpec' /
--- 'LegendSpec' / 'FontSpec') を持つ。 ※'Inset' は 'VisualSpec' と相互参照の
--- ため 'Graphics.Hgg.Spec.Visual' 側 (Phase 55 A1 実測)。 公開 API は従来どおり
--- 'Graphics.Hgg.Spec' (facade) が re-export する。 挙動・出力は完全に不変。
+-- 'LegendSpec' / 'FontSpec') を持つ。 ※@Inset@ は @VisualSpec@ と相互参照の
+-- ため @Graphics.Hgg.Spec.Visual@ 側。 公開 API は従来どおり
+-- @Graphics.Hgg.Spec@ (facade) が re-export する。 挙動・出力は完全に不変。
+-- [English]: Split out from @Graphics.Hgg.Spec@ via module decomposition.
+-- Holds the declarative spec types for decorations placed on a figure
+-- ('ReferenceLine' / 'Annotation' / 'MarginalSpec' / 'LegendSpec' /
+-- 'FontSpec'). Note: @Inset@ instead lives alongside @VisualSpec@ in
+-- @Graphics.Hgg.Spec.Visual@, since the two cross-reference each other.
+-- The public API is unchanged — @Graphics.Hgg.Spec@ (the facade) still
+-- re-exports everything, and behavior/output are fully preserved.
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingStrategies        #-}
 {-# LANGUAGE DerivingVia               #-}
@@ -41,11 +48,16 @@ import           Graphics.Hgg.Unit (Pos (..))
 -- ReferenceLine (= Phase 26 §C-2 #3: 既存 PlotConfig.referenceLine 等価)
 -- ===========================================================================
 
--- | plot area 内に重ねる参照線。
+-- | [日本語]: plot area 内に重ねる参照線。
 --   * 'RefIdentity'    ─ y = x の対角線 (= Actual vs Predicted)
---   * 'RefHorizontalAt c' ─ y = c
---   * 'RefVerticalAt c'   ─ x = c
---   * 'RefLinear slope intercept' ─ y = slope * x + intercept
+--   * @RefHorizontalAt c@ ─ y = c
+--   * @RefVerticalAt c@   ─ x = c
+--   * @RefLinear slope intercept@ ─ y = slope * x + intercept
+--   [English]: A reference line overlaid on the plot area.
+--   * 'RefIdentity' — the y = x diagonal (Actual vs Predicted)
+--   * @RefHorizontalAt c@ — y = c
+--   * @RefVerticalAt c@   — x = c
+--   * @RefLinear slope intercept@ — y = slope * x + intercept
 data ReferenceLine
   = RefIdentity
   | RefHorizontalAt !Double
@@ -90,14 +102,16 @@ instance FromJSON Annotation
 -- MarginalSpec (= Phase 26 §C-2 #10 周辺 histogram)
 -- ===========================================================================
 
--- | P9: marginal の種別 (hist / density / 重ね)。
+-- | [日本語]: marginal の種別 (hist / density / 重ね)。
+--   [English]: The kind of marginal panel (histogram / density / overlaid).
 data MarginalKind = MarginalHist | MarginalDensity | MarginalBoth
   deriving (Show, Eq, Generic)
 
 instance ToJSON   MarginalKind
 instance FromJSON MarginalKind
 
--- | scatter の周辺に X/Y histogram を sub-plot として配置するか。
+-- | [日本語]: scatter の周辺に X/Y histogram を sub-plot として配置するか。
+--   [English]: Whether to place X/Y histograms as sub-plots around the scatter.
 data MarginalSpec = MarginalSpec
   { msShowX :: !Bool
   , msShowY :: !Bool
@@ -180,7 +194,9 @@ data FontSpec = FontSpec
 instance ToJSON   FontSpec
 instance FromJSON FontSpec
 
--- | 空 'FontSpec' (= 'mempty' alias、 generic 導出の mempty と同値)。
+-- | [日本語]: 空 'FontSpec' (= 'mempty' alias、 generic 導出の mempty と同値)。
+--   [English]: The empty 'FontSpec' (an alias for 'mempty', identical to the
+--   value produced by the generic derivation).
 emptyFontSpec :: FontSpec
 emptyFontSpec = mempty
 

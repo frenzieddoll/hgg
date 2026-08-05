@@ -1,16 +1,26 @@
 -- |
 -- Module      : Graphics.Hgg.Spec.Layer
--- Description : Layer (内側 Monoid) 本体 + layer-local attribute setter
+-- Description : Layer (inner Monoid) record and layer-local attribute setters
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- Phase 55: 'Graphics.Hgg.Spec' の module 分割で切り出し。 1 layer の全 field を
+-- [日本語]: 'Graphics.Hgg.Spec' の module 分割で切り出し。 1 layer の全 field を
 -- 持つ 'Layer' record と field-wise Monoid ('lyKind' のみ First・後は Last/concat、
 -- @design/monoid-semantics.md@ §1)、 および「直前の 'Layer' に @<>@ する」
 -- layer-local setter ('colorBy' / 'alpha' / 'size' / 'connect' 系等) を持つ。
 -- mark ごとの構築子は 'Graphics.Hgg.Spec.Constructors' 側。 公開 API は従来どおり
 -- 'Graphics.Hgg.Spec' (facade) が re-export する。 挙動・出力 (JSON 形含む) は
 -- 完全に不変。
+--
+-- [English]: Split out from 'Graphics.Hgg.Spec' during a module split. Holds
+-- the 'Layer' record with every field for a single layer, together with a
+-- field-wise Monoid instance (only 'lyKind' uses First; the rest use Last or
+-- concatenation — see @design/monoid-semantics.md@ §1), plus the layer-local
+-- setters (colorBy / alpha / size / connect, and friends) that each combine
+-- with @<>@ onto the preceding 'Layer'. Mark-specific constructors live in
+-- 'Graphics.Hgg.Spec.Constructors'. The public API is unchanged:
+-- 'Graphics.Hgg.Spec' (the facade) still re-exports everything. Behavior and
+-- output (including JSON shape) are completely unchanged.
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE OverloadedStrings         #-}
 module Graphics.Hgg.Spec.Layer
@@ -58,8 +68,11 @@ import           Graphics.Hgg.Spec.Mark
 -- Layer (= 内側 Monoid)
 -- ===========================================================================
 
--- | 1 layer の全 field。 各 field を 'First' (= kind は最初勝ち) または
--- 'Last' (= 属性は後勝ち) で包んで Monoid を field-wise に。
+-- | [日本語]: 1 layer の全 field。 各 field を 'First' (= kind は最初勝ち) または
+--   'Last' (= 属性は後勝ち) で包んで Monoid を field-wise に。
+--   [English]: All fields for a single layer. Each field is wrapped in
+--   'First' (kind, where the first value wins) or 'Last' (attributes, where
+--   the last value wins) to make the Monoid instance field-wise.
 data Layer = Layer
   { lyKind    :: !(First MarkKind)
   , lyEncX    :: !(Last ColRef)
@@ -131,13 +144,24 @@ instance FromJSON Layer where
       in Aeson.genericParseJSON Aeson.defaultOptions (Object o2)
     _ -> Aeson.genericParseJSON Aeson.defaultOptions v
 
--- | 1 layer 内の属性合成。 'lyKind' のみ 'First' (= 最初の mark が勝ち、 後続の
--- mark は消える点に注意 ─ 重畳は 'layer' で包んで合成する。 @design/monoid-semantics.md@
--- §1 参照)。 lyHover/lyShapeMap は concat、 lyColorCats は last-nonempty、 残りは 'Last'。
--- Phase 26 A2: field 数が多く positional 列挙は取り違えやすいので record 構文で
--- per-field '(<>)' する (= Layer3D が Phase 25 A3 で行った変更と同方針)。 挙動は
--- 旧 positional 版と同一: 'lyKind' は First (= 最初の mark 勝ち)、 'lyHover'/
--- 'lyShapeMap' は list concat ('(<>)')、 'lyColorCats' は last-nonempty、 残りは Last。
+-- | [日本語]: 1 layer 内の属性合成。 'lyKind' のみ 'First' (= 最初の mark が勝ち、 後続の
+--   mark は消える点に注意 ─ 重畳は 'layer' で包んで合成する。 @design/monoid-semantics.md@
+--   §1 参照)。 lyHover/lyShapeMap は concat、 lyColorCats は last-nonempty、 残りは 'Last'。
+--   field 数が多く positional 列挙は取り違えやすいので record 構文で
+--   per-field '(<>)' する (= Layer3D が同方針で行った変更)。 挙動は
+--   旧 positional 版と同一: 'lyKind' は First (= 最初の mark 勝ち)、 'lyHover'/
+--   'lyShapeMap' は list concat ('(<>)')、 'lyColorCats' は last-nonempty、 残りは Last。
+--   [English]: Combines attributes within a single layer. Only 'lyKind' uses
+--   'First' (the first mark wins; note that later marks are dropped —
+--   overlaying multiple marks should instead go through 'layer'; see
+--   @design/monoid-semantics.md@ §1). lyHover/lyShapeMap concatenate,
+--   lyColorCats keeps the last non-empty value, and everything else uses
+--   'Last'. With this many fields, a positional field list is easy to get
+--   wrong, so this uses record syntax with a per-field '(<>)' instead (the
+--   same approach taken for Layer3D). The behavior matches the old
+--   positional version exactly: 'lyKind' is First (the first mark wins),
+--   'lyHover'/'lyShapeMap' use list concatenation ('(<>)'), 'lyColorCats'
+--   keeps the last non-empty value, and the rest use Last.
 instance Semigroup Layer where
   a <> b = Layer
     { lyKind        = lyKind a <> lyKind b
@@ -217,16 +241,26 @@ instance Monoid Layer where
 -- Layer-local attribute (= 直前の Layer に <>)
 -- ===========================================================================
 
--- | 列で色分け encoding (= categorical / continuous は ColRef 種別による)。
---   Phase 30 案2: map 系は @*By@ 接尾辞 ('color' は固定色に明け渡し)。
+-- | [日本語]: 列で色分け encoding (= categorical / continuous は ColRef 種別による)。
+--   map 系は @*By@ 接尾辞 ('color' は固定色に明け渡し)。
+--   [English]: Column-based color encoding (categorical or continuous,
+--   depending on the ColRef kind). Mapping-style aesthetics use the @*By@
+--   suffix ('color' is reserved for a fixed color).
 colorBy :: ColRef -> Layer
 colorBy c = mempty { lyColor = Last (Just (ColorByCol c)) }
 
--- | Phase 36 B1b: distribution mark の「群分け列」。 明示の 'lyEncX' があればそれを
+-- | [日本語]: distribution mark の「群分け列」。 明示の 'lyEncX' があればそれを
 --   群列とし、 無ければ 'colorBy' (= 'ColorByCol') の列を群列とみなす。 これにより
 --   @boxplot "v" <> colorBy "g"@ が scatter と同様に群分割される (従来は encX 専用で
 --   colorBy 単体だと単一群になっていた)。 distribution renderer と
 --   'collectCategoricalLabels' (distribution 限定) が共有する。
+--   [English]: The "grouping column" for a distribution mark. If 'lyEncX' is
+--   set explicitly, that is the grouping column; otherwise the column behind
+--   'colorBy' (a 'ColorByCol') is treated as the grouping column. This lets
+--   @boxplot "v" <> colorBy "g"@ split into groups the same way scatter does
+--   (previously only encX did this, and colorBy alone produced a single
+--   group). Shared by the distribution renderer and
+--   'collectCategoricalLabels' (distribution-only).
 distGroupRef :: Layer -> Maybe ColRef
 distGroupRef ly = case getLast (lyEncX ly) of
   Just cr -> Just cr
@@ -234,11 +268,19 @@ distGroupRef ly = case getLast (lyEncX ly) of
     Just (ColorByCol cr) -> Just cr
     _                    -> Nothing
 
--- | Phase 36 B2: distribution mark の dodge 検出。 @groupBy@ (= 'lyEncX' = 位置列) と
---   @colorBy@ (= 'lyColor' の 'ColorByCol' = 色列) が **両方** 指定され、 かつ別列の
+-- | [日本語]: distribution mark の dodge 検出。 @groupBy@ (= 'lyEncX' = 位置列) と
+--   @colorBy@ (= 'lyColor' の 'ColorByCol' = 色列) が __両方__ 指定され、 かつ別列の
 --   とき @Just (位置列, 色列)@。 このとき各位置カテゴリ内で色サブグループを横並び
 --   (= ggplot @position_dodge@) する。 同一列 (groupBy と colorBy が同じ) のときは
 --   dodge せず単一群彩色のまま (= 'distGroupRef' 経路) なので 'Nothing'。
+--   [English]: Detects dodging for a distribution mark. When @groupBy@ (that
+--   is, 'lyEncX', the position column) and @colorBy@ (the 'ColorByCol' inside
+--   'lyColor', the color column) are __both__ set and refer to different
+--   columns, returns @Just (position column, color column)@. In that case the
+--   color subgroups within each position category are laid out side by side
+--   (ggplot's @position_dodge@). When the two columns are the same (groupBy
+--   and colorBy match), there is no dodging — coloring stays a single group
+--   (the 'distGroupRef' path), so this returns 'Nothing'.
 distDodgeRef :: Layer -> Maybe (ColRef, ColRef)
 distDodgeRef ly = case (getLast (lyEncX ly), getLast (lyColor ly)) of
   (Just posC, Just (ColorByCol colC))
@@ -248,43 +290,72 @@ distDodgeRef ly = case (getLast (lyEncX ly), getLast (lyColor ly)) of
     | posC /= colC -> Just (posC, colC)
   _ -> Nothing
 
--- | 静的色 (layer 全体に適用)。 Phase 30 案2: 固定色 aesthetic は bare 名 'color'。
+-- | [日本語]: 静的色 (layer 全体に適用)。 固定色 aesthetic は bare 名 'color'。
 --   'Color' 型 (RGB / 'fromHex' / R 657 名前付き定数) を受け、 ワイヤは 'toCss' で Text 化。
+--   [English]: A static color (applied to the whole layer). The fixed-color
+--   aesthetic uses the bare name 'color'. Takes a 'Color' value (RGB /
+--   'fromHex' / one of the 657 R named colors) and converts it to Text on the
+--   wire via 'toCss'.
 color :: Color -> Layer
 color c = mempty { lyColor = Last (Just (ColorStatic (toCss c))) }
 
--- | 便利関数: 8 桁 RGBA hex (@"#rrggbbaa"@ / 4 桁 @"#rgba"@) を 1 つで受け、
+-- | [日本語]: 便利関数: 8 桁 RGBA hex (@"#rrggbbaa"@ / 4 桁 @"#rgba"@) を 1 つで受け、
 --   @color (fromHex …) <> alpha …@ に展開する ('fromHexA' 経由)。 design ツール /
 --   Web 由来の RGBA hex をそのまま貼れる。 ★@Color@ は RGB のみゆえ alpha は別 channel
 --   に分離される (後続の @<> alphaBy "col"@ 等は 'Last' で後勝ち)。 不正入力は 'error'
 --   (total 版は 'colorRGBAMaybe')。 6/3 桁 (alpha 無し) は不透明として扱う。
+--   [English]: A convenience function: takes an 8-digit RGBA hex
+--   (@"#rrggbbaa"@, or a 4-digit @"#rgba"@) as a single value and expands it
+--   into @color (fromHex …) <> alpha …@ (via 'fromHexA'). Lets you paste RGBA
+--   hex values straight from design tools or the web. Since @Color@ only
+--   holds RGB, the alpha is split off into a separate channel (a later
+--   @<> alphaBy "col"@ etc. still wins, per 'Last'). Invalid input calls
+--   'error' (see 'colorRGBAMaybe' for the total version). 6- and 3-digit
+--   forms (no alpha) are treated as fully opaque.
 colorRGBA :: Text -> Layer
 colorRGBA t = let (c, a) = fromHexA t in color c <> alpha a
 
--- | 'colorRGBA' の total 版。 不正な hex は 'Nothing'。
+-- | [日本語]: 'colorRGBA' の total 版。 不正な hex は 'Nothing'。
+--   [English]: The total version of 'colorRGBA'. Invalid hex input yields
+--   'Nothing'.
 colorRGBAMaybe :: Text -> Maybe Layer
 colorRGBAMaybe t = (\(c, a) -> color c <> alpha a) <$> fromHexAMaybe t
 
--- | Phase 26 §C-2 #9: 連続値 column を Viridis 風 gradient で色分け。
---   Phase 30 案2: map 系ゆえ @*By@ 接尾辞。
+-- | [日本語]: 連続値 column を Viridis 風 gradient で色分け。
+--   map 系ゆえ @*By@ 接尾辞。
+--   [English]: Colors by a continuous column using a Viridis-like gradient.
+--   Uses the @*By@ suffix since it is a mapping-style aesthetic.
 colorContinuousBy :: ColRef -> Layer
 colorContinuousBy c = mempty { lyColor = Last (Just (ColorByContinuous c)) }
 
--- | 透過度 (0..1)。 これは無次元なので 'Double' のまま。
+-- | [日本語]: 透過度 (0..1)。 これは無次元なので 'Double' のまま。
+--   [English]: Opacity (0..1). This is dimensionless, so it stays a 'Double'.
 alpha :: Double -> Layer
 alpha  a = mempty { lyAlpha  = Last (Just a) }
 
--- | マーカー径 ('size') / 線幅 ('stroke') を 'Length' で指定 (Phase 34 A4)。
--- bare 数値リテラルは @Num Length@ 経由で **pt** (@size 6@ = 6pt 直径)。 別単位は
--- @size (2 *~ mm)@。 内部は pt の 'Double' に解決して保持する (px は描画 dpi が
--- 確定する前なので、 例外的に 96dpi で pt 化する = マーカーに px 指定は非推奨)。
+-- | [日本語]: マーカー径 ('size') / 線幅 ('stroke') を 'Length' で指定。
+--   bare 数値リテラルは @Num Length@ 経由で __pt__ (@size 6@ = 6pt 直径)。 別単位は
+--   @size (2 *~ mm)@。 内部は pt の 'Double' に解決して保持する (px は描画 dpi が
+--   確定する前なので、 例外的に 96dpi で pt 化する = マーカーに px 指定は非推奨)。
+--   [English]: Sets marker diameter ('size') / stroke width ('stroke') via a
+--   'Length'. A bare numeric literal is __pt__ via @Num Length@ (@size 6@ =
+--   a 6pt diameter). Other units use @size (2 *~ mm)@. Internally this
+--   resolves and stores a 'Double' in pt (since the rendering dpi is not yet
+--   known, px is converted at a fixed 96dpi as an exception — specifying
+--   markers in px is discouraged).
 size, stroke :: Length -> Layer
 size   s = mempty { lySize   = Last (Just (lengthToPt 96 s)) }
 stroke s = mempty { lyStroke = Last (Just (lengthToPt 96 s)) }
 
--- | Phase 28: 散布点に縁 (edge) を付ける。 既定は縁なし (= ggplot の塗り点 shape 19)。
+-- | [日本語]: 散布点に縁 (edge) を付ける。 既定は縁なし (= ggplot の塗り点 shape 19)。
 --   'edgeOn' は点と同色の 1px 縁、 'edge col' は色を指定、 'edgeWidth w' は幅を指定
 --   (いずれも縁を有効化)。 縁の透過は色に alpha 付き hex (例 @edge "#00000044"@) で表せる。
+--   [English]: Adds an edge (outline) to scatter points. The default is no
+--   edge (ggplot's filled-point shape 19). 'edgeOn' gives a 1px edge the same
+--   color as the point, 'edge col' sets the edge color, and 'edgeWidth w'
+--   sets the edge width (each of these also enables the edge). Edge
+--   transparency can be expressed with an alpha-bearing color hex (for
+--   example @edge "#00000044"@).
 edgeOn :: Layer
 edgeOn = mempty { lyEdge = Last (Just True) }
 
@@ -294,21 +365,25 @@ edge c = mempty { lyEdge = Last (Just True), lyEdgeColor = Last (Just c) }
 edgeWidth :: Double -> Layer
 edgeWidth w = mempty { lyEdge = Last (Just True), lyEdgeWidth = Last (Just w) }
 
--- | hover tooltip に表示する追加列 (= multi-col)。
+-- | [日本語]: hover tooltip に表示する追加列 (= multi-col)。
+--   [English]: Additional columns to show in the hover tooltip (multi-column).
 --
 -- > scatter "x" "y" <> hoverCols ["group", "label"]
 hoverCols :: [ColRef] -> Layer
 hoverCols cs = mempty { lyHover = cs }
 
--- | Phase 26 §C-2 #6: 各点の X 方向 ± 半幅 (error bar)。
+-- | [日本語]: 各点の X 方向 ± 半幅 (error bar)。
+--   [English]: The X-direction ± half-width for each point (an error bar).
 errorX :: ColRef -> Layer
 errorX c = mempty { lyErrorX = Last (Just c) }
 
--- | Phase 26 §C-2 #6: 各点の Y 方向 ± 半幅 (error bar)。
+-- | [日本語]: 各点の Y 方向 ± 半幅 (error bar)。
+--   [English]: The Y-direction ± half-width for each point (an error bar).
 errorY :: ColRef -> Layer
 errorY c = mempty { lyErrorY = Last (Just c) }
 
--- | Phase 26 §C-2 #5: scatter 点を線で結ぶ ON。
+-- | [日本語]: scatter 点を線で結ぶ ON。
+--   [English]: Turns on connecting scatter points with a line.
 --
 -- > scatter "x" "y" <> connect
 -- > scatter "x" "y" <> connect <> connectOrder "time" <> connectGroup "id"
