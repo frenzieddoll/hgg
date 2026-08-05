@@ -883,6 +883,16 @@ renderParallel r layout pal ly =
 --   [English]: Pie chart: lyEncX gives the categorical labels, lyEncY gives
 --   the values. Draws the circle centered in the plotArea, coloring each
 --   slice from the categorical palette. Assumes axes and ticks are hidden.
+--
+--   [日本語]: __投影層 (projectXY 等) を通さず自前で cos/sin を回すのは意図的__。
+--   pie はそもそも極座標専用の図で、 cross 軸 / value 軸という直交の役割分担を
+--   持たない (角度が値そのもの)。 座標系の切替対象ではないため投影層に載せる
+--   意味が薄い。
+--   [English]: __Deliberately computes cos/sin itself rather than going through
+--   the projection layer__ (projectXY and friends). A pie is inherently a
+--   polar-only chart with no cross-axis / value-axis split — the angle __is__
+--   the value — so it is not a target for coordinate switching and would gain
+--   nothing from the projection layer.
 renderPie :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderPie r layout thePal ly =
   let area    = lpPlotArea layout

@@ -577,6 +577,11 @@ renderRidge r layout _thePal ly =
       a = doubleOr (lyAlpha ly) 0.8
       area = lpPlotArea layout
       pal = lpCategoricalPalette layout
+      -- ★ Phase 64 A4: ここで flipped scale を直に使うのは意図的で、 投影層へは
+      --   寄せない。 ridge は「値 → x・群 → y」 の向きが必須なので Layout 側が
+      --   'Graphics.Hgg.Spec.Setters.ridgeAutoFlip' で coord_flip を自動適用しており、
+      --   flipped scale を使うのがその機構の一部になっている。 投影層へ移すには
+      --   自動 flip の設計自体を見直す必要があるため、 本 Phase では現状維持とした。
       vx v = scaleApply (lpYScaleFlipped layout) v        -- 値 → x (flip 済・連続)
       gyc i = scaleApply (lpXScaleFlipped layout) (fromIntegral i)  -- 群 index → y baseline
       allVals = concatMap snd groups
