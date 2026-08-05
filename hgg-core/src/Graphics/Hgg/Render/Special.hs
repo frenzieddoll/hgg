@@ -21,6 +21,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
+                                      -- Phase 64 A4: 棒を投影層の形状 dispatcher へ
+                                      BarShape (..), projectBar,
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical, textWidthEm)
 import           Graphics.Hgg.Layout.RangeOf (qqPoints, ecdfPoints)  -- Phase 11 A6-2/A6-4
@@ -946,7 +948,10 @@ renderWaterfall r layout pal ly =
       -- Phase 8 A2 Step4c: bar 幅 = 1 スロット (unit = sx 1 - sx 0) の 0.6。 旧 rW/n (Total
       -- スロットを数えず個数ベース) を unit ベースに。 PS renderWaterfallLayer と同値に統一
       -- (従来 HS=rW/n*0.6 / PS=rW/(n+1)*0.7 で不一致だった)。 ±0.6 expansion にも追従。
-      coord = flipOnly (lpCoord layout)   -- A7-c: waterfall は polar 非対象
+      -- ★ Phase 64 A4: flipOnly を撤去し projectBar (形状 dispatcher) へ。 直線座標系は
+      --   projectBarRect と同式なので px は bit 一致、 極座標では扇形 (wedge) になる。
+      --   halfWidthD 0.3 = 厚み 0.6 スロットの半分 (catUnitPx は 1 data 単位の px 幅)。
+      coord = lpCoord layout
       bw = catUnitPx coord layout * 0.6   -- Phase 10 A4-fix: flip では縦スロット幅
       mkBar i d =
         let xp = if isCat then fromIntegral i else fromIntegral i
@@ -954,8 +959,9 @@ renderWaterfall r layout pal ly =
             yEnd   = yStart + d
             c = if d >= 0 then posC else negC
         -- Phase 10 A4: data x=xp、 yStart..yEnd を data 値で、 厚み bw px (flip 追従)。
-        in PRect (projectBarRect coord layout xp yStart yEnd bw)
-                 (FillStyle c a) (Just (StrokeStyle c 1.0))
+        in case projectBar coord layout xp yStart yEnd 0.3 bw of
+             BarRect  rect -> PRect rect (FillStyle c a) (Just (StrokeStyle c 1.0))
+             BarWedge segs -> PPath segs (FillStyle c a) (Just (StrokeStyle c 1.0))
       -- Phase 7 A6: 末尾に合計 (Total) バー (= base 0 から累積到達値)。 デフォルト出す
       -- (フラグ切替の Spec API は後追い)。 中立灰で増減バーと区別。 x = n (Layout で
       -- category を "Total" 1 つ拡張済み)。
@@ -963,6 +969,7 @@ renderWaterfall r layout pal ly =
       total  = sum deltas
       totalBar =
         let xp = fromIntegral n
-        in PRect (projectBarRect coord layout xp 0 total bw)
-                 (FillStyle totalC a) (Just (StrokeStyle totalC 1.0))
+        in case projectBar coord layout xp 0 total 0.3 bw of
+             BarRect  rect -> PRect rect (FillStyle totalC a) (Just (StrokeStyle totalC 1.0))
+             BarWedge segs -> PPath segs (FillStyle totalC a) (Just (StrokeStyle totalC 1.0))
   in [ mkBar i d | (i, d) <- zip [0..] deltas ] ++ [totalBar]

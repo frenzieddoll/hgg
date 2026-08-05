@@ -31,6 +31,10 @@ import           Graphics.Hgg.Layout (numToText,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical,
+                                      -- Phase 64 A4: categorical-cross 投影口
+                                      CrossLoc (..), BarShape (..),
+                                      projectCrossPoint, projectCrossSpan,
+                                      projectCrossBar,
                                       UCtx (..), resolvePosX, resolvePosY)
 import           Graphics.Hgg.Unit   (Pos (..), mmToPt)
 import           Graphics.Hgg.Primitive  -- Phase 51: Point/Rect/style/Primitive/scalePrimitives (leaf)
@@ -1681,6 +1685,42 @@ fiveNum vals =
 --   single-group box). Centered at x = cx, with half-width hw px. Uses the
 --   shared 'fiveNum' to return the whisker legs, the IQR box, and the
 --   white median line.
+-- | [日本語]: 'boxAt' の座標系対応版。 cross 位置を 'CrossLoc' + px offset で受け、
+--   座標変換を投影層 ('projectCrossPoint' / 'projectCrossSpan' / 'projectCrossBar')
+--   に委ねる。 直線座標系は 'boxAt' と同じ primitive 列・同じ px を返す (byte 一致)。
+--   極座標では箱が扇形、 髭が radial 線、 cap / median が弧になる。 halfD は極座標用の
+--   data 単位半幅。
+--   [English]: The coordinate-aware counterpart of 'boxAt'. Takes the cross
+--   position as a 'CrossLoc' plus a pixel offset and delegates coordinate
+--   conversion to the projection layer ('projectCrossPoint' /
+--   'projectCrossSpan' / 'projectCrossBar'). Linear coordinate systems return
+--   the same primitive sequence at the same pixels as 'boxAt' (byte
+--   identical); in polar the box becomes a sector, the whiskers radial lines,
+--   and the caps and median arcs. halfD is the half width in data units, used
+--   by the polar path.
+boxAtCross :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
+           -> Text -> [Double] -> [Primitive]
+boxAtCross coord layout loc offPx hwPx halfD color vals = case fiveNum vals of
+  Nothing -> []
+  Just fn ->
+    let q1 = fnQ1 fn; q2 = fnMed fn; q3 = fnQ3 fn; loV = fnLoW fn; hiV = fnHiW fn
+        pt v = projectCrossPoint coord layout loc offPx v
+        spanLine w v =
+          let pts = projectCrossSpan coord layout loc offPx hwPx halfD v
+          in [ PLine p q (solid color w) | (p, q) <- zip pts (drop 1 pts) ]
+        body = case projectCrossBar coord layout loc offPx hwPx halfD q3 q1 of
+          BarRect rect  -> PRect rect (FillStyle color 0.7) (Just (StrokeStyle color 1.0))
+          BarWedge segs -> PPath segs (FillStyle color 0.7) (Just (StrokeStyle color 1.0))
+        medianLine =
+          let pts = projectCrossSpan coord layout loc offPx hwPx halfD q2
+          in [ PLine p q (solid "#ffffff" 1.5) | (p, q) <- zip pts (drop 1 pts) ]
+    in [ PLine (pt q3) (pt hiV) (solid color 1.0)
+       , PLine (pt q1) (pt loV) (solid color 1.0) ]
+       <> spanLine 1.0 hiV
+       <> spanLine 1.0 loV
+       <> [ body ]
+       <> medianLine
+
 boxAt :: (Double -> Double) -> Double -> Double -> Text -> [Double] -> [Primitive]
 boxAt sy cx hw color vals = case fiveNum vals of
   Nothing -> []

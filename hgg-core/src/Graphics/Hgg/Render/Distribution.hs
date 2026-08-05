@@ -498,31 +498,40 @@ renderRaincloud r layout _ ly =
       pal       = lpCategoricalPalette layout
       -- ★ Phase 36 B1c: 群なし (単一 raincloud) は plotArea 中央・幅も plotArea 基準。
       hasCats   = not (null (lpXCategoryLabels layout))
-      halfWidth = if hasCats then (sx 1 - sx 0) * 0.35 else rW area * 0.35
+      -- ★ Phase 64 A4: 自前 sx/sy を投影層へ。 cross 位置は 'CrossLoc'、 3 部位の
+      --   横ずらしは px offset として渡す。 直線座標系は旧式と bit 一致
+      --   (catUnitPx CoordCartesian == sx 1 - sx 0)、 極座標では雲/雨/箱が
+      --   接線方向に並ぶ。 halfWidthD は極座標用の data 単位半幅。
+      coord     = lpCoord layout
+      halfWidth = if hasCats then catUnitPx coord layout * 0.35 else rW area * 0.35
+      spanXD    = lsDomainHi (lpXScale layout) - lsDomainLo (lpXScale layout)
+      halfWidthD = 0.35 * (if hasCats then 1 else spanXD)
+      locFor i  = if hasCats then CrossAt (fromIntegral i) else CrossMid
       sz        = doubleOr (lySize ly) (mmPt 1.25)
       jAlpha    = doubleOr (lyAlpha ly) 0.6
       mkOne i (_label, vals) =
-        let cx = if hasCats then sx (fromIntegral i) else rX area + rW area / 2
+        let loc = locFor i
+            pt off v = projectCrossPoint coord layout loc off v
             color = case staticColorOr ly "" of
                       ""    -> pal !! (i `mod` length pal)
                       given -> given
-            -- (1) 右半身 violin (= 「雲」、 共通 kdeGrid を baseline cx から右へ)
+            -- (1) 右半身 violin (= 「雲」、 共通 kdeGrid を baseline から右へ)
             grid = kdeGrid 30 vals
             violinPrims = case grid of
               [] -> []
               _  -> let dMax     = max 1e-9 (maximum (map snd grid))
-                        rightPts = [ Point (cx + (d / dMax) * halfWidth) (sy v) | (v, d) <- grid ]
-                        basePts  = reverse [ Point cx (sy v) | (v, _) <- grid ]
+                        rightPts = [ pt ((d / dMax) * halfWidth) v | (v, d) <- grid ]
+                        basePts  = reverse [ pt 0 v | (v, _) <- grid ]
                     in case rightPts ++ basePts of
                          (p0:rest) -> [ PPath (MoveTo p0 : map LineTo rest ++ [ClosePath])
                                               (FillStyle color 0.4) (Just (StrokeStyle color 1.0)) ]
                          []        -> []
-            -- (2) box (= 共通 boxAt)。 KDE baseline (cx) と離すため左に halfWidth*0.32 寄せる
-            boxCx = cx - halfWidth * 0.32
-            boxPrims = boxAt sy boxCx 3 color vals
+            -- (2) box (= 共通 boxAtCross)。 KDE baseline と離すため左に halfWidth*0.32 寄せる
+            boxOff = negate (halfWidth * 0.32)
+            boxPrims = boxAtCross coord layout loc boxOff 3 (halfWidthD * 0.06) color vals
             -- (3) 左 jitter strip (= 「雨」、 box より更に左、 hashRand で deterministic)
-            stripCx = cx - halfWidth * 0.7
-            stripPrims = [ PCircle (Point (stripCx + dx) (sy v)) (sz / 2)
+            stripOff = negate (halfWidth * 0.7)
+            stripPrims = [ PCircle (pt (stripOff + dx) v) (sz / 2)
                                    (FillStyle color jAlpha) Nothing Nothing
                          | (k, v) <- zip [0 :: Int ..] vals
                          , let dx = (hashRand (i * 97 + k * 131) - 0.5) * halfWidth * 0.5 ]
