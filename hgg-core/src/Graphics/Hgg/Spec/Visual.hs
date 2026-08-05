@@ -92,19 +92,19 @@ data VisualSpec = VisualSpec
   , vsFacet  :: !(Last ColRef)
   , vsXLabel :: !(Last Text)
   , vsYLabel :: !(Last Text)
-  , vsXAxis  :: !(Last AxisSpec)
-  , vsYAxis  :: !(Last AxisSpec)
+  , vsXAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
+  , vsYAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
   , vsYAxisRight :: !(Last AxisSpec)    -- ★ dual Y 軸 (右側)
-  , vsRefLines :: ![ReferenceLine]
-  , vsMarginal :: !(Last MarginalSpec)
-  , vsSubplots :: ![VisualSpec]         -- ★ panel grid (= facet と独立、 任意の sub-spec 並列)
+  , vsRefLines :: ![ReferenceLine]      -- ★ Phase 26 §C-2 #3
+  , vsMarginal :: !(Last MarginalSpec)  -- ★ Phase 26 §C-2 #10
+  , vsSubplots :: ![VisualSpec]         -- ★ Phase 26 S5-e-1 panel grid (= facet と独立、 任意の sub-spec 並列)
   , vsSubplotCols :: !(Last Int)         -- ★ 2D grid 折り返し列数
-    -- ★ subplot 列/行の相対サイズ (cowplot plot_grid の rel_widths /
+    -- ★ Phase 63 A6: subplot 列/行の相対サイズ (cowplot plot_grid の rel_widths /
     --   rel_heights 相当)。 統一グリッドの列/行 index 順の重み。 グリッド数に対して
     --   不足分は 1 で埋める (エラーにしない)。 未指定 = 全列/行 1 (= 従来の等分)。
   , vsSubplotWidths  :: !(Last [Double])
   , vsSubplotHeights :: !(Last [Double])
-    -- ★ subplot panel の自動タグ (cowplot plot_grid の labels="AUTO" 相当)。
+    -- ★ Phase 63 A7: subplot panel の自動タグ (cowplot plot_grid の labels="AUTO" 相当)。
     --   panel 列挙順に TagStyle の連番タグを各 panel の vsTag へ注入 (個別 vsTag 優先)。
     --   未指定 = タグ無し (= 従来同一)。
   , vsSubplotTags    :: !(Last TagStyle)
@@ -117,39 +117,39 @@ data VisualSpec = VisualSpec
   , vsAxisLabelFont :: !(Last FontSpec)   -- ★ 〃
   , vsTickFont      :: !(Last FontSpec)   -- ★ 〃
   , vsLegendFont    :: !(Last FontSpec)   -- ★ 〃
-  , vsWidth  :: !(Last Length)   -- ★ 図幅 (Length・既定 mm)。px=pt×dpi/72。
-  , vsHeight :: !(Last Length)   -- ★ 図高 (Length・既定 mm)。
-    -- ★ 描画 dpi。px backend は px=pt×dpi/72、PDF backend は無視 (pt 直結)。
+  , vsWidth  :: !(Last Length)   -- ★ Phase 33: 図幅 (Length・既定 mm)。px=pt×dpi/72。
+  , vsHeight :: !(Last Length)   -- ★ Phase 33: 図高 (Length・既定 mm)。
+    -- ★ Phase 33: 描画 dpi。px backend は px=pt×dpi/72、PDF backend は無視 (pt 直結)。
     --   未指定 = 96 (web 標準)。
   , vsDpi    :: !(Last Double)
-    -- ★ coord_fixed(ratio) 相当。 panel の 高/幅 比 (aspect)。
+    -- ★ Phase 8 A2 Step2: coord_fixed(ratio) 相当。 panel の 高/幅 比 (aspect)。
     --   Nothing = 可用域を埋める (ggplot 既定 Coord$aspect = NULL)。 Just a (a>0) =
     --   可用域内で aspect を保つ最大 panel を取り中央寄せ。 root: ggplot R/coord-.R。
   , vsAspect :: !(Last Double)
-    -- ★ facet_wrap の列数 (ncol)。 Nothing = 従来の 1 行 N 列 (非破壊)、
+    -- ★ Phase 8 C G7: facet_wrap の列数 (ncol)。 Nothing = 従来の 1 行 N 列 (非破壊)、
     --   Just n = n 列で複数行に折り返し (nrow = ceil(panel 数 / n))。 root: ggplot facet_wrap。
   , vsFacetNcol :: !(Last Int)
-    -- ★ facet_grid(row ~ col)。 2 変数 cross 配置。
+    -- ★ Phase 8 C G7 part-b: facet_grid(row ~ col)。 2 変数 cross 配置。
     --   vsFacetRow = 行を作る変数 (levels が各行、 右側 strip)、 vsFacetCol = 列を作る変数
     --   (levels が各列、 上側 strip)。 両 Nothing = grid 無し (= 従来 facet_wrap 経路)。
     --   片方のみ指定も可 (1 行 or 1 列の grid)。 root: ggplot facet_grid。
   , vsFacetRow :: !(Last ColRef)
   , vsFacetCol :: !(Last ColRef)
-    -- ★ element 単位 theme override (preset に合成、 resolveTheme で解決)。
+    -- ★ Phase 9 A-2: element 単位 theme override (preset に合成、 resolveTheme で解決)。
   , vsThemeOverride :: !ThemeOverride
-    -- ★ 座標系 (coord_flip 等)。 Nothing = CoordCartesian (= ggplot 既定)。
+    -- ★ Phase 9 C: 座標系 (coord_flip 等)。 Nothing = CoordCartesian (= ggplot 既定)。
   , vsCoord :: !(Last Coord)
-    -- ★ 軸反転 (= ggplot scale_x_reverse / scale_y_reverse)。
+    -- ★ Phase 11 A4-a: 軸反転 (= ggplot scale_x_reverse / scale_y_reverse)。
     --   Just True で該当軸の scale range (rLo/rHi) を入替え、 大値が小座標側に。
     --   tick/grid/glyph は scaleApply 経由なので自動追従 (renderer 無変更)。
     --   coord_flip とは独立合成 (= データ軸基準で反転、 flip 後も x/y データ軸を指す)。
   , vsReverseX :: !(Last Bool)
   , vsReverseY :: !(Last Bool)
-    -- ★ 明示凡例タイトル (= ggplot scale_color_*(name=) / labs(color=))。
+    -- ★ Phase 11 A4-c: 明示凡例タイトル (= ggplot scale_color_*(name=) / labs(color=))。
     --   Nothing なら従来通りタイトル非表示 (= legend 項目が自己説明的)。 明示値なので
-    --   bakeSpec (色列 inline 化) 後も保持され HS/PS が同一描画 (食い違い回避)。
+    --   bakeSpec (色列 inline 化) 後も保持され HS/PS が同一描画 (Phase 9 A-5 の食い違い回避)。
   , vsLegendTitle :: !(Last Text)
-    -- ★ 色/サイズ scale 拡充。
+    -- ★ Phase 11 A4-e: 色/サイズ scale 拡充。
     --   vsColorManual = ggplot scale_color_manual(values=)。 カテゴリ名→hex の辞書。
     --     ColorByCol で当該名があれば palette index より優先。 未登録名は従来の palette。
   , vsColorManual :: !(Last [(Text, Text)])
@@ -158,13 +158,13 @@ data VisualSpec = VisualSpec
   , vsColorGradient2 :: !(Last (Text, Text, Text, Double))
     --   vsSizeRange = ggplot scale_size(range=c(min,max))。 sizeBy の px 範囲 (default (3,10))。
   , vsSizeRange :: !(Last (Double, Double))
-    -- ★ labs サブシステム (= ggplot labs(subtitle=,caption=,tag=))。
+    -- ★ Phase 11 A5-a: labs サブシステム (= ggplot labs(subtitle=,caption=,tag=))。
     --   vsSubtitle = title 直下の小見出し。 vsCaption = 図右下の注記。 vsTag = 左上隅のタグ。
     --   いずれも Nothing で従来同一 (= 描画も margin 予約も無し)。
   , vsSubtitle :: !(Last Text)
   , vsCaption  :: !(Last Text)
   , vsTag      :: !(Last Text)
-    -- ★ guides サブシステム (= ggplot guide_legend(reverse=, ncol=, nrow=))。
+    -- ★ Phase 11 A5-c: guides サブシステム (= ggplot guide_legend(reverse=, ncol=, nrow=))。
     --   位置 ('vsLegend') とは独立 (= vsLegendTitle と同じく VisualSpec レベルに置き
     --   LegendSpec Semigroup の position 上書き footgun を回避)。 いずれも Nothing で従来同一。
     --   vsLegendReverse = 凡例キーの表示順を逆に (色は各キーに固定のまま)。
@@ -172,33 +172,33 @@ data VisualSpec = VisualSpec
   , vsLegendReverse :: !(Last Bool)
   , vsLegendNcol    :: !(Last Int)
   , vsLegendNrow    :: !(Last Int)
-    -- ★ coord_cartesian(xlim,ylim) = データを落とさない zoom。
+    -- ★ Phase 11 A7-a: coord_cartesian(xlim,ylim) = データを落とさない zoom。
     --   axisRange (= scale limits、 範囲外データを切る) と別概念で、 scale domain を
     --   指定範囲に上書きするだけ。 stat (regression/density 等) は全データから計算され、
     --   範囲外の glyph は panel に clip される (= ggplot coord_cartesian, expand=FALSE)。
     --   numeric 軸のみ有効 (categorical / funnel 軸は無視)。 Nothing で従来同一。
   , vsCoordXLim :: !(Last (Double, Double))
   , vsCoordYLim :: !(Last (Double, Double))
-    -- ★ facet free scales (= ggplot facet_wrap(scales=))。 Nothing =
+    -- ★ Phase 11 A7-b: facet free scales (= ggplot facet_wrap(scales=))。 Nothing =
     --   FacetFixed (全 panel 共通 domain)。 free な軸は各 panel が自分のデータで domain を
     --   再計算し、 全 panel に軸を表示する (= 値比較より panel 内分布を優先)。 facet_wrap
     --   (renderFaceted) のみ対応 (facet_grid は別途)。
   , vsFacetScales :: !(Last FacetScales)
-    -- ★ facet_grid の panel サイズ配分 (= ggplot facet_grid(space=))。
+    -- ★ Phase 11 A7-b: facet_grid の panel サイズ配分 (= ggplot facet_grid(space=))。
     --   Nothing = SpaceFixed (全 panel 同サイズ)。 free な軸は track 重みを data 範囲比例に。
   , vsFacetSpace :: !(Last FacetSpace)
-    -- ★ subplot panel の名前選択 (= @repeatFields@ の逆方向)。
+    -- ★ Phase 18 A1: subplot panel の名前選択 (= @repeatFields@ の逆方向)。
     --   Just ws = vsSubplots の子を vsTitle ∈ ws で filter し __ws の列挙順に並べ替え__
     --   (ggplot discrete limits と同じ「選択 + 順序」 の意味論)。 名前不一致は無視。
     --   Nothing = 従来通り全 panel。 facet panel (データ分割) は対象外 (subplots 専用)。
   , vsPanelSel :: !(Last [Text])
-    -- ★ 離散軸カテゴリの limits (= ggplot @scale_x_discrete(limits=)@ /
+    -- ★ Phase 18 A2: 離散軸カテゴリの limits (= ggplot @scale_x_discrete(limits=)@ /
     --   @scale_y_discrete(limits=)@、 連続版 @axisRange@ の離散対応)。 Just ws = 当該軸の
     --   encoding が ColTxt の layer について __カテゴリ行を選択 + ws の列挙順に並べ替え__
     --   (行 filter は全 row-aligned encoding を同 index で間引く)。 aes 基準 (coord_flip と
     --   直交 = flip 後も x/y データ軸を指す、 'vsReverseX' と同思想)。 Nothing = 従来通り。
     --   ★Last-上書き footgun 回避のため AxisSpec でなく VisualSpec 直 field
-    --   ('vsLegendTitle' と同じ判断)。
+    --   ('vsLegendTitle' / Phase 11 A4-c と同じ判断)。
   , vsXDiscreteLimits :: !(Last [Text])
   , vsYDiscreteLimits :: !(Last [Text])
   } deriving (Generic, Show, Eq)
@@ -262,7 +262,7 @@ instance Semigroup VisualSpec where
     , vsReverseX     = vsReverseX a     <> vsReverseX b
     , vsReverseY     = vsReverseY a     <> vsReverseY b
     , vsLegendTitle  = vsLegendTitle a  <> vsLegendTitle b
-      -- ★特殊: 全群の色辞書を concat+dedup (Last 後勝ちだと先頭群が消える)
+      -- ★特殊: 全群の色辞書を concat+dedup (Last 後勝ちだと先頭群が消える・Phase 52.A10/19)
     , vsColorManual  = mergeColorManual (vsColorManual a) (vsColorManual b)
     , vsColorGradient2 = vsColorGradient2 a <> vsColorGradient2 b
     , vsSizeRange    = vsSizeRange a    <> vsSizeRange b
@@ -325,7 +325,7 @@ mergeColorManual (Last (Just d1)) (Last (Just d2)) =
     -- 同 key (カテゴリ名) は後勝ち = 後方の値を優先。 出現順は最初の出現位置で保存。
     dedupColorManual kvs =
       let lastVal k = last [ v | (k', v) <- kvs, k' == k ]
-          -- ★旧 foldr 形は interleaved 重複で最終出現順になっていた
+          -- ★Phase 19: 旧 foldr 形は interleaved 重複で最終出現順になっていた
           -- (辞書は lookup のみで順序非依存だが、 コメント通り初出順に統一)
           keysInOrder = nubKeep (map fst kvs)
       in [ (k, lastVal k) | k <- keysInOrder ]

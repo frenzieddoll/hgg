@@ -36,7 +36,7 @@ import           Data.Text       (Text)
 import           GHC.Generics    (Generic)
 
 -- ===========================================================================
--- AxisSpec ─ 軸 1 本の設定 (Phase 26 §C-2 #1 LogScale + #2 軸 format)
+-- AxisSpec ─ 軸 1 本の設定 (LogScale + 軸 format)
 -- ===========================================================================
 
 -- | [日本語]: 軸 scale 種別。 線形 / 対数 / sqrt / time / ordinal / band を将来追加。
@@ -56,7 +56,7 @@ data AxisFormat
   = AxisIntegerFmt
   | AxisDecimalFmt !Int      -- 小数桁数
   | AxisExponentFmt !Int     -- 指数表記 N 桁
-  | AxisTimeFmt !Text        -- ★ P7 timestamp ms → date 文字列 (= "yyyy-MM-dd" 等)
+  | AxisTimeFmt !Text        -- ★ timestamp ms → date 文字列 (= "yyyy-MM-dd" 等)
   deriving (Show, Eq, Generic)
 
 instance ToJSON   AxisFormat
@@ -77,14 +77,14 @@ data AxisSpec = AxisSpec
   , axFormat :: !(Last AxisFormat)
   , axMin    :: !(Last Double)
   , axMax    :: !(Last Double)
-  , axRotate :: !(Last Double)    -- ★ P10 軸 label 回転 (度)
-  , axBreaks :: ![AxisBreak]       -- ★ P16 軸不連続範囲
+  , axRotate :: !(Last Double)    -- ★ 軸 label 回転 (度)
+  , axBreaks :: ![AxisBreak]       -- ★ 軸不連続範囲
   , axShowTicks :: !(Last Bool)   -- ★ tick 表示 (= default true、 pairs/facet 内側 false)
   , axShowGrid  :: !(Last Bool)   -- ★ C-5 grid line 表示 (= default false)
-    -- ★ Phase 11 A4-d: 明示 tick 位置 (= ggplot scale_*_continuous(breaks=))。 非空なら
+    -- ★ 明示 tick 位置 (= ggplot scale_*_continuous(breaks=))。 非空なら
     --   自動 extendedBreaks を上書き。 numeric 軸のみ有効 (categorical は無視)。
   , axTickVals :: ![Double]
-    -- ★ Phase 11 A4-d: 明示 tick ラベル (= ggplot labels=)。 axTickVals と 1:1 対応
+    -- ★ 明示 tick ラベル (= ggplot labels=)。 axTickVals と 1:1 対応
     --   (短ければ "" 埋め)。 空なら値を format して使う。
   , axTickLabels :: ![Text]
   } deriving (Show, Eq, Generic)
@@ -92,7 +92,7 @@ data AxisSpec = AxisSpec
 instance ToJSON   AxisSpec
 instance FromJSON AxisSpec
 
--- ★ Phase 43 A3: レコードフィールド形式 (位置依存撲滅・挙動不変)。axTickVals/axTickLabels
+-- ★ レコードフィールド形式 (位置依存撲滅・挙動不変)。axTickVals/axTickLabels
 --   のみ「右が非空なら右」特殊合成 (list `<>` = 連結と別) を名前付きで温存。
 instance Semigroup AxisSpec where
   a <> b = AxisSpec
@@ -247,12 +247,12 @@ axisRotateOf (Last (Just as)) = case getLast (axRotate as) of
   Nothing -> 0
 
 -- | [日本語]: 軸目盛りラベルの回転角を解決 (__CCW 正・canonical__)。
---   'axisRotate' / theme axis.text angle も内部 'tsRotate' も __CCW 正__ (R/matplotlib/ggplot 準拠)
+--   'axisRotate' / theme axis.text angle も内部 @tsRotate@ も __CCW 正__ (R/matplotlib/ggplot 準拠)
 --   で一貫。 CW の device (SVG/canvas/rasterific) への変換は __各 backend の emit で 1 回だけ__ 行う
 --   (PDF は y-up=CCW ゆえ恒等)。 per-axis 明示指定を最優先、 無ければ theme override、 無ければ 0。
 --   [English]: Resolves the rotation angle for axis tick labels
 --   (__CCW positive, canonical__). 'axisRotate', the theme's axis.text angle,
---   and the internal 'tsRotate' are all consistently __CCW positive__
+--   and the internal @tsRotate@ are all consistently __CCW positive__
 --   (matching R/matplotlib/ggplot). The conversion to the CW-positive
 --   device coordinate system (SVG/canvas/rasterific) happens
 --   __exactly once, in each backend's emit step__ (a no-op for PDF, since

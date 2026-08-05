@@ -66,7 +66,7 @@ import           GHC.Generics    (Generic)
 --       resolver needed)
 --     * 'ColTxt'    — an inline text Vector (for categorical encoding)
 --
---   With 'OverloadedStrings', `"weight" :: ColRef` becomes `ColByName
+--   With @OverloadedStrings@, `"weight" :: ColRef` becomes `ColByName
 --   "weight"` automatically.
 data ColRef
   = ColByName !Text
@@ -179,10 +179,10 @@ inlineCat = ColTxt . toTxtVec
 -- ===========================================================================
 
 -- | [日本語]: 2D 点 (= world space)。 @Graphics.Hgg.ThreeD.Types.Point3@ と対称の
---   直積型。 inline の点単位 API ('scatterPoints' / 'linePoints') で使う。
+--   直積型。 inline の点単位 API (@scatterPoints@ / @linePoints@) で使う。
 --   [English]: A 2D point (in world space); a product type symmetric to
 --   @Graphics.Hgg.ThreeD.Types.Point3@. Used by the inline point-wise API
---   ('scatterPoints' / 'linePoints').
+--   (@scatterPoints@ / @linePoints@).
 --
 --   [日本語]: JSON: positional field は array @[x, y]@ になる (= aeson の
 --   Generic 既定挙動・@Point3@ と同形式)。 ※ @Graphics.Hgg.Render@ の @Point@

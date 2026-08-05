@@ -45,7 +45,7 @@ import           GHC.Generics    (Generic, Generically (..))
 import           Graphics.Hgg.Unit (Pos (..))
 
 -- ===========================================================================
--- ReferenceLine (= Phase 26 §C-2 #3: 既存 PlotConfig.referenceLine 等価)
+-- ReferenceLine (= 既存 PlotConfig.referenceLine 等価)
 -- ===========================================================================
 
 -- | [日本語]: plot area 内に重ねる参照線。
@@ -69,10 +69,10 @@ instance ToJSON   ReferenceLine
 instance FromJSON ReferenceLine
 
 -- ===========================================================================
--- Annotation (= P6、 2026-05-25 任意 overlay)
+-- Annotation (= 2026-05-25 任意 overlay)
 -- ===========================================================================
 
--- ★ Phase 33 B6: 注釈の座標は 'Pos' (native/npc/絶対長を軸ごとに混在指定可)。
+-- ★ 注釈の座標は 'Pos' (native/npc/絶対長を軸ごとに混在指定可)。
 -- 旧 'AnnotCoord' (Data/Frac) は Pos に統一して撤去 (Frac は HS 描画で未実装だった)。
 -- AnnRect は w/h でなく 2 隅 (x1,y1)-(x2,y2) の Pos で表す (座標一貫)。
 data Annotation
@@ -99,7 +99,7 @@ instance ToJSON   Annotation
 instance FromJSON Annotation
 
 -- ===========================================================================
--- MarginalSpec (= Phase 26 §C-2 #10 周辺 histogram)
+-- MarginalSpec (= 周辺 histogram)
 -- ===========================================================================
 
 -- | [日本語]: marginal の種別 (hist / density / 重ね)。
@@ -116,13 +116,13 @@ data MarginalSpec = MarginalSpec
   { msShowX :: !Bool
   , msShowY :: !Bool
   , msBins  :: !Int   -- bin 数 (= default 20)
-  , msKind  :: !MarginalKind  -- ★ P9 hist / density / 重ね
+  , msKind  :: !MarginalKind  -- ★ hist / density / 重ね
   } deriving (Show, Eq, Generic)
 
 instance ToJSON   MarginalSpec
 instance FromJSON MarginalSpec
 
--- ★ Phase 43 A3: レコードフィールド形式 (位置依存撲滅・挙動不変)。全 field が非 Monoid
+-- ★ レコードフィールド形式 (位置依存撲滅・挙動不変)。全 field が非 Monoid
 --   (Bool/Int/enum) なので合成は名前付きで明示: show は OR・bins は max・kind は後勝ち。
 instance Semigroup MarginalSpec where
   a <> b = MarginalSpec
@@ -139,14 +139,14 @@ defaultMarginalSpec :: MarginalSpec
 defaultMarginalSpec = MarginalSpec False False 20 MarginalHist
 
 -- ===========================================================================
--- LegendSpec (= P8、 2026-05-25 凡例設定)
+-- LegendSpec (= 2026-05-25 凡例設定)
 -- ===========================================================================
 
 data LegendPosition
   = LegendRight | LegendBottom | LegendNone
   | LegendInsideTopRight | LegendInsideTopLeft
   | LegendInsideBottomRight | LegendInsideBottomLeft
-  -- ★ Phase 32 (re-apply): 外・右に置きつつ panel 高の縦中央に揃える (ggplot 既定の
+  -- ★ 外・右に置きつつ panel 高の縦中央に揃える (ggplot 既定の
   --   legend.position="right" は縦中央寄せ)。 LegendRight=上揃えは不変・これは opt-in。
   | LegendRightCenter
   deriving (Show, Eq, Generic)
@@ -162,7 +162,7 @@ data LegendSpec = LegendSpec
 instance ToJSON   LegendSpec
 instance FromJSON LegendSpec
 
--- ★ Phase 43 A3: レコードフィールド形式 (位置依存撲滅・挙動不変)。lgPosition は非 Monoid
+-- ★ レコードフィールド形式 (位置依存撲滅・挙動不変)。lgPosition は非 Monoid
 --   enum なので後勝ち、 lgTitle は素直な `Last` 合成。
 instance Semigroup LegendSpec where
   a <> b = LegendSpec
@@ -174,7 +174,7 @@ instance Monoid LegendSpec where
   mempty = defaultLegendSpec
 
 defaultLegendSpec :: LegendSpec
-defaultLegendSpec = LegendSpec LegendRightCenter mempty  -- Phase 43: ggplot 既定 (右・縦中央)
+defaultLegendSpec = LegendSpec LegendRightCenter mempty  -- ggplot 既定 (右・縦中央)
 
 -- ===========================================================================
 -- FontSpec (= hgg-frontend-settings-spec v0.1 §1.3)
@@ -184,10 +184,10 @@ data FontSpec = FontSpec
   { fsFamily :: !(Last Text)
   , fsSize   :: !(Last Double)
   , fsWeight :: !(Last Text)
-  , fsItalic :: !(Last Bool)   -- ★ TODO-10 (2026-05-29): PS parity
+  , fsItalic :: !(Last Bool)   -- ★ PS parity
   , fsColor  :: !(Last Text)
   } deriving stock (Show, Eq, Generic)
-    -- ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出
+    -- ★ 全 field が `Last` の素直な per-field 合成なので generic 導出
     --   (= 手書き instance ゼロ・field 追加に強い)。挙動は旧手書きと完全同型。
     deriving (Semigroup, Monoid) via Generically FontSpec
 

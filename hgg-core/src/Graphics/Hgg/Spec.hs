@@ -1,19 +1,35 @@
 -- |
 -- Module      : Graphics.Hgg.Spec
--- Description : Layer 3 ─ VisualSpec / Layer / ColRef + Monoid (Phase 26 §A-2)
+-- Description : Layer 3 — VisualSpec / Layer / ColRef types, with Monoid instances
 -- Copyright   : (c) 2026 Aelysce Project (Toshiaki Honda)
 -- License     : BSD-3-Clause
 --
--- 設計方針 (詳細: design/api-style-discussion-2.md + 続き):
+-- [日本語]: 設計方針 (詳細: design/api-style-discussion-2.md + 続き):
 --
 --   * 2 階層 Monoid: 'Layer' (= 1 layer 内属性) と 'VisualSpec' (= 図全体)
 --   * 全 helper が `<>` で paren 無し合成可能 (= plotnine 風)
 --   * 'ColRef' で「文字列 col 参照」 と「Vector inline」 両対応、
---     ('OverloadedStrings' で `"weight" :: ColRef` が自動 'ColByName')
+--     (@OverloadedStrings@ で `"weight" :: ColRef` が自動 'ColByName')
 --   * core は DataFrame 型に非依存。 col 名 → Vector 解決は 'Resolver'
 --     callback で render 時に行う (= core 内ではデータ source を持たない)
---   * Generic + ToJSON/FromJSON で Spec 全体が **JSON serializable**
+--   * Generic + ToJSON/FromJSON で Spec 全体が __JSON serializable__
 --     (= frontend ↔ backend 間で共有し、 差分 Patch を送るユースケースを想定)
+--
+-- [English]: Design policy (details: design/api-style-discussion-2.md and
+-- its follow-ups):
+--
+--   * Two-level Monoid: 'Layer' (attributes within a single layer) and
+--     'VisualSpec' (the whole figure)
+--   * Every helper composes with `<>` without parentheses (plotnine style)
+--   * 'ColRef' supports both "a string column reference" and "an inline
+--     Vector" (@OverloadedStrings@ turns `"weight" :: ColRef` automatically
+--     into 'ColByName')
+--   * core is agnostic to any DataFrame type; resolving a column name to a
+--     Vector happens at render time via the 'Resolver' callback (core
+--     itself holds no data source)
+--   * Generic + ToJSON/FromJSON make the whole Spec __JSON serializable__
+--     (shared between a frontend and a backend, with sending diff Patches
+--     as the intended use case)
 {-# LANGUAGE DeriveGeneric             #-}
 {-# LANGUAGE DerivingStrategies        #-}
 {-# LANGUAGE DerivingVia               #-}
@@ -51,7 +67,7 @@ module Graphics.Hgg.Spec
   , defaultConnectSpec
     -- * 2D 点 'Point2' (= 3D 'Graphics.Hgg.ThreeD.Types.Point3' と対称)
   , Point2(..)
-    -- * Phase 51: custom mark (拡張可能な描画語彙)
+    -- * custom mark (拡張可能な描画語彙)
   , RenderCtx(..)
   , CustomMark(..)
   , customMark
@@ -209,7 +225,7 @@ module Graphics.Hgg.Spec
   , connectGroup
   , connectColor
   , connectWidth
-    -- * Axis (= Phase 26 §C-2 #1 / #2)
+    -- * Axis
   , AxisSpec(..)
   , AxisKind(..)
   , AxisFormat(..)
@@ -234,12 +250,12 @@ module Graphics.Hgg.Spec
   , histBorder
   , densityFill
   , hollow
-    -- * 分布 mark の位置決め (= Phase 36 D1)
+    -- * 分布 mark の位置決め
   , Side(..)
   , nudge
   , markWidth
   , side
-    -- * Bar position adjustment (= Phase 9 B)
+    -- * Bar position adjustment
   , Position(..)
   , position
   , Coord(..)
@@ -251,9 +267,9 @@ module Graphics.Hgg.Spec
   , coordCartesianX
   , coordCartesianY
   , coordCartesian
-    -- * Reference line (= Phase 26 §C-2 #3)
+    -- * Reference line
   , ReferenceLine(..)
-    -- * Marginal histogram (= Phase 26 §C-2 #10)
+    -- * Marginal histogram
   , MarginalSpec(..)
   , MarginalKind(..)
   , defaultMarginalSpec
@@ -267,7 +283,7 @@ module Graphics.Hgg.Spec
   , legendReverse
   , legendNcol
   , legendNrow
-    -- * DAG (= Phase 26 §E-6, HBM ModelGraph)
+    -- * DAG (= HBM ModelGraph)
   , DAGSpec(..)
   , DAGNode(..)
   , DAGEdge(..)
@@ -353,7 +369,7 @@ module Graphics.Hgg.Spec
   , alphaBy              -- ★ Phase 30 A8 連続 alpha encoding (= ggplot scale_alpha)
   , colorCats
   , orderedCats
-    -- * Phase 11 A4-b linetype encoding
+    -- * linetype encoding
   , LineType(..)
   , linetype
   , linetypeBy

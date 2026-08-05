@@ -74,34 +74,34 @@ import           Graphics.Hgg.Spec.Column (ColRef)
 --   Line / Bar / Histogram first).
 data MarkKind
   = MScatter | MLine | MBar | MHistogram | MBox | MHeatmap
-    -- 統計特化
+    -- 統計特化 (Phase 26 §E)
   | MTrace | MDensity | MForest | MFunnel
-    -- 頻度多角形 (= ggplot geom_freqpoly)。 histogram と同じ
+    -- Phase 28 (Ch10 EDA): 頻度多角形 (= ggplot geom_freqpoly)。 histogram と同じ
     -- bin 化 (histBinning) で各 bin の count を求め、 bin 中心を折れ線で結ぶ。
     -- KDE の MDensity とは別物 (= ビン頻度の折れ線、 滑らかでない)。 lyHistDensity
     -- True で after_stat(density) = count/(群N*binW) 正規化 (面積 1)。 color
     -- aesthetic で群分割すると群ごとに別色の折れ線を重ねる (MDensity 同方式)。
   | MFreqPoly
-    -- 半導体特化
+    -- 半導体特化 (Phase 26 §F)
   | MWaferMap | MControl
-    -- 統計線
+    -- 統計線 (Phase 26 §C-2 #8)
   | MStatMean | MStatMedian
-    -- Parallel coordinates
+    -- Parallel coordinates (Phase 26 §C-2 #13)
   | MParallel
-    -- DAG (HBM ModelGraph)
+    -- DAG (Phase 26 §E-6 HBM ModelGraph)
   | MDAG
-    -- Pie chart
+    -- Pie chart (Phase 26 S4-d)
   | MPie
-    -- Waterfall
+    -- Waterfall (Phase 26 S5-c)
   | MWaterfall
     -- Contour (連続 x/y/z → marching squares の等高線 iso-line)
   | MContour
-    -- Filled contour (等値帯の塗り = matplotlib contourf / ggplot geom_contour_filled)
+    -- Filled contour (等値帯の塗り = matplotlib contourf / ggplot geom_contour_filled。 Phase 24 A4)
   | MContourFilled
     -- Bin2d (連続 x/y/z → grid binning + セル平均を連続色で塗る = ggplot geom_bin2d)
   | MBin2d
     -- Tile (連続 x/y のセルを fill 値でベタ塗り = ggplot geom_tile/geom_raster。 1 行=1 セル・
-    -- 再ビニングせず格子間隔から幅自動。 決定境界の連続軸塗りが主用途)
+    -- 再ビニングせず格子間隔から幅自動。 決定境界の連続軸塗りが主用途。 Phase 60)
   | MTile
     -- MCMC 診断
   | MAutocorr | MEss
@@ -113,49 +113,49 @@ data MarkKind
   | MRidge
     -- area band (= 信頼区間 / 予測帯、 PPath fill 1 枚)
   | MBand
-    -- 3D placeholder (実装は別 Phase で hgg-3d)
+    -- 3D placeholder (Phase 26 §C-2 #15、 実装は別 Phase で hgg-3d)
   | MScatter3D
-    -- データ駆動テキストラベル (geom_text / geom_label)。 各 (x,y) 点に
+    -- Phase 11 A6: データ駆動テキストラベル (geom_text / geom_label)。 各 (x,y) 点に
     -- lyLabel 列の文字を描く。 MLabel は背景の角丸矩形付き (= ggplot geom_label)。
   | MText | MLabel
-    -- Q-Q plot (= ggplot stat_qq / geom_qq)。 encY = サンプル列。
+    -- Phase 11 A6-2: Q-Q plot (= ggplot stat_qq / geom_qq)。 encY = サンプル列。
     -- ソートした order statistic を y、 理論正規分位点 Φ⁻¹((i-0.5)/n) を x に取り
     -- scatter 系で描画する (= 正規性の視覚診断)。
   | MQQ
-    -- ECDF (= ggplot stat_ecdf)。 encX = サンプル列。 ソートして
+    -- Phase 11 A6-4: ECDF (= ggplot stat_ecdf)。 encX = サンプル列。 ソートして
     -- 右連続の階段 F(x)=#(≤x)/n を描く (y∈[0,1])。
   | MEcdf
-    -- 区間 geom (= ggplot geom_linerange / geom_pointrange / geom_crossbar)。
+    -- Phase 11 A6-4b: 区間 geom (= ggplot geom_linerange / geom_pointrange / geom_crossbar)。
     -- encX=x, encY=y(中心), errorY=半幅 (y±err)。 linerange=縦線のみ、 pointrange=縦線+中心点、
     -- crossbar=幅付き箱 (y±err) + 中央水平線。
   | MLineRange | MPointRange | MCrossbar
-    -- stat-in (= ggplot stat_smooth(method="lm"/"…"))。 純タグ (回帰 fit は
+    -- Phase 16: stat-in (= ggplot stat_smooth(method="lm"/"…"))。 純タグ (回帰 fit は
     -- analyze-bridge の resolveStats が hanalyze で行い band+line layer に展開する)。
     -- encX=x, encY=y。 lyColor/lyStroke/lyAlpha 等の装飾はそのまま band/line に引き継がれる。
     -- MStatSmooth の knot 数は lyBinCount を流用。 renderer は MStat* を no-op (skip)。
   | MStatLM | MStatSmooth
-    -- 多項式回帰 (= ggplot stat_smooth(method="lm", formula=y~poly(x,deg)))。
+    -- Phase 16 B3: 多項式回帰 (= ggplot stat_smooth(method="lm", formula=y~poly(x,deg)))。
     -- deg は lyBinCount を流用。 resolveStats が y~poly(x,deg) で fit し band+line に展開。
     -- MStatResid = 残差 vs fitted の診断散布図 (= base R plot(lm) #1)。 fit して
     -- (fitted, residual) を scatter に展開する。 いずれも renderer は MStat* を skip。
   | MStatPoly | MStatResid
-    -- Streamgraph (= 中心化積層 area、 ThemeRiver 風)。 encX=x, encY=y、
+    -- Phase 52.D2: Streamgraph (= 中心化積層 area、 ThemeRiver 風)。 encX=x, encY=y、
     -- color aes で系列分割。 各 x 点で系列 y を積層し baseline を -(Σy)/2 から開始する
     -- (silhouette 中心化)。 各系列を renderBand 同型の塗り polygon で描く。
   | MStream
-    -- vector field (quiver)。 encX=x, encY=y, lyEncU=u, lyEncV=v。
+    -- Phase 26 A2: vector field (quiver)。 encX=x, encY=y, lyEncU=u, lyEncV=v。
     -- 各 (x,y) に成分 (u,v) の矢印を描く (autoscale × lyArrowScale)。 magnitude
     -- 連続色は lyArrowMagnitude。 = matplotlib quiver / geom_segment(arrow=)。
   | MQuiver
-    -- 2 カテゴリ変数の件数 (= ggplot geom_count / stat_sum)。
+    -- Phase 28 (Ch10 EDA): 2 カテゴリ変数の件数 (= ggplot geom_count / stat_sum)。
     -- encX/encY はともにカテゴリ列。 各 (x,y) セルの観測件数を集計し、 cell 中心に
     -- 面積 ∝ 件数 (= 半径 ∝ √件数) の点を打つ。 lySize で最大半径 px を上書き可。
   | MCount
-    -- hexbin (六角ビニング = matplotlib hexbin / ggplot geom_hex)。 encX/encY は
+    -- Phase 40: hexbin (六角ビニング = matplotlib hexbin / ggplot geom_hex)。 encX/encY は
     -- 連続列。 binwidth 正規化空間で d3-hexbin (Carr 1987) アルゴで点を六角セルに割当て count し、
     -- pointy-top 六角形を count→連続色 (Viridis) で塗る。 セル分割数は lyBinCount を流用 (既定 30)。
   | MHexbin
-    -- custom mark (拡張可能な描画語彙)。 core を触らず 'customMark' で新プロット型を
+    -- Phase 51: custom mark (拡張可能な描画語彙)。 core を触らず 'customMark' で新プロット型を
     -- 足す拡張点。 payload (id/options/draw closure) は 'lyCustom' に持つ。 renderer は
     -- 'lyCustom' の 'cmDraw' を呼んで primitive を emit する (= registry 不要・closure が源)。
   | MCustom
@@ -183,11 +183,11 @@ instance FromJSON DAGNodeKind
 -- | [日本語]: DAG layout algorithm。
 --   * 'LayoutManual'       ─ dnX / dnY をそのまま使う
 --   * 'LayoutHierarchical' ─ topological sort + 同層 x 均等配置
---   * 'LayoutForce'        ─ 将来対応予定 (= force-directed)
+--   * @LayoutForce@        ─ 将来対応予定 (= force-directed)
 --   [English]: DAG layout algorithm.
 --   * 'LayoutManual'       ─ uses dnX / dnY as-is
 --   * 'LayoutHierarchical' ─ topological sort + evenly spaced x within a layer
---   * 'LayoutForce'        ─ planned for the future (force-directed)
+--   * @LayoutForce@        ─ planned for the future (force-directed)
 data DAGLayoutAlgorithm = LayoutManual | LayoutHierarchical
   deriving (Show, Eq, Generic)
 
@@ -224,13 +224,13 @@ data EdgeShapeKind = EShStraight | EShSpline | EShBezier | EShCubic
 instance ToJSON   EdgeShapeKind
 instance FromJSON EdgeShapeKind
 
--- | [日本語]: HS が焼き込んだ routing 結果 (= pt 空間 = post-'toScreen'・pre-fit)。
---   HS 'routeEdge' が owner。 PS は描画 + 'fitPrimsToArea' のみ (option1 / DRY)。
+-- | [日本語]: HS が焼き込んだ routing 結果 (= pt 空間 = post-@toScreen@・pre-fit)。
+--   HS @routeEdge@ が owner。 PS は描画 + @fitPrimsToArea@ のみ (option1 / DRY)。
 --   'rePts' の意味は 'reKind' 依存: Straight=[port0,port1]、 Spline/Bezier=制御点列、
 --   Cubic=先頭が始点で以後 3 点ずつ (ctrl1,ctrl2,end) の cubic segment 列。
 --   [English]: The routing result baked in by HS (in point space, that is,
---   post-'toScreen' and pre-fit). HS's 'routeEdge' owns this; PS only
---   draws it and applies 'fitPrimsToArea' (option 1 / DRY). The meaning of
+--   post-@toScreen@ and pre-fit). HS's @routeEdge@ owns this; PS only
+--   draws it and applies @fitPrimsToArea@ (option 1 / DRY). The meaning of
 --   'rePts' depends on 'reKind': Straight = [port0, port1], Spline/Bezier =
 --   the control-point list, Cubic = the start point followed by cubic
 --   segments of 3 points each (ctrl1, ctrl2, end).
@@ -329,7 +329,7 @@ defaultConnectSpec = ConnectSpec mempty mempty mempty mempty False
 data ColorEnc
   = ColorByCol        !ColRef    -- categorical: Okabe-Ito palette
   | ColorStatic       !Text      -- "red" / "#ff0000"
-  | ColorByContinuous !ColRef    -- ★ 連続値 → Viridis 風 gradient
+  | ColorByContinuous !ColRef    -- ★ Phase 26 §C-2 #9 連続値 → Viridis 風 gradient
   deriving (Generic, Show, Eq)
 
 instance ToJSON   ColorEnc
@@ -344,7 +344,7 @@ instance ToJSON   YAxisSide
 instance FromJSON YAxisSide
 
 -- | [日本語]: bar の position adjustment (= ggplot position_*)。
---   1 カテゴリに複数系列 (= color/group aesthetic = 'lyColor' の 'ColorByCol') の棒を
+--   1 カテゴリに複数系列 (= color/group aesthetic = @lyColor@ の 'ColorByCol') の棒を
 --   どう配置するか。 'PosIdentity' (既定) = 従来挙動 (= color を見ず単色棒)。
 --     * 'PosDodge' = 系列を横に並べる (slot を系列数で等分)
 --     * 'PosStack' = 系列を縦に積む (cumsum、 y domain は群和の max)
@@ -352,7 +352,7 @@ instance FromJSON YAxisSide
 --   JSON tag: "identity" / "dodge" / "stack" / "fill" (PS Codec と一致)。
 --   [English]: Bar position adjustment (equivalent to ggplot's position_*).
 --   Controls how bars for multiple series in one category (that is, the
---   color/group aesthetic, 'lyColor's 'ColorByCol') are arranged.
+--   color/group aesthetic, a 'ColorByCol' in @lyColor@) are arranged.
 --   'PosIdentity' (default) keeps the legacy behavior (single-color bars,
 --   ignoring color).
 --     * 'PosDodge' places series side by side (splitting the slot evenly

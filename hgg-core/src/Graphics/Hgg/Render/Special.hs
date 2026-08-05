@@ -807,7 +807,7 @@ renderText r layout pal ly withBox =
 --   becomes PLine. Layout computation happens externally (in hanalyze
 --   / the frontend).
 -- | [日本語]: embedded DAG (= MDAG レイヤを他 geom と同一軸に重ねた退化ケース)。
---   ★ 旧実装は node 座標を [0,1] に潰す `nrm` shim + 軸 scale で
+--   ★ 旧実装は node 座標を [0,1] に潰す @nrm@ shim + 軸 scale で
 --   直線のみ (矢印/plate 箱/迂回 routing 無し) を描く間に合わせだった。 本格
 --   'renderDAGStandalone' (矢印・plate・routing・fit 完備) が landing 済のため、
 --   shim を撤去して standalone を panel 矩形 ('lpPlotArea') 上で呼ぶ委譲に統一する。
@@ -815,7 +815,7 @@ renderText r layout pal ly withBox =
 --   [English]: An embedded DAG (the degenerate case where an MDAG layer is
 --   overlaid on the same axes as other geoms).
 --   ★ The old implementation was a stopgap that collapsed node coordinates
---   into [0,1] via an `nrm` shim plus axis scaling, drawing only straight
+--   into [0,1] via an @nrm@ shim plus axis scaling, drawing only straight
 --   lines (no arrowheads, plate boxes, or detour routing). Now that the
 --   full-featured 'renderDAGStandalone' (arrowheads, plates, routing, and
 --   fitting all included) has landed, the shim is removed and delegation is

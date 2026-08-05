@@ -98,7 +98,7 @@ themeSeriesPalette t = case t of
   ThemeParchmentDark -> [ "#F0A5A0", "#A98BD0", "#E8D58A", "#5FA0A8"
                             , "#E0617E", "#B8C7D9", "#D9685F" ]
   -- [日本語]: default 系 (grey/default/minimal/light/dark) は ggplot2 既定 scales::hue_pal() にならう。
-  --   固定 7 色版でなく __群数 n 依存の hue sentinel__ を返す。
+  --   ★Phase 28 (2026-06-14): 固定 7 色版でなく __群数 n 依存の hue sentinel__ を返す。
   --   ggplot は離散色スケールごとに hue_pal()(n) を再計算するため、 群数 3 なら
   --   赤/緑/青、 4 なら別配色…と変わる。 固定 7 色だと群数 3 でも index 0,1,2 =
   --   赤/金/緑 になり R4DS と食い違っていた。 sentinel は Layout.catPal /
@@ -163,8 +163,9 @@ instance FromJSON TickDir
 --   と同じ。 'ThemeOverride' の @toPlotMargin@ に指定すると自動算出の外周分
 --   (各辺 half_line = 5.5pt) を __置き換える__ (加算ではない)。
 --   [English]: The outer margin of the figure (pt). Field order matches
---   ggplot's @margin(t, r, b, l)@. When specified via 'ThemeOverride''s
---   @toPlotMargin@, it __replaces__ the automatically computed outer margin
+--   ggplot's @margin(t, r, b, l)@. When specified via the @toPlotMargin@
+--   field of 'ThemeOverride', it __replaces__ the automatically computed
+--   outer margin
 --   (each side's half_line = 5.5pt) rather than adding to it.
 data Margin = Margin
   { marTop    :: !Double
@@ -189,7 +190,7 @@ instance FromJSON Margin
 --   way ggplot's theme() calls add up).
 data ThemeOverride = ThemeOverride
   { toPlotBg       :: !(Last Text)   -- plot.background fill
-    -- [日本語]: plot.background を塗るか (False = 塗らない = 透過。
+    -- [日本語]: ★ Phase 63 A18: plot.background を塗るか (False = 塗らない = 透過。
     --   cowplot は rect fill NA = 透過なので合成 preset が False を焼き込む)。
     --   [English]: Whether to fill plot.background (False = don't fill, i.e.
     --   transparent; since cowplot's rect fill NA means transparent, the
@@ -199,7 +200,7 @@ data ThemeOverride = ThemeOverride
   , toShowPanel    :: !(Last Bool)   -- panel 矩形を塗るか
   , toGridColor    :: !(Last Text)   -- panel.grid colour
   , toShowGrid     :: !(Last Bool)   -- panel.grid on/off (= major/minor 両方の糖衣)
-    -- [日本語]: grid major/minor の個別 on/off (cowplot theme_minimal_grid 等)。
+    -- [日本語]: ★ Phase 63 A2: grid major/minor の個別 on/off (cowplot theme_minimal_grid 等)。
     --   優先順は 個別 (これ) > 一括 toShowGrid > preset (@resolveTheme@ で解決)。
     --   [English]: Individual on/off for grid major/minor (cowplot's
     --   theme_minimal_grid etc.). Priority is: individual (this) > the blanket
@@ -210,7 +211,7 @@ data ThemeOverride = ThemeOverride
   , toShowAxisLine :: !(Last Bool)   -- axis.line on/off
   , toAxisColor    :: !(Last Text)   -- axis 線/目盛り色
   , toTextColor    :: !(Last Text)   -- 文字色
-    -- [日本語]: 文字 theme 統合 (ggplot theme(text/plot.title/axis.title/...) 相当)。
+    -- [日本語]: ★ Phase 9 A-3: 文字 theme 統合 (ggplot theme(text/plot.title/axis.title/...) 相当)。
     --   各 slot の FontSpec を theme から差し替え可能に。 優先順位は
     --   override (これ) > font setter (vsTitleFont 等) > preset 既定 (@mkFontTS@)。
     --   [English]: Unified text theming (equivalent to ggplot's
@@ -223,7 +224,7 @@ data ThemeOverride = ThemeOverride
   , toLegendFont    :: !(Last FontSpec)  -- legend.title / legend.text
     -- [日本語]: axis.text の回転角 (度・CCW)。 per-axis @axisRotate@ 未指定時の fallback。
     --   'toAxisTextAngle' = x/y 共通既定、 'toAxisTextAngleX'/'toAxisTextAngleY' = 軸別上書き
-    --   (軸別 > 共通 の優先。 @axisTextAngleXOf@/@axisTextAngleYOf@ で解決)。
+    --   (Phase 50 A3・軸別 > 共通 の優先。 @axisTextAngleXOf@/@axisTextAngleYOf@ で解決)。
     --   [English]: The rotation angle of axis.text (degrees, CCW). The
     --   fallback used when the per-axis @axisRotate@ is not specified.
     --   'toAxisTextAngle' is the shared x/y default; 'toAxisTextAngleX' /
@@ -232,11 +233,11 @@ data ThemeOverride = ThemeOverride
   , toAxisTextAngle  :: !(Last Double)
   , toAxisTextAngleX :: !(Last Double)
   , toAxisTextAngleY :: !(Last Double)
-    -- [日本語]: strip.background (facet strip の灰矩形)。
+    -- [日本語]: ★ Phase 9 A-4: strip.background (facet strip の灰矩形)。
     --   [English]: strip.background (the grey rectangle behind facet strips).
   , toStripBg       :: !(Last Text)   -- strip.background fill
   , toShowStrip     :: !(Last Bool)   -- strip 矩形を塗るか
-    -- [日本語]: プリセット専用だった 4 項目に上書き口を追加 (= 全プロパティ `<>` 上書き
+    -- [日本語]: ★ Phase 43 A4: プリセット専用だった 4 項目に上書き口を追加 (= 全プロパティ `<>` 上書き
     --   可能に)。対応 @ThemePalette@ field = tpTitleHjust / tpTitleColor / tpTickLineColor /
     --   tpLegendKeyBg。generic 導出なので field 追加のみで instance は自動追従。
     --   [English]: Added override hooks for four fields that used to be
@@ -249,7 +250,7 @@ data ThemeOverride = ThemeOverride
   , toTitleColor    :: !(Last Text)   -- plot.title / axis.title の文字色
   , toTickLineColor :: !(Last Text)   -- 軸目盛線 (tick mark) の色
   , toLegendKeyBg   :: !(Last Text)   -- legend.key 背景塗り色 ("" なら塗らない)
-    -- [日本語]: legend.position を theme に焼き込む口 (cowplot 自作 theme 用)。
+    -- [日本語]: ★ Phase 63 A3: legend.position を theme に焼き込む口 (cowplot 自作 theme 用)。
     --   優先順は 図レベル vsLegend (legendPos setter) > これ > 既定 LegendRightCenter
     --   (@effectiveLegendPos@ で解決。 ggplot の theme() と個別指定の関係に同じ)。
     --   [English]: A hook for baking legend.position into the theme (for
@@ -258,7 +259,7 @@ data ThemeOverride = ThemeOverride
     --   (resolved by @effectiveLegendPos@; the same relationship as ggplot's
     --   theme() versus per-call specification).
   , toLegendPos     :: !(Last LegendPosition) -- legend.position
-    -- [日本語]: 軸目盛線の長さ (pt)・向き (ggplot axis.ticks.length 相当)。
+    -- [日本語]: ★ Phase 63 A4: 軸目盛線の長さ (pt)・向き (ggplot axis.ticks.length 相当)。
     --   tick 長は軸ラベル/マージン位置に波及するため、 palette でなく
     --   Layout の @effectiveTickLength@/@effectiveTickDir@ が解決し
     --   computeLayout (予約) と Render.tickMarks (描画) の単一情報源になる。
@@ -272,7 +273,7 @@ data ThemeOverride = ThemeOverride
     --   ggTickLen (2.75pt) / TickOut (identical to the previous behavior).
   , toTickLength    :: !(Last Double)  -- axis.ticks.length (pt)
   , toTickDir       :: !(Last TickDir) -- 目盛線の向き (外/内/両)
-    -- [日本語]: 図の外周余白 (ggplot plot.margin 相当)。 指定時は自動算出の
+    -- [日本語]: ★ Phase 63 A5: 図の外周余白 (ggplot plot.margin 相当)。 指定時は自動算出の
     --   外周分 (各辺 ggHalfLine) を置き換える。 軸ラベル・title 帯・凡例などの
     --   内側予約は従来どおり自動。 Layout の @effectivePlotMargin@ が解決する。
     --   [English]: The outer margin of the figure (equivalent to ggplot's
@@ -281,7 +282,7 @@ data ThemeOverride = ThemeOverride
     --   such as axis labels, the title band, and the legend remain
     --   automatic as before. Resolved by Layout's @effectivePlotMargin@.
   , toPlotMargin    :: !(Last Margin)  -- plot.margin (t/r/b/l、 pt)
-    -- [日本語]: base font size (pt、 ggplot base_size 相当)。 各 slot の既定
+    -- [日本語]: ★ Phase 63 A12: base font size (pt、 ggplot base_size 相当)。 各 slot の既定
     --   font size はこれからの相対倍率 (title ×1.2 / axis.title ×1 / axis.text ×0.8 /
     --   legend.title ×1 / legend.text ×0.8) で派生する。 優先順 = 個別 theme*Font
     --   (fsSize) > これによる base 派生 > 既定 11 (theme_grey base_size)。
@@ -298,7 +299,7 @@ data ThemeOverride = ThemeOverride
     --   resolves it, making it the single source of truth for computeLayout
     --   (reserving space) and Render.mkFontTS (drawing).
   , toBaseFontSize  :: !(Last Double)  -- base font size (pt)
-    -- [日本語]: axis.text (目盛ラベル文字) / axis.title (軸タイトル) の表示。
+    -- [日本語]: ★ Phase 63 A19: axis.text (目盛ラベル文字) / axis.title (軸タイトル) の表示。
     --   False = ggplot element_blank 相当 (tick 線の有無は toTickLength と独立)。
     --   表示 off は margin 予約に波及するため Layout の @effectiveShowAxisText@ /
     --   @effectiveShowAxisTitle@ が解決し、 computeLayout (予約) と Render
@@ -315,7 +316,7 @@ data ThemeOverride = ThemeOverride
     --   element_blank), True for every other preset.
   , toShowAxisText  :: !(Last Bool)  -- axis.text on/off
   , toShowAxisTitle :: !(Last Bool)  -- axis.title on/off
-    -- [日本語]: 凡例キー 1 辺 (pt、 ggplot legend.key.size 相当)。 キーの
+    -- [日本語]: ★ Phase 63 A19.5: 凡例キー 1 辺 (pt、 ggplot legend.key.size 相当)。 キーの
     --   行 pitch = キー辺なので凡例の行間もこれで決まる。 cowplot は全 preset で
     --   1.1 × font_size を明示上書きする (既定 = 1.2 lines = 1.2 × base × 1.3133)。
     --   凡例幅/高さの margin 予約に波及するため Layout の @effectiveLegendKeyW@ が解決。
@@ -327,7 +328,7 @@ data ThemeOverride = ThemeOverride
     --   affects the legend's width/height margin reservation, Layout's
     --   @effectiveLegendKeyW@ resolves it.
   , toLegendKeySize :: !(Last Double)  -- legend.key.size (pt)
-    -- [日本語]: 全 text slot 共通の font family fallback (ggplot
+    -- [日本語]: ★ Phase 63 A20.5: 全 text slot 共通の font family fallback (ggplot
     --   theme(text = element_text(family=...)) 相当)。 優先順位は slot 別 FontSpec の
     --   fsFamily > これ > "sans-serif" (@mkFontTS@ が解決)。 slot 丸ごと置換
     --   (Last FontSpec) と違い preset の fontSize 焼き込みを潰さない。
@@ -338,7 +339,7 @@ data ThemeOverride = ThemeOverride
     --   FontSpec), this doesn't clobber the preset's baked-in fontSize.
   , toFontFamily    :: !(Last Text)    -- text family (全 slot 共通 fallback)
   } deriving stock (Generic, Show, Eq)
-    -- [日本語]: 全 field が `Last` の素直な per-field 合成なので generic 導出。
+    -- [日本語]: ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field
     --   追加を「field を足すだけ」で安全にする。挙動は旧手書きと完全同型。
     --   [English]: Since every field is a straightforward per-field

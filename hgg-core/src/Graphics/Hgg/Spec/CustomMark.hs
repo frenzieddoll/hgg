@@ -6,14 +6,14 @@
 --
 -- [日本語]: 'Graphics.Hgg.Spec' の module 分割で切り出した leaf。 custom mark
 -- 拡張点のうち __型__ ('RenderCtx' / 'CustomMark') のみを持つ (smart
--- constructor 'customMark' 等は 'Graphics.Hgg.Spec.Constructors' 側)。 依存は
+-- constructor @customMark@ 等は 'Graphics.Hgg.Spec.Constructors' 側)。 依存は
 -- 'Graphics.Hgg.Spec.Column' ('Resolver') と 'Graphics.Hgg.Primitive'。 公開
 -- API は従来どおり 'Graphics.Hgg.Spec' (facade) が re-export する。 挙動・出力
 -- (JSON 形含む) は完全に不変。
 --
 -- [English]: A leaf split out of 'Graphics.Hgg.Spec' during its module
 -- split. Carries only the __types__ ('RenderCtx' / 'CustomMark') for the
--- custom-mark extension point (the smart constructor 'customMark' and
+-- custom-mark extension point (the smart constructor @customMark@ and
 -- friends live in 'Graphics.Hgg.Spec.Constructors'). Depends only on
 -- 'Graphics.Hgg.Spec.Column' ('Resolver') and 'Graphics.Hgg.Primitive'. The
 -- public API is still re-exported by the 'Graphics.Hgg.Spec' facade as
@@ -63,7 +63,7 @@ data RenderCtx = RenderCtx
                                                              --   [English]: The theme's default axis color.
   }
 
--- | [日本語]: custom mark の payload。 'lyCustom' に載る。
+-- | [日本語]: custom mark の payload。 @lyCustom@ に載る。
 --
 --     * 'cmDraw' は HS の描画 closure。 データは closure に閉じ込め可。
 --       __serialize 不能__ ゆえ JSON では落ち、 decode 時は no-op (@const []@)
@@ -72,7 +72,7 @@ data RenderCtx = RenderCtx
 --
 --   'Eq' / 'Show' は closure を無視し 'cmId' + 'cmOptions' で比較 (function は
 --   比較不能ゆえ)。
---   [English]: The payload of a custom mark, carried in 'lyCustom'.
+--   [English]: The payload of a custom mark, carried in @lyCustom@.
 --
 --     * 'cmDraw' is the Haskell draw closure. Data may be captured inside
 --       the closure, so it is __not serializable__: it is dropped from

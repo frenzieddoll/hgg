@@ -81,60 +81,60 @@ data Layer = Layer
   , lyAlpha   :: !(Last Double)
   , lySize    :: !(Last Double)
   , lyStroke  :: !(Last Double)
-  , lyHover   :: ![ColRef]                  -- ★ Phase 26 §C-2 #4 multi-col tooltip
-  , lyConnect :: !(Last ConnectSpec)        -- ★ Phase 26 §C-2 #5 connect points
-  , lyErrorX  :: !(Last ColRef)             -- ★ Phase 26 §C-2 #6 ± 半幅 X
-  , lyErrorY  :: !(Last ColRef)             -- ★ Phase 26 §C-2 #6 ± 半幅 Y
-  , lyEncY2   :: !(Last ColRef)             -- ★ TODO-11: MBand 用 upper y
-  , lyDAG     :: !(Last DAGSpec)            -- ★ Phase 26 §E-6 HBM ModelGraph
-  , lyJitterX :: !(Last Double)             -- ★ P14 jitter X (plotArea 比率)
-  , lyJitterY :: !(Last Double)             -- ★ P14 jitter Y
-  , lyYAxisSide :: !(Last YAxisSide)        -- ★ P5 どちら Y 軸か
+  , lyHover   :: ![ColRef]                  -- ★ multi-col tooltip
+  , lyConnect :: !(Last ConnectSpec)        -- ★ connect points
+  , lyErrorX  :: !(Last ColRef)             -- ★ ± 半幅 X
+  , lyErrorY  :: !(Last ColRef)             -- ★ ± 半幅 Y
+  , lyEncY2   :: !(Last ColRef)             -- ★ MBand 用 upper y
+  , lyDAG     :: !(Last DAGSpec)            -- ★ HBM ModelGraph
+  , lyJitterX :: !(Last Double)             -- ★ jitter X (plotArea 比率)
+  , lyJitterY :: !(Last Double)             -- ★ jitter Y
+  , lyYAxisSide :: !(Last YAxisSide)        -- ★ どちら Y 軸か
   , lyBinCount :: !(Last Int)               -- ★ frontend-settings v0.1 §2.4 hist bin 数
-  , lyBinWidth :: !(Last Double)            -- ★ Phase 28: histogram の bin 幅 (= ggplot binwidth)。 binCount より優先
-  , lyShape     :: !(Last MarkShape)        -- ★ Phase 30 A3: 固定 shape (bare=固定・lyShapeBy より優先)
+  , lyBinWidth :: !(Last Double)            -- ★ histogram の bin 幅 (= ggplot binwidth)。 binCount より優先
+  , lyShape     :: !(Last MarkShape)        -- ★ 固定 shape (bare=固定・lyShapeBy より優先)
   , lyShapeBy   :: !(Last ColRef)           -- ★ C-6 categorical shape encoding 列
   , lyShapeMap  :: ![ShapeMapEntry]          -- ★ C-6 cat → shape 上書き
   , lySizeBy    :: !(Last ColRef)           -- ★ C-6 continuous size encoding 列
-  , lyAlphaBy   :: !(Last ColRef)           -- ★ Phase 30 A8 continuous alpha encoding 列
+  , lyAlphaBy   :: !(Last ColRef)           -- ★ continuous alpha encoding 列
   , lyColorCats :: ![Text]                   -- ★ trellis 色一貫性 (= 全 data cat 順)
-  , lyHistDensity :: !(Last Bool)             -- ★ TODO-3a (2026-05-29): histogram を density 正規化
-  , lyHistBorder :: !(Last Bool)              -- ★ Phase 8 B7: histogram/bar の bin 境界線 (= default False)
-  , lyDensityFill :: !(Last Bool)             -- ★ Phase 28: density 曲線下を塗る (= ggplot geom_density(aes(fill=)))。 alpha と併用
-  , lyHollow    :: !(Last Bool)               -- ★ Phase 34: 中抜きマーカー (= ggplot shape="circle open"/fill=NA)。 塗り透明 + 点色 stroke
-  , lyNudge     :: !(Last Double)             -- ★ Phase 36 D1: 分布 mark の slot 内横 offset (slot 幅比、 ggplot position_nudge 相当)
-  , lyMarkWidth :: !(Last Double)             -- ★ Phase 36 D1: 分布 mark の幅 (slot 幅比・占有率)。 各 mark の既定占有率を上書き
-  , lySide      :: !(Last Side)               -- ★ Phase 36 D1: violin の片側化 (= 半 violin)。 既定 Both
-  , lyMaxLag    :: !(Last Int)                -- ★ Phase 6 A4 autocorr max lag (= default 40)
-  , lyChain     :: !(Last ColRef)             -- ★ Phase 6 A5 chain group 列 (ESS / trace で chain 分け)
-  , lyDensityNorm :: !(Last Bool)             -- ★ Phase 8 B16: pairs 対角用。 y 軸 = 値範囲、 KDE は panel 高さに独立正規化
-  , lyPosition  :: !(Last Position)           -- ★ Phase 9 B: bar position adjustment (dodge/stack/fill、 既定 identity)
-  , lyLinetype   :: !(Last LineType)           -- ★ Phase 11 A4-b: 固定 linetype (= ggplot linetype=)
-  , lyLinetypeBy :: !(Last ColRef)             -- ★ Phase 11 A4-b: categorical linetype scale 列
-  , lyLabel      :: !(Last ColRef)             -- ★ Phase 11 A6: geom_text/label のラベル列 (各点の文字)
-  , lyStatLevel  :: !(Last Double)             -- ★ Phase 16 B1: stat 回帰の信頼水準 (= 既定 0.95)。 MStat* 解決時のみ意味を持つ
-  , lyContourLevels :: !(Last Int)             -- ★ Phase 24 A4: 等高線の本数 (既定 8)。 MContour/MContourFilled 用
-  , lyContourBreaks :: !(Last [Double])        -- ★ Phase 24 A4: 等高線レベルの明示指定 (本数指定より優先)
-  , lyEncU        :: !(Last ColRef)            -- ★ Phase 26 A2: vector field (quiver) の u 成分列
-  , lyEncV        :: !(Last ColRef)            -- ★ Phase 26 A2: vector field (quiver) の v 成分列
-  , lyArrowScale  :: !(Last Double)            -- ★ Phase 26 A2: quiver 矢印長の倍率 (autoscale × この値・既定 1)
-  , lyArrowMagnitude :: !(Last Bool)           -- ★ Phase 26 A2: quiver を magnitude (|u,v|) で連続色マップ (既定 False)
-  , lyEdge         :: !(Last Bool)             -- ★ Phase 28: 散布点の縁を描くか (既定 False = 縁なし、 ggplot 塗り点 shape 19 相当)
-  , lyEdgeColor    :: !(Last Text)             -- ★ Phase 28: 縁の色 (未指定なら点と同色)
-  , lyEdgeWidth    :: !(Last Double)           -- ★ Phase 28: 縁の幅 px (既定 1.0)
-  , lyOverlay      :: ![Layer]                  -- ★ Phase 36 D2: 同一 layer 内に重畳する追加 sub-mark
+  , lyHistDensity :: !(Last Bool)             -- ★ histogram を density 正規化
+  , lyHistBorder :: !(Last Bool)              -- ★ histogram/bar の bin 境界線 (= default False)
+  , lyDensityFill :: !(Last Bool)             -- ★ density 曲線下を塗る (= ggplot geom_density(aes(fill=)))。 alpha と併用
+  , lyHollow    :: !(Last Bool)               -- ★ 中抜きマーカー (= ggplot shape="circle open"/fill=NA)。 塗り透明 + 点色 stroke
+  , lyNudge     :: !(Last Double)             -- ★ 分布 mark の slot 内横 offset (slot 幅比、 ggplot position_nudge 相当)
+  , lyMarkWidth :: !(Last Double)             -- ★ 分布 mark の幅 (slot 幅比・占有率)。 各 mark の既定占有率を上書き
+  , lySide      :: !(Last Side)               -- ★ violin の片側化 (= 半 violin)。 既定 Both
+  , lyMaxLag    :: !(Last Int)                -- ★ autocorr max lag (= default 40)
+  , lyChain     :: !(Last ColRef)             -- ★ chain group 列 (ESS / trace で chain 分け)
+  , lyDensityNorm :: !(Last Bool)             -- ★ pairs 対角用。 y 軸 = 値範囲、 KDE は panel 高さに独立正規化
+  , lyPosition  :: !(Last Position)           -- ★ bar position adjustment (dodge/stack/fill、 既定 identity)
+  , lyLinetype   :: !(Last LineType)           -- ★ A4-b: 固定 linetype (= ggplot linetype=)
+  , lyLinetypeBy :: !(Last ColRef)             -- ★ A4-b: categorical linetype scale 列
+  , lyLabel      :: !(Last ColRef)             -- ★ geom_text/label のラベル列 (各点の文字)
+  , lyStatLevel  :: !(Last Double)             -- ★ stat 回帰の信頼水準 (= 既定 0.95)。 MStat* 解決時のみ意味を持つ
+  , lyContourLevels :: !(Last Int)             -- ★ 等高線の本数 (既定 8)。 MContour/MContourFilled 用
+  , lyContourBreaks :: !(Last [Double])        -- ★ 等高線レベルの明示指定 (本数指定より優先)
+  , lyEncU        :: !(Last ColRef)            -- ★ vector field (quiver) の u 成分列
+  , lyEncV        :: !(Last ColRef)            -- ★ vector field (quiver) の v 成分列
+  , lyArrowScale  :: !(Last Double)            -- ★ quiver 矢印長の倍率 (autoscale × この値・既定 1)
+  , lyArrowMagnitude :: !(Last Bool)           -- ★ quiver を magnitude (|u,v|) で連続色マップ (既定 False)
+  , lyEdge         :: !(Last Bool)             -- ★ 散布点の縁を描くか (既定 False = 縁なし、 ggplot 塗り点 shape 19 相当)
+  , lyEdgeColor    :: !(Last Text)             -- ★ 縁の色 (未指定なら点と同色)
+  , lyEdgeWidth    :: !(Last Double)           -- ★ 縁の幅 px (既定 1.0)
+  , lyOverlay      :: ![Layer]                  -- ★ 同一 layer 内に重畳する追加 sub-mark
                                                 --   (= '<+>' で蓄積)。 各 sub は自前の kind/nudge/markWidth/side
                                                 --   を持ち、 親の群 (encX)・色 (colorBy)・値 (encY) を継承して描かれる。
                                                 --   raincloud = (半 violin <+> box <+> strip) の preset。
-  , lyCustom       :: !(Last CustomMark)         -- ★ Phase 51: custom mark payload (MCustom 用・id/options/draw closure)
+  , lyCustom       :: !(Last CustomMark)         -- ★ custom mark payload (MCustom 用・id/options/draw closure)
   } deriving (Generic, Show, Eq)
 
 instance ToJSON   Layer
--- ★ Phase 36 D2: lyOverlay は後付けフィールドゆえ、 旧 JSON (= gallery specs/**.json 等) に
+-- ★ lyOverlay は後付けフィールドゆえ、 旧 JSON (= gallery specs/**.json 等) に
 --   キーが無くても [] として decode できるよう、 generic parse の前に欠損キーを補う。
 instance FromJSON Layer where
   parseJSON v = case v of
-    -- ★ Phase 36 D2 / Phase 51: 後付けフィールド (lyOverlay/lyCustom) が旧 JSON に無くても
+    -- ★ 後付けフィールド (lyOverlay/lyCustom) が旧 JSON に無くても
     --   decode できるよう、 generic parse の前に欠損キーを既定値で補う。
     Object o ->
       let o1 = if KM.member "lyOverlay" o then o
@@ -145,7 +145,7 @@ instance FromJSON Layer where
     _ -> Aeson.genericParseJSON Aeson.defaultOptions v
 
 -- | [日本語]: 1 layer 内の属性合成。 'lyKind' のみ 'First' (= 最初の mark が勝ち、 後続の
---   mark は消える点に注意 ─ 重畳は 'layer' で包んで合成する。 @design/monoid-semantics.md@
+--   mark は消える点に注意 ─ 重畳は @layer@ で包んで合成する。 @design/monoid-semantics.md@
 --   §1 参照)。 lyHover/lyShapeMap は concat、 lyColorCats は last-nonempty、 残りは 'Last'。
 --   field 数が多く positional 列挙は取り違えやすいので record 構文で
 --   per-field '(<>)' する (= Layer3D が同方針で行った変更)。 挙動は
@@ -153,7 +153,7 @@ instance FromJSON Layer where
 --   'lyShapeMap' は list concat ('(<>)')、 'lyColorCats' は last-nonempty、 残りは Last。
 --   [English]: Combines attributes within a single layer. Only 'lyKind' uses
 --   'First' (the first mark wins; note that later marks are dropped —
---   overlaying multiple marks should instead go through 'layer'; see
+--   overlaying multiple marks should instead go through @layer@; see
 --   @design/monoid-semantics.md@ §1). lyHover/lyShapeMap concatenate,
 --   lyColorCats keeps the last non-empty value, and everything else uses
 --   'Last'. With this many fields, a positional field list is easy to get
@@ -212,8 +212,8 @@ instance Semigroup Layer where
     , lyEdge        = lyEdge a <> lyEdge b
     , lyEdgeColor   = lyEdgeColor a <> lyEdgeColor b
     , lyEdgeWidth   = lyEdgeWidth a <> lyEdgeWidth b
-    , lyOverlay     = lyOverlay a <> lyOverlay b   -- ★ Phase 36 D2: sub-mark を concat
-    , lyCustom      = lyCustom a <> lyCustom b      -- ★ Phase 51: custom mark payload (Last)
+    , lyOverlay     = lyOverlay a <> lyOverlay b   -- ★ sub-mark を concat
+    , lyCustom      = lyCustom a <> lyCustom b      -- ★ custom mark payload (Last)
     }
 
 instance Monoid Layer where
@@ -253,14 +253,14 @@ colorBy c = mempty { lyColor = Last (Just (ColorByCol c)) }
 --   群列とし、 無ければ 'colorBy' (= 'ColorByCol') の列を群列とみなす。 これにより
 --   @boxplot "v" <> colorBy "g"@ が scatter と同様に群分割される (従来は encX 専用で
 --   colorBy 単体だと単一群になっていた)。 distribution renderer と
---   'collectCategoricalLabels' (distribution 限定) が共有する。
+--   @collectCategoricalLabels@ (distribution 限定) が共有する。
 --   [English]: The "grouping column" for a distribution mark. If 'lyEncX' is
 --   set explicitly, that is the grouping column; otherwise the column behind
 --   'colorBy' (a 'ColorByCol') is treated as the grouping column. This lets
 --   @boxplot "v" <> colorBy "g"@ split into groups the same way scatter does
 --   (previously only encX did this, and colorBy alone produced a single
 --   group). Shared by the distribution renderer and
---   'collectCategoricalLabels' (distribution-only).
+--   @collectCategoricalLabels@ (distribution-only).
 distGroupRef :: Layer -> Maybe ColRef
 distGroupRef ly = case getLast (lyEncX ly) of
   Just cr -> Just cr
@@ -291,10 +291,10 @@ distDodgeRef ly = case (getLast (lyEncX ly), getLast (lyColor ly)) of
   _ -> Nothing
 
 -- | [日本語]: 静的色 (layer 全体に適用)。 固定色 aesthetic は bare 名 'color'。
---   'Color' 型 (RGB / 'fromHex' / R 657 名前付き定数) を受け、 ワイヤは 'toCss' で Text 化。
+--   'Color' 型 (RGB / @fromHex@ / R 657 名前付き定数) を受け、 ワイヤは 'toCss' で Text 化。
 --   [English]: A static color (applied to the whole layer). The fixed-color
 --   aesthetic uses the bare name 'color'. Takes a 'Color' value (RGB /
---   'fromHex' / one of the 657 R named colors) and converts it to Text on the
+--   @fromHex@ / one of the 657 R named colors) and converts it to Text on the
 --   wire via 'toCss'.
 color :: Color -> Layer
 color c = mempty { lyColor = Last (Just (ColorStatic (toCss c))) }
