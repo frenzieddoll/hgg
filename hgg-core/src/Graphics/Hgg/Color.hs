@@ -16,7 +16,7 @@
 --   colors into compile errors. The 657 named colors are isolated as
 --   top-level bindings in @Graphics.Hgg.Color.Named@.
 --
---   ★The wire format is Text as before: @ColorEnc@'s @ColorStatic !Text@ is
+--   The wire format is Text as before: @ColorEnc@'s @ColorStatic !Text@ is
 --   kept unchanged, and named-color combinators convert via 'toCss' at the
 --   entry point and store the result. Render / the PureScript canvas / JSON
 --   therefore need no changes (PureScript does not know the Color type and
@@ -99,7 +99,7 @@ fromHex t = fromMaybe err (fromHexMaybe t)
 --   4-digit shorthand). The 6/3-digit forms without alpha pass through with
 --   alpha = 1.0 (delegated to 'fromHexMaybe'). Invalid input yields
 --   'Nothing'. A total function.
---   ★Since 'Color' is RGB-only, alpha is returned separately (@colorRGBA@
+--   Since 'Color' is RGB-only, alpha is returned separately (@colorRGBA@
 --   expands it to @color c <> alpha a@).
 fromHexAMaybe :: Text -> Maybe (Color, Double)
 fromHexAMaybe raw =

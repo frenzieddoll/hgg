@@ -138,7 +138,7 @@ data Primitive
 --   純 pt を出力し、ここで一度だけ k を掛ける。PDF は k=1 (pt 直結・恒等) を渡す。
 --   座標・サイズ・線幅・font size・dash 配列を全て k 倍する。'ScaleT' は比率ゆえ不変。
 --   [English]: Bulk-scales primitives from pt space to device units
---   (k = dpi/72). ★ This is the __sole point where dpi is applied__ across
+--   (k = dpi/72). This is the __sole point where dpi is applied__ across
 --   the raster/vector backends: Layout/Render emit pure pt values, and k is
 --   applied exactly once here. PDF passes k=1 (a pt-direct identity).
 --   Coordinates, sizes, line widths, font sizes, and dash arrays are all

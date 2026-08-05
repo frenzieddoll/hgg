@@ -721,7 +721,7 @@ smoothInterior k ps
 --   segments. Endpoints are handled as their own ghost points (a natural
 --   spline that approaches a straight line at the ends).
 --
---   ★ __Clamps the control-point offset to the segment length__. When knot
+--   __Clamps the control-point offset to the segment length__. When knot
 --   spacing is extremely uneven (for example, a long edge reduced to three
 --   points due to insufficient detour waypoints), the tangent (b-prev)/6
 --   gets pulled by a distant prev and the control point overshoots far
@@ -814,7 +814,7 @@ renderText r layout pal ly withBox =
 --   これで mixed ケースでも DAG 専用経路 (renderDAGOnly) と同一品質で描画される。
 --   [English]: An embedded DAG (the degenerate case where an MDAG layer is
 --   overlaid on the same axes as other geoms).
---   ★ The old implementation was a stopgap that collapsed node coordinates
+--   The old implementation was a stopgap that collapsed node coordinates
 --   into [0,1] via an @nrm@ shim plus axis scaling, drawing only straight
 --   lines (no arrowheads, plate boxes, or detour routing). Now that the
 --   full-featured 'renderDAGStandalone' (arrowheads, plates, routing, and

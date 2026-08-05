@@ -371,7 +371,7 @@ themeMinimalGrid = themeMinimalGridSized 14
 --   grey80 で残すため 'stripFill' を明示 (ThemeVoid 既定は strip なし)。
 --   [English]: The equivalent of cowplot's @theme_map(font_size = N)@:
 --   removes axis lines, grid, border, tick marks, axis-label text and
---   axis titles entirely (★ 'ThemeVoid' also blanks axis.text /
+--   axis titles entirely ('ThemeVoid' also blanks axis.text /
 --   axis.title by default). Title elements and the legend remain. Since
 --   theme_map keeps the facet strip at grey80, 'stripFill' is set
 --   explicitly (ThemeVoid's default has no strip).
@@ -426,7 +426,7 @@ plotBg c = mempty { vsThemeOverride = mempty { toPlotBg = Last (Just c) } }
 -- | [日本語]: plot.background を塗るか (★)。 @themePlotBg False@ = 塗らない
 --   (= 透過、 ggplot @plot.background = element_blank()@ / cowplot fill NA
 --   相当)。
---   [English]: Whether to paint plot.background. ★ @themePlotBg False@
+--   [English]: Whether to paint plot.background. @themePlotBg False@
 --   means no paint (transparent, equivalent to ggplot's
 --   @plot.background = element_blank()@ / cowplot's fill NA).
 themePlotBg :: Bool -> VisualSpec     -- plot.background 塗り on/off
@@ -463,7 +463,7 @@ themeLegendFont f = mempty { vsThemeOverride = mempty { toLegendFont = Last (Jus
 --   解決)。 slot 丸ごとの 'themeTitleFont' 等と違い preset の fontSize
 --   焼き込みを潰さない。 PNG backend は family 名を正規化してフォントファイルを
 --   解決する (不在なら既定フォント + stderr 警告)。
---   [English]: ★ The font family shared by all text slots (like ggplot's
+--   [English]: The font family shared by all text slots (like ggplot's
 --   theme(text = element_text(family=...))). A per-slot FontSpec setting
 --   via 'Graphics.Hgg.Spec.fontFamily' takes priority when present
 --   (resolved by 'Graphics.Hgg.Render.Common.mkFontTS'). Unlike whole-slot setters such as
@@ -861,7 +861,7 @@ distCols (l : ls) = layer (foldl (<+>) l ls)
 --   box/violin と統一 (値=encY・群=encX via groupBy)。 coord_flip で
 --   encY(値)→x・encX(群)→y に回す (box-flip と同機構)。 computeLayout /
 --   renderToPrimitives の入口で適用する。
---   [English]: ★ Automatically applies coord_flip to a spec that contains
+--   [English]: Automatically applies coord_flip to a spec that contains
 --   a ridge layer and has no coord specified. Although ridge is
 --   conceptually "value→x (continuous), group→y (categorical)", its
 --   combinator is unified with box/violin (value=encY, group=encX via
@@ -890,7 +890,7 @@ annotText x y t = annotTextP (PNative x) (PNative y) t
 
 -- | [日本語]: ★ 'Pos' で text を打つ (native/npc/絶対長を軸ごと混在可)。
 --   例: @annotTextP (PNpc 0.95) (PNative 3.0) "R²"@ (右端 npc・data y)。
---   [English]: ★ Places text using 'Pos' (native/npc/absolute length can be
+--   [English]: Places text using 'Pos' (native/npc/absolute length can be
 --   mixed per axis). Example:
 --   @annotTextP (PNpc 0.95) (PNative 3.0) "R²"@ (npc for the right edge,
 --   data for y).
@@ -905,7 +905,7 @@ annotArrow x1 y1 x2 y2 =
   annotArrowP (PNative x1) (PNative y1) (PNative x2) (PNative y2)
 
 -- | [日本語]: ★ 'Pos' で arrow を引く。
---   [English]: ★ Draws an arrow using 'Pos'.
+--   [English]: Draws an arrow using 'Pos'.
 annotArrowP :: Pos -> Pos -> Pos -> Pos -> VisualSpec
 annotArrowP x1 y1 x2 y2 = annotate $ AnnArrow
   { anX1 = x1, anY1 = y1, anX2 = x2, anY2 = y2
@@ -921,7 +921,7 @@ annotRect x y w h col =
 -- | [日本語]: ★ 'Pos' 2 隅で rect を描く。
 --   例: @annotRectP (PNpc 0.0) (PNative 1.0) (PNpc 1.0) (PNative 2.0) "grey"@
 --   (帯: x 全幅 npc・y は data 1..2)。
---   [English]: ★ Draws a rect from two 'Pos' corners. Example:
+--   [English]: Draws a rect from two 'Pos' corners. Example:
 --   @annotRectP (PNpc 0.0) (PNative 1.0) (PNpc 1.0) (PNative 2.0) "grey"@
 --   (a band: x spans the full width in npc, y is data 1..2).
 annotRectP :: Pos -> Pos -> Pos -> Pos -> Text -> VisualSpec
@@ -936,7 +936,7 @@ annotLine x1 y1 x2 y2 =
   annotLineP (PNative x1) (PNative y1) (PNative x2) (PNative y2)
 
 -- | [日本語]: ★ 'Pos' で line を引く。
---   [English]: ★ Draws a line using 'Pos'.
+--   [English]: Draws a line using 'Pos'.
 annotLineP :: Pos -> Pos -> Pos -> Pos -> VisualSpec
 annotLineP x1 y1 x2 y2 = annotate $ AnnLine
   { anX1 = x1, anY1 = y1, anX2 = x2, anY2 = y2

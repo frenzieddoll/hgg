@@ -13,7 +13,7 @@
 -- Layer 1 structure as the SVG/PDF backends). Since Rasterific has y pointing
 -- down (the same convention as SVG), __no y flip is needed__ (unlike PDF).
 --
--- フォントは FontyFruity の TrueType 読込 = __日本語ラベル対応__
+-- [日本語]: フォントは FontyFruity の TrueType 読込 = __日本語ラベル対応__
 -- (PDF v1 制約の受け皿)。 探索は fontconfig 非依存の固定候補リスト
 -- (明示 'pngFontPath' → 既知ディレクトリ × 既知ファイル名)。
 -- ★FontyFruity は .ttc (TrueType Collection) / CFF 系 OTF 非対応 —

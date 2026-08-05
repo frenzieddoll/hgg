@@ -161,7 +161,7 @@ data PlotErrorKind
     --   [English]: There is not a single layer.
   | DistColsNonDistribution MarkKind
     -- ^ [日本語]: ★ distCols のレーンが分布 mark でない。
-    --   [English]: ★ A distCols lane whose mark is not a distribution mark.
+    --   [English]: A distCols lane whose mark is not a distribution mark.
   deriving (Show, Eq)
 
 data PlotWarningKind
@@ -172,7 +172,7 @@ data PlotWarningKind
   | FacetInlineLengthMismatch Aesthetic Int Int
     -- ^ [日本語]: ★ facet 列と長さの異なる inline 列 (inline 長 / facet 長)。
     --   facet 分割がこの列に効かず全 panel に同一データが描かれる。 描画は継続する。
-    --   [English]: ★ An inline column whose length differs from the facet
+    --   [English]: An inline column whose length differs from the facet
     --   column (inline length / facet length). Facet splitting has no
     --   effect on this column, so the same data is drawn on every panel.
     --   Rendering continues regardless.
@@ -410,7 +410,7 @@ layerCols ly = mapMaybe pick
 --   判定は 'applyDiscreteLimits' 適用後の姿で行う (= 経路 2 の bake / limits に
 --   よる行 drop の後、 実際に render が見る spec と同条件。 limits の行 drop で
 --   facet 列と layer が desync するケースもこれで捕まる)。
---   [English]: ★ Detects inline encodings whose length differs from the
+--   [English]: Detects inline encodings whose length differs from the
 --   facet column. Since inline columns bypass the Resolver, facet row
 --   splitting (@subsetInlineSpec@) applies __only to inline columns whose length matches the facet column__.
 --   If a mismatched-length inline
@@ -454,7 +454,7 @@ facetInlineDiagnostics r spec0 = go (applyDiscreteLimits r spec0) ++ subDiags
 -- | [日本語]: ★ 'facetInlineDiagnostics' を stderr へ報告する backend 共用
 --   helper (SVG / PNG / PDF / TeX の save 系入口から呼ぶ)。 診断ゼロなら無音。
 --   描画は止めない (= 描画継続 + 警告)。
---   [English]: ★ A backend-shared helper that reports
+--   [English]: A backend-shared helper that reports
 --   'facetInlineDiagnostics' to stderr (called from the SVG / PNG / PDF /
 --   TeX save entry points). Silent when there are no diagnostics. Does not
 --   stop rendering (rendering continues, with a warning).

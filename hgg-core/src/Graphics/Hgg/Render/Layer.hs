@@ -192,7 +192,7 @@ renderAutocorrStandalone r layout spec =
 --   title/theme は描かれない (operator チェーンの中間ノードは純粋な構造なので通常問題ない。
 --   全体 theme は top spec から themeCtx で全 leaf に伝播する)。
 --   [English]: Lays out subplots (tiles arbitrary specs into a grid).
---   ★ (unified grid): flattens the nesting of vsSubplots / @<->@ / @<:>@ via
+--   (unified grid): flattens the nesting of vsSubplots / @<->@ / @<:>@ via
 --   'flattenSubplots' into a __single grid__, assigning each leaf panel
 --   @(rowStart,rowSpan,colStart,colSpan)@. The previous implementation had
 --   each subplots level build its own independent grid and recursed through
@@ -211,7 +211,7 @@ renderAutocorrStandalone r layout spec =
 --   plus the inner bands and padding. The container's own phantom axis
 --   margin has already been removed (the isContainer branch in Layout).
 --
---   ★ __Known limitation__: since flattening keeps only leaves, a
+--   __Known limitation__: since flattening keeps only leaves, a
 --   title/theme set on an intermediate subplots node in the nesting is not
 --   drawn (intermediate nodes in the operator chain are purely structural,
 --   so this is usually not an issue; the overall theme propagates from the
@@ -366,7 +366,7 @@ isDAGOnly spec = case vsLayers spec of
 --   'labels' は viewport でなく lpPlotArea ± margin 基準で配置するため・'lpPlotArea' は親が
 --   panelRect に retarget 済)。 旧実装は viewport±pad で独自に area/title を作っており、 DAG
 --   だけ title がずれ、 入れ子セルから漏れていた (旧来の viewport 特例も本統一で不要に)。
---   [English]: Draws DAGs standalone. ★ Unified with the __same framework__
+--   [English]: Draws DAGs standalone. Unified with the __same framework__
 --   as other plots ('renderSingle'). Draws the DAG inside the 'lpPlotArea'
 --   reserved by 'Graphics.Hgg.Layout.computeLayout' (the in-axis region after subtracting the
 --   title band and axis-tick margins), and draws the title at the standard
@@ -896,7 +896,7 @@ renderLayerDual r layout pal ly =
 --   base を描いた後、 各 sub-mark を「親の群 (encX)・色 (colorBy)・値 (encY) 等を継承し、
 --   自前の kind/nudge/markWidth/side で」 描く (= raincloud / 自作 composite)。 overlay が
 --   空 (= 既存の単一 mark layer) なら base のみ・出力は従来と byte 一致。
---   [English]: ★ One layer = one base mark plus any number of overlaid
+--   [English]: One layer = one base mark plus any number of overlaid
 --   sub-marks ('lyOverlay'). After drawing the base, each sub-mark is drawn
 --   "inheriting the parent's group (encX), color (colorBy), value (encY),
 --   etc., but with its own kind/nudge/markWidth/side" (used for raincloud
@@ -1002,7 +1002,7 @@ renderLayerBase r layout pal ly =
 --   返った 'Primitive' 列をそのまま emit する (HS は registry 不要 = closure が源)。
 --   'Graphics.Hgg.Spec.Layer.lyCustom' が空なら no-op。 RenderCtx は scale 適用済 projection・plot 領域・resolver・
 --   theme 既定色を提供する (authoring API)。
---   [English]: ★ Draws a custom mark. Passes a 'RenderCtx' to the draw
+--   [English]: Draws a custom mark. Passes a 'RenderCtx' to the draw
 --   closure stored in 'Graphics.Hgg.Spec.Layer.lyCustom' and emits the returned 'Primitive' list
 --   as-is (no registry is needed on the Haskell side — the closure is the
 --   source). A no-op when 'Graphics.Hgg.Spec.Layer.lyCustom' is empty. RenderCtx provides the
@@ -1072,7 +1072,7 @@ renderLegend r layout pal spec =
 --   LegendGuide / collectGuides は Layout へ集約 (予約と描画の単一情報源)。
 --   ここでは Layout から import して使う。
 --   [English]: Turns the first color encoding found into a legend (matches
---   PS findColorEnc). ★ findColorEnc / allColorCategories /
+--   PS findColorEnc). findColorEnc / allColorCategories /
 --   effectiveLegendTitle / nubKeep / LegendGuide / collectGuides are all
 --   consolidated into Layout (a single source shared by reservation and
 --   drawing); here they are simply imported from Layout and used.
@@ -1176,14 +1176,14 @@ legendUsesPoint spec = case filter (\l -> case getLast (lyColor l) of
 --   ★ キー背景は 'legendKeyPrim' と同じ theme 口 tpLegendKeyBg
 --   ("" = 塗らない) に一本化。 旧 grey95 ハードコードは bottom/top 凡例だけ
 --   一本化から漏れていた取り残し。
---   [English]: The legend's color swatch (given left, top, key size). ★
+--   [English]: The legend's color swatch (given left, top, key size).
 --   Like ggplot's @legend.key@, lays a background square behind each key
 --   before drawing the marker on top. Point geoms are drawn as circles
 --   (per-category ●▲■ when shapeBy maps to the same column as color);
 --   others are drawn as colored rectangles. The marker diameter is set to
 --   __the same diameter as points in the plot__ (markerDiam = the resolved
 --   lySize, or the 1.65mm default) so the legend markers are not enlarged.
---   ★ The key background is consolidated onto the same theme knob as
+--   The key background is consolidated onto the same theme knob as
 --   'legendKeyPrim', tpLegendKeyBg ("" = unfilled). The old hardcoded
 --   grey95 was a leftover that had been missed when the bottom/top legend
 --   was consolidated onto this knob.
@@ -1216,7 +1216,7 @@ legendSwatch mLayer usePoint mShape markerDiam pal left top sz col =
 --   [English]: The top margin (pt) of a top-aligned legend block. ggplot
 --   vertically centers the right legend, so there is no directly
 --   corresponding metric; since this is a user preference (top-aligned),
---   it is defined as a multiple of half_line (11pt ≈ 10). ★ half_line is
+--   it is defined as a multiple of half_line (11pt ≈ 10). half_line is
 --   now derived as base/2 (bit-identical to the previous 2×5.5 at the
 --   default of 11).
 legendTopInset :: VisualSpec -> Double
@@ -1238,12 +1238,12 @@ data LegendKeyStyle
 --   1pt 縁をハードコードしており、 精緻なスーツ形の凹みを潰していた (= plot と不一致)。
 --   ★ キー 1 辺 kw は呼び手が実効値 ('effectiveLegendKeyW') で渡す
 --   (pitch = keyW ゆえ引数 1 つ。 本関数は spec を持たないため)。
---   [English]: ★ The legend key's decoration is kept in sync with the
+--   [English]: The legend key's decoration is kept in sync with the
 --   plot's points (@mLayer@ = the corresponding point layer). KeyPoint's
 --   fill and stroke are consolidated onto 'markerFillFor'/'markerStrokeFor'
 --   (no stroke by default). The previous implementation hardcoded a 1pt
 --   stroke of the same color as the fill, which flattened fine shape
---   details such as suit-symbol notches (a mismatch with the plot). ★ The
+--   details such as suit-symbol notches (a mismatch with the plot). The
 --   key's side length kw is passed by the caller as the effective value
 --   ('effectiveLegendKeyW') — a single argument, since pitch = keyW and
 --   this function itself does not hold the spec.
@@ -1297,7 +1297,7 @@ legendMarkerDiam spec =
 --   color と shape を __同じ列__ にマップしているとき (ggplot の統合凡例) のみ、 自動
 --   shape scale ('shapePalette') を k で巡回して返す。 色のみ・shape 別列 (= ggplot は
 --   2 凡例) のときは Nothing (= 従来の円) にして単一 color 凡例を保つ。
---   [English]: ★ The marker shape for legend entry k (a category index).
+--   [English]: The marker shape for legend entry k (a category index).
 --   Only when a scatter layer maps color and shape to __the same column__
 --   (ggplot's combined legend) does this cycle through the automatic shape
 --   scale ('shapePalette') by k. When color alone is mapped, or shape maps
@@ -1512,7 +1512,7 @@ renderLegendRight spec r layout pal centered _enc =
 --   行 pitch も予約と同じ effectiveLegendKeyPitch。 +7 は swatch 上端 (cy-7) を
 --   ブロック上端に一致させる内部 anchor (swatch/text の描画式は従来のまま)。
 --   [English]: LegendBottom: lays out entries horizontally in the reserved
---   area below the panel (matches PS renderLegendBottom). ★ The actual
+--   area below the panel (matches PS renderLegendBottom). The actual
 --   position is panel-bottom + lpLegendYOff (a single source shared with
 --   Layout's bM reservation stack — the outermost of
 --   ticks→labels→title→legend). The old hardcoded +50 was in the reverse
@@ -1616,7 +1616,7 @@ renderLegendInside spec r layout pal enc fracX fracY =
 -- | [日本語]: annotation 1 個を Primitive に変換。 ★ 座標は 'Graphics.Hgg.Unit.Pos' で、
 --   'resolvePosX'/'resolvePosY' (= UCtx 経由) で pt 化する。native/npc/絶対長を軸
 --   ごとに混在できる。dpi は PAbs Px 解決にのみ使う (layout は pt)。
---   [English]: Converts a single annotation into primitives. ★ Coordinates
+--   [English]: Converts a single annotation into primitives. Coordinates
 --   are given as 'Graphics.Hgg.Unit.Pos' and converted to pt via 'resolvePosX'/'resolvePosY'
 --   (through UCtx). native/npc/absolute-length units can be mixed per
 --   axis. dpi is used only to resolve PAbs Px (layout itself is in pt).

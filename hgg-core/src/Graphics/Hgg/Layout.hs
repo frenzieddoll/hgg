@@ -826,7 +826,7 @@ legendBaseSize = 2 * ggHalfLine
 --   grid の "lines" は行高 (= 1.2 × base × lineheight) なので 1.2×base(=13.2)
 --   ではなくこの値。 = 1.2 × base × 1.3133。
 --   [English]: The side length of a legend key (pt), matching ggplot's
---   @legend.key.size = unit(1.2,"lines")@. ★Measured from an R gtable trace
+--   @legend.key.size = unit(1.2,"lines")@. Measured from an R gtable trace
 --   as 17.34pt (at base 11pt). Since grid's "lines" is a line height
 --   (1.2 × base × lineheight), the value is not 1.2×base(=13.2) but this
 --   one: 1.2 × base × 1.3133.
@@ -882,14 +882,14 @@ isWideChar c =
 --   上回る安全側に丸め 「切れない方向」 を維持。 全角は 'isWideChar' で 1.0em。
 --   ★この表は HS=PS で完全一致させること (PS canvas も同値)。
 --   [English]: Approximates a single character's advance in em units.
---   ★Measured from the actual advance of the default sans font (DejaVu) and
+--   Measured from the actual advance of the default sans font (DejaVu) and
 --   bucketed by character class (measured via rsvg trim; e.g. i/l≈0.25,
 --   a/e≈0.56, M/W≈0.9). The previous flat 0.6 over-reserved space for
 --   labels dominated by narrow glyphs (lowercase, hyphens, etc.), whose
 --   true average is ~0.49em/char, producing excess right padding. Values
 --   are rounded slightly above the measured average, on the safe side of
 --   "never truncate". Fullwidth characters are 1.0em via 'isWideChar'.
---   ★This table must match exactly between Haskell and PureScript (the
+--   This table must match exactly between Haskell and PureScript (the
 --   PureScript canvas uses the same values).
 charWidthEm :: Char -> Double
 charWidthEm c
@@ -955,9 +955,9 @@ dagNodeBaseHalfWidth n =
 --   single-column legend). Matches renderGuideBlock's drawing formula
 --   exactly: column width = (key side) + (key-to-label gap = half_line/2) +
 --   (longest label width) + (right padding = half_line). If the title is
---   wider, the title width wins instead. Arguments: spec (★so key
+--   wider, the title width wins instead. Arguments: spec (so key
 --   width/gap are drawn from base-derived effective values), item font pt,
---   title font pt, title string, and labels. ★"Longest" is measured by
+--   title font pt, title string, and labels. "Longest" is measured by
 --   maximum 'textWidthEm', not character count (since fullwidth mixing can
 --   reverse the ordering, width is used).
 legendGuideWidth :: VisualSpec -> Double -> Double -> Text -> [Text] -> Double
@@ -1031,7 +1031,7 @@ effectiveLegendTitle spec = maybe "" id (getLast (vsLegendTitle spec))
 --   [English]: The display order of legend keys. Returns
 --   (originalIndex, label); color is looked up by originalIndex, so each
 --   key's color stays fixed even when reversed. Reversed when
---   vsLegendReverse=True. ★Migrated from Render/Layer, since auto-wrap's
+--   vsLegendReverse=True. Migrated from Render/Layer, since auto-wrap's
 --   column-width computation depends on display order and must be shared
 --   between reservation (computeLayout) and rendering (a single source of
 --   truth).
@@ -1069,7 +1069,7 @@ data LegendGuide
   = ColorGuide !ColorEnc      -- [日本語]: 色 guide (categorical / continuous)。 [English]: A color guide (categorical or continuous).
   | ShapeGuide !ColRef        -- [日本語]: 形 guide (色とは別列・または色無しのとき)。 [English]: A shape guide (a column distinct from color, or used when there is no color).
   | CountBarGuide !Double !Double  -- [日本語]: ★ Phase 40: 件数 colorbar (lo,hi)。 hexbin/bin2d-count 用 (列でなく集計値ゆえ ColorByContinuous と別。 ラベル = "count")。
-                                   -- [English]: ★A count colorbar (lo,hi), for hexbin/bin2d-count (distinct from ColorByContinuous since it is an aggregate rather than a column; labeled "count").
+                                   -- [English]: A count colorbar (lo,hi), for hexbin/bin2d-count (distinct from ColorByContinuous since it is an aggregate rather than a column; labeled "count").
 
 -- | [日本語]: spec から guide を ggplot 順 (color → shape) で収集。 形が色と
 --   同列なら統合し形 guide なし。
@@ -1161,8 +1161,8 @@ effectiveLegendPos spec = case getLast (vsLegend spec) of
 --   axis.ticks.length = 0)。
 --   [English]: The effective tick length (pt). Priority: theme
 --   (toTickLength) > the default half_line/2 (ggplot's
---   axis.ticks.length; ★changed from the fixed 'ggTickLen' 2.75 to a
---   base-derived value, bit-identical at the default of 11. ★ThemeVoid
+--   axis.ticks.length; changed from the fixed 'ggTickLen' 2.75 to a
+--   base-derived value, bit-identical at the default of 11. ThemeVoid
 --   alone defaults to 0, matching ggplot theme_void's
 --   axis.ticks.length = 0).
 effectiveTickLength :: VisualSpec -> Double
@@ -1230,7 +1230,7 @@ tickOutwardLen spec = case effectiveTickDir spec of
 --   title 帯・凡例などの内側予約は従来どおり自動算出のまま (computeLayout と
 --   Render.labels が共有)。
 --   [English]: The effective plot margin (pt). Priority: theme
---   (toPlotMargin) > the default, half_line on each side (★changed from
+--   (toPlotMargin) > the default, half_line on each side (changed from
 --   the fixed 'ggHalfLine' 5.5 to a base-derived value, bit-identical at
 --   the default of 11). When specified, it __replaces__ the outer margin
 --   entirely (matching ggplot's plot.margin). Inner reservations for axis
@@ -1298,7 +1298,7 @@ effectiveLegendBaseSize spec = 2 * effectiveHalfLine spec
 --   = 32px)。
 --   [English]: The effective legend key side length (pt), = 1.2 lines (the
 --   1.3133 line-height multiplier matches 'legendKeyW'). Bit-identical at
---   the default of 11. pitch = keyW (key cells adjacent). ★theme
+--   the default of 11. pitch = keyW (key cells adjacent). theme
 --   (toLegendKeySize, corresponding to ggplot's legend.key.size) takes
 --   priority. The cowplot preset bakes in 1.1 × font_size (measured against
 --   gold: base14 = 15.4pt = 32px).

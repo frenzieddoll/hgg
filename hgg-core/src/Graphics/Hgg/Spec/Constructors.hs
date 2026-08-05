@@ -448,7 +448,7 @@ funnel effectCol seCol = mempty
 
 -- | [日本語]: Box plot。 ★ 値 1 列を受ける。 群分けは @<> groupBy "g"@ (色一律) /
 --   @<> colorBy "g"@ (群色+凡例) で付ける (ggplot 同型)。 群指定なしなら単一 box。
---   [English]: A box plot. ★ Takes a single value column. Grouping is added
+--   [English]: A box plot. Takes a single value column. Grouping is added
 --   with @<> groupBy "g"@ (uniform color) / @<> colorBy "g"@ (per-group
 --   color + legend), matching ggplot. With no group specified, it draws a
 --   single box.
@@ -461,7 +461,7 @@ boxplot vals = mempty
 --   等) では群ごとに集約を作りカテゴリ x に並べる。 内部表現は encX (= 既存の
 --   群配置機構を流用)。 ⚠ @Data.List.groupBy@ と同名なので、 両方 import する場合は
 --   qualified 推奨。
---   [English]: ★ A channel for grouping and positioning marks (like
+--   [English]: A channel for grouping and positioning marks (like
 --   ggplot's @aes(group=)@). It does not add color (uniform; use 'color' /
 --   'colorBy' separately for that). Distribution marks (boxplot/violin,
 --   etc.) build one aggregate per group and lay them out along categorical
@@ -659,7 +659,7 @@ step x y = mempty
 --   analyze-bridge's @resolveStats@ performs the fit via hanalyze and
 --   expands it into a confidence band (band) plus a regression line
 --   (line). Decoration works the same as an ordinary geom:
---   @statLm "x" "y" <> color N.red <> stroke 2@. ★It is never drawn on its
+--   @statLm "x" "y" <> color N.red <> stroke 2@. It is never drawn on its
 --   own (the renderer skips MStatLM) — it must be resolved via the
 --   bridge's saveSVGBoundStats or similar.
 statLm :: ColRef -> ColRef -> Layer
@@ -711,7 +711,7 @@ statSmoothCI x y n = (statSmooth x y n)
 --   @geom_smooth(method="lm", formula=y~poly(x,deg))@). The degree deg
 --   reuses 'lyBinCount'. resolveStats fits @y ~ poly(x,deg)@ and expands it
 --   into band+line; the confidence band's level is 'lyStatLevel' (default
---   0.95). ★It is never drawn on its own (the renderer skips MStatPoly).
+--   0.95). It is never drawn on its own (the renderer skips MStatPoly).
 statPoly :: ColRef -> ColRef -> Int -> Layer
 statPoly x y deg = mempty
   { lyKind = First (Just MStatPoly), lyEncX = Last (Just x), lyEncY = Last (Just y)
@@ -724,7 +724,7 @@ statPoly x y deg = mempty
 --   [English]: A residual-vs-fitted diagnostic scatter (base R's
 --   @plot(lm)@ #1). Fits @y ~ x@ and expands each point into a scatter
 --   mapped to (fitted, residual) — a regression diagnostic. Decoration
---   carries over to the scatter. ★It is never drawn on its own (the
+--   carries over to the scatter. It is never drawn on its own (the
 --   renderer skips MStatResid); it requires the bridge's resolveStats.
 statResid :: ColRef -> ColRef -> Layer
 statResid x y = mempty
@@ -785,7 +785,7 @@ stream x y = mempty
 -- | [日本語]: P2: violin plot。 ★ boxplot と同じく __値 1 列__を受ける。 群分けは
 --   @<> groupBy "g"@ (色一律) / @<> colorBy "g"@ (群色+凡例) で付ける (ggplot
 --   同型)。 群指定なしなら単一 violin。
---   [English]: P2: a violin plot. ★ Like boxplot, it takes a __single value column__.
+--   [English]: P2: a violin plot. Like boxplot, it takes a __single value column__.
 --   Grouping is added with @<> groupBy "g"@ (uniform color) /
 --   @<> colorBy "g"@ (per-group color + legend), matching ggplot. With no
 --   group specified, it draws a single violin.
@@ -793,13 +793,13 @@ violin :: ColRef -> Layer
 violin v = mempty { lyKind = First (Just MViolin), lyEncY = Last (Just v) }
 
 -- | [日本語]: P3: strip plot。 ★ 値 1 列 + groupBy/colorBy で群分け。
---   [English]: P3: a strip plot. ★ A single value column, grouped via
+--   [English]: P3: a strip plot. A single value column, grouped via
 --   groupBy/colorBy.
 strip :: ColRef -> Layer
 strip v = mempty { lyKind = First (Just MStrip), lyEncY = Last (Just v) }
 
 -- | [日本語]: P3: swarm plot。 ★ 値 1 列 + groupBy/colorBy で群分け。
---   [English]: P3: a swarm plot. ★ A single value column, grouped via
+--   [English]: P3: a swarm plot. A single value column, grouped via
 --   groupBy/colorBy.
 swarm :: ColRef -> Layer
 swarm v = mempty { lyKind = First (Just MSwarm), lyEncY = Last (Just v) }
@@ -812,7 +812,7 @@ swarm v = mempty { lyKind = First (Just MSwarm), lyEncY = Last (Just v) }
 --   「親の群 (encX)・色 (colorBy)・値 (encY) を継承・自前の
 --   kind/nudge/markWidth/side で」 描く。 1D 分布 mark (box/violin/strip/swarm)
 --   の重畳を想定 (= raincloud / 自作 composite)。
---   [English]: P22: raincloud (a composite of violin + box + strip). ★ A
+--   [English]: P22: raincloud (a composite of violin + box + strip). A
 --   single value column, grouped via groupBy/colorBy. A direct mark
 --   combinator: @a \<+\> b@ returns a __single Layer__ with a as the base
 --   and b as the overlaid sub-mark (since the return type stays Layer,
@@ -832,7 +832,7 @@ a <+> b = a { lyOverlay = lyOverlay a ++ [b { lyOverlay = [] }] ++ lyOverlay b }
 --   つまみ nudge/markWidth/side に委譲)。 戻り型は Layer なので
 --   @raincloud v \<\> groupBy g@ / @\<\> colorBy g@ は従来どおり群分けする。
 --   [English]: P22: raincloud (a composite of a half violin + box +
---   jitter strip). ★ Retired as a dedicated mark and demoted to a preset
+--   jitter strip). Retired as a dedicated mark and demoted to a preset
 --   built from a 3-sub-mark composite via '<+>' (positioning is delegated
 --   to the D1 knobs nudge/markWidth/side). Since the return type is Layer,
 --   @raincloud v \<\> groupBy g@ / @\<\> colorBy g@ still group as before.
@@ -861,7 +861,7 @@ compositeLanes ly = foldl add [] [ c | l <- ly : lyOverlay ly, Just c <- [getLas
 --   box/violin と同じ)。 群指定なしは単一 density 風。 ridge は値→x・群→y の
 --   向きが要るため、 ridge レイヤを含む spec は 'Graphics.Hgg.Spec.Setters.ridgeAutoFlip' で coord_flip
 --   を自動適用する (値が x、 群が y に回る)。 内部表現は violin と同じ encY=値。
---   [English]: P21: ridge / joyplot. ★ Unified with the other distribution
+--   [English]: P21: ridge / joyplot. Unified with the other distribution
 --   marks, it takes a __single value column__. Grouping is added via
 --   @<> groupBy "g"@ / @<> colorBy "g"@ (the same as box/violin); with no
 --   group specified it looks like a single density curve. Since ridge
@@ -956,7 +956,7 @@ data HexCell = HexCell
 --   data range and @pts@ is the list of (x,y) points. Points are assigned
 --   to hex cells in (u,v) space normalized by binwidth, counted, and
 --   returned with center + six vertices in data coordinates (fed straight
---   into the scale pipeline to reach screen space; pointy-top). ★HS and PS
+--   into the scale pipeline to reach screen space; pointy-top). HS and PS
 --   use the identical formula and JS Math.round (= @floor (z+0.5)@) to
 --   match byte-for-byte.
 hexbinCells :: Int -> (Double, Double) -> (Double, Double)

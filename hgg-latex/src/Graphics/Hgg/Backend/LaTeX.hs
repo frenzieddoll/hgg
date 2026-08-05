@@ -165,7 +165,7 @@ data CJKMode
     --   [English]: Emits labels as raw UTF-8 without wrapping (__for lualatex / xelatex__.
     --   CJK font resolution is left to the preamble —
     --   luatexja, fontspec, etc. Verified working when typeset with
-    --   lualatex + luatexja, via 'luaLaTeXConfig'). ★ A footgun with the
+    --   lualatex + luatexja, via 'luaLaTeXConfig'). A footgun with the
     --   reverse combination (verified 2026-07-09): typesetting a 'CJKWrap'
     --   .tex with lualatex does not error — it __silently drops only the CJK characters__.
     --   Always use CJKRaw when typesetting with lualatex.
@@ -519,7 +519,7 @@ fillDrawOpts (FillStyle fc opa) ms =
 --   How labels are interpreted:
 --     * a string entirely wrapped in @$...$@ is treated as __math passthrough__
 --       (emitted raw, without escaping — a distinctive
---       feature of the LaTeX backend. ★ other backends draw the $ characters
+--       feature of the LaTeX backend. other backends draw the $ characters
 --       literally as part of the string)
 --     * a string containing CJK characters is wrapped in the CJK
 --       environment for 'texCJKFamily' (pdflatex + CJKutf8)

@@ -10,7 +10,7 @@
 --
 --   タイポは文字列ルックアップでなくトップレベル束縛ゆえコンパイルエラーで防げる。
 --   grey/gray の両綴り・連番 (grey0..grey100 等) も R に倣って保持。
---   [English]: ★This file is machine-generated (scripts/gen-named-colors.py).
+--   [English]: This file is machine-generated (scripts/gen-named-colors.py).
 --   Do not edit it by hand. The primary source is R's
 --   src/library/grDevices/src/colors.c, specifically ColorDataBase[] (the
 --   backing data for R's colors(), 657 colors). Values are derived from the

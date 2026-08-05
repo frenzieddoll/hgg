@@ -28,7 +28,7 @@
 --   top/bottom bands per row" once for this single grid, which guarantees
 --   panel-body alignment across nesting boundaries.
 --
---   ★Approach (see the design section of the plan): recursively computes
+--   Approach (see the design section of the plan): recursively computes
 --   tree dimensions in integer grid units.
 --     * leaf: @w=1, h=1@.
 --     * hbox (side-by-side): @w=Σ child.w@, @h=max child.h@. Each child spans

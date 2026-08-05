@@ -41,16 +41,16 @@
 --   above — the decoration on a stat layer works the same as on a normal
 --   geom.)
 --
---   ★ Dependency direction (most important): @plot-core@ stays
+--   Dependency direction (most important): @plot-core@ stays
 --   analyze-independent (it only holds the tag). Regression fitting is a
 --   reverse edge (@plot → analyze@), so it is confined to this opt-in
 --   isolation package (`hgg-analyze-bridge`) alone.
 --
---   ★ Usage: after binding, 'saveSVGBoundStats' / 'renderBoundStats'
+--   Usage: after binding, 'saveSVGBoundStats' / 'renderBoundStats'
 --   automatically call 'resolveStats' with bpResolver before rendering (the
 --   dataframe is referenced only once).
 --
---   ★ What is delegated: @statLm@ fits via @parseModel "y ~ x"@ + @fitLMF@
+--   What is delegated: @statLm@ fits via @parseModel "y ~ x"@ + @fitLMF@
 --   and computes the confidence band via LM's @confidenceBand@ (using the
 --   design matrix from @designMatrix@ — the same [1,x] design as fitLMF).
 --   @statSmooth@ fits @y ~ bs(x,n)@ via fitLMF (B-spline, curve only, no
@@ -112,7 +112,7 @@ resolveStats r vs = vs { vsLayers = concatMap (expandLayer pal r) (vsLayers vs) 
 --   scatter (renderer は lpCategoricalPalette を index 参照) と一致する。
 --   ggplot hue sentinel (["__ggplot_hue__"]) は群数依存ゆえ 'resolveGrouped' で展開する。
 --   [English]: The categorical palette that group colors are drawn from.
---   ★ Derived using the same discipline as Layout's catPalRaw (an explicit
+--   Derived using the same discipline as Layout's catPalRaw (an explicit
 --   spec.palette wins over the theme's default series palette). This keeps
 --   per-group stat line colors consistent with ColorByCol scatter (whose
 --   renderer looks up lpCategoricalPalette by index). The ggplot hue

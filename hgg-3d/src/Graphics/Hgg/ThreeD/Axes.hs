@@ -371,7 +371,7 @@ renderAxes3DPanes f sty cam proj vp ax =
 --   __小数点がある場合のみ__ (整数の末尾 0 を削ると 10→1・100→1 になるバグを
 --   修正済。 log tick の 10/100/1000 で顕在化)。
 --   [English]: Formats a number compactly (1 decimal place, trailing zeros
---   and the decimal point stripped). ★Trailing-zero stripping only applies
+--   and the decimal point stripped). Trailing-zero stripping only applies
 --   __when there is a decimal point__ (stripping trailing zeros from an
 --   integer used to turn 10 into 1 and 100 into 1 — a bug now fixed; it
 --   surfaced with log ticks like 10/100/1000).

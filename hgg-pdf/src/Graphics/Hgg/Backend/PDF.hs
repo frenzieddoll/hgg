@@ -16,7 +16,7 @@
 -- origin top-left, y pointing down. A global flip would mirror text, so the
 -- conversion is applied per primitive instead).
 --
--- ★v1 制約: フォントは PDF 標準 14 種 (Latin) のみ — 日本語ラベルは
+-- [日本語]: ★v1 制約: フォントは PDF 標準 14 種 (Latin) のみ — 日本語ラベルは
 -- 出せない (非 Latin-1 文字は警告 + @?@ 置換)。 日本語の受け皿は
 -- hgg-rasterific (PNG + TrueType)。
 --

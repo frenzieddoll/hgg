@@ -116,7 +116,7 @@ k *~ Length n u = Length (k * n) u
 --   as in @width 624@, while also accepting a unit
 --   annotation such as @width (7 *~ inch)@ at the same argument type.
 --
---   ★ Why this rather than a type class (the @ToLength@ idea): with
+--   Why this rather than a type class (the @ToLength@ idea): with
 --   @ToLength a => a -> _@, @width 624@ becomes ambiguous at
 --   @(Num a, ToLength a) => a@, and since ToLength is not a standard class,
 --   Haskell2010 defaulting does not kick in, so it __fails to compile__
