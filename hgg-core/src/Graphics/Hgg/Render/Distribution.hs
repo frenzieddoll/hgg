@@ -66,23 +66,47 @@ import           Graphics.Hgg.Primitive
 import           Graphics.Hgg.Render.Common
 
 
--- | Phase 36 D3: 各群を 'lpXCategoryLabels' 内の **大域 index**(= 列名スロット)に置く。
---   cats が空(単一群・非 categorical)なら局所順 @[0..]@。 既存の grouped 図は groups が cats と
---   同順・全在ゆえ大域 = 局所で **byte 不変**。 distCols は各レーンが 1 群(自列名)= 大域 index。
+-- | [日本語]: 各群を 'lpXCategoryLabels' 内の __大域 index__ (= 列名スロット) に置く。
+--   cats が空 (単一群・非 categorical) なら局所順 @[0..]@。 既存の grouped 図は groups が cats と
+--   同順・全在ゆえ大域 = 局所で __byte 不変__。 distCols は各レーンが 1 群 (自列名) = 大域 index。
+--   [English]: Places each group at its __global index__ within
+--   'lpXCategoryLabels' (a column-name slot). If cats is empty (a single group,
+--   non-categorical), falls back to local order @[0..]@. In existing grouped
+--   figures, groups follow cats in the same order and are all present, so
+--   global equals local and output is __byte-identical__. For distCols, each
+--   lane is its own group (its own column name), which is its global index.
 laneIndices :: Layout -> [(Text, a)] -> [Int]
 laneIndices layout gs =
   let xls = lpXCategoryLabels layout
   in if null xls then [0 ..]
      else [ maybe i id (elemIndex g xls) | (i, (g, _)) <- zip [0 ..] gs ]
 
--- | Box plot (= 5-number summary)。 PS / HS で API 統一: lyEncY = 値、 lyEncX = 群 (optional)。
--- 群指定なしなら単一 box を plot 中央に。 群指定ありなら各群について並列描画。
--- 中央線 (median) + IQR 箱 + 髭 (min/max within 1.5*IQR)。
--- | Phase 36 B2 → Phase 64 A3: box glyph を CrossLoc (cross 位置) + 半幅指定で描く共通部。
---   座標変換は projectCrossBar/Span/Point (Layout) に集約し、 geom 側は coord を場合分け
+-- | [日本語]: Box plot (= 5-number summary)。 PS / HS で API 統一: lyEncY = 値、 lyEncX = 群 (optional)。
+--   群指定なしなら単一 box を plot 中央に。 群指定ありなら各群について並列描画。
+--   中央線 (median) + IQR 箱 + 髭 (min/max within 1.5*IQR)。
+--   [English]: A box plot (a 5-number summary). Unified API across PS/HS:
+--   lyEncY is the value, lyEncX is the group (optional). With no group, draws
+--   a single box centered in the plot; with a group, draws each group's box
+--   side by side. Shows the median line, the IQR box, and whiskers
+--   (min/max within 1.5*IQR).
+-- | [日本語]: box glyph を CrossLoc (cross 位置) + 半幅指定で描く共通部。
+--   座標変換は 'Graphics.Hgg.Layout.projectCrossBar' /
+--   'Graphics.Hgg.Layout.projectCrossSpan' /
+--   'Graphics.Hgg.Layout.projectCrossPoint' に集約し、 geom 側は coord を場合分け
 --   しない。 直線座標系は旧 px 式と byte 一致 (halfPx = box 半幅 px)、 polar は
 --   箱 = wedge (halfD = data 半幅)・髭 = radial 線・median/cap = 弧。
 --   normal path (群 = カテゴリ位置) と dodge path (sub-slot 中心) が共有。
+--   [English]: The shared routine that draws a box glyph from a 'CrossLoc'
+--   (its position on the cross axis) plus a half width. All coordinate
+--   conversion is concentrated in 'Graphics.Hgg.Layout.projectCrossBar' /
+--   'Graphics.Hgg.Layout.projectCrossSpan' /
+--   'Graphics.Hgg.Layout.projectCrossPoint', so the geom itself never
+--   branches on the coordinate system. Linear systems are byte identical to
+--   the previous pixel formulas (halfPx is the box half width in pixels); in
+--   polar the body becomes a wedge (halfD is the half width in data units),
+--   the whiskers become radial lines, and the median and caps become arcs.
+--   Shared by the normal path (group at a categorical position) and the dodge
+--   path (centered in a sub-slot).
 boxGlyphAt :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
            -> Double -> [Double] -> Text -> Text -> [Primitive]
 boxGlyphAt coord layout loc offPx halfPx halfD a sorted0 fill stroke =

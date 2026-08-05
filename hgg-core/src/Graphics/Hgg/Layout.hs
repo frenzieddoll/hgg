@@ -1653,9 +1653,13 @@ projectBarRect CoordPolarX l centerD baseD valueD thicknessPx =
 projectBarRect CoordPolarY l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
 
--- | Phase 64 A2 (Common.hs:505 から移設): 扇形 (annular sector) の path。
---   (tf0..tf1) = 角度 frac 帯、 (rf0..rf1) = 半径 frac 帯。 円弧は 0.1 rad 刻みの
---   折線近似 (nSeg ≥ 2)。 polar bar (rose/pie) と 'projectBar' が共有する。
+-- | [日本語]: 扇形 (annular sector) の path。 (tf0..tf1) = 角度 frac 帯、
+--   (rf0..rf1) = 半径 frac 帯。 円弧は 0.1 rad 刻みの折線近似 (nSeg ≥ 2)。
+--   polar bar (rose/pie) と 'projectBar' が共有する。
+--   [English]: The path of an annular sector. (tf0..tf1) is the angular
+--   fraction band and (rf0..rf1) the radial fraction band. Arcs are
+--   approximated by a polyline at 0.1 rad per segment (nSeg >= 2). Shared by
+--   polar bars (rose / pie) and 'projectBar'.
 wedgeSegments :: Layout -> Double -> Double -> Double -> Double -> [PathSegment]
 wedgeSegments l tf0 tf1 rf0 rf1 =
   let dθ    = abs (tf1 - tf0) * 2 * pi
@@ -1668,11 +1672,19 @@ wedgeSegments l tf0 tf1 rf0 rf1 =
        (p0 : rest) -> MoveTo p0 : map LineTo rest ++ [ClosePath]
        []          -> []
 
--- | Phase 64 A2: データ空間の線分 → px polyline。 直線座標系 (Cartesian/Flip) は
+-- | [日本語]: データ空間の線分 → px polyline。 直線座標系 (Cartesian/Flip) は
 --   両端の 2 点 (= 従来の直線結線と bit 一致)、 極座標は data 空間で線形補間した
 --   中間点を 'projectXY' で投影し θ 0.1 rad 刻み ('wedgeSegments' と同粒度) の
 --   折線に曲げる。 θ 不変 (= 純 radial) な線分は 2 点のまま。 geom はこの関数を
---   通すことで「線分が座標系でどう曲がるか」 を知らずに済む (§1 集約の受け皿)。
+--   通すことで「線分が座標系でどう曲がるか」 を知らずに済む。
+--   [English]: Projects a segment in data space to a pixel polyline. Linear
+--   coordinate systems (Cartesian / Flip) give just the two endpoints (bit
+--   identical to the previous straight-line joining); polar systems bend the
+--   segment into a polyline by projecting intermediate points — linearly
+--   interpolated in data space — through 'projectXY' at 0.1 rad per segment
+--   (the same granularity as 'wedgeSegments'). A segment at constant theta
+--   (purely radial) stays two points. Going through this function frees each
+--   geom from knowing how a segment bends under the coordinate system.
 projectSegment :: Coord -> Layout -> (Double, Double) -> (Double, Double) -> [Point]
 projectSegment coord l (dx0, dy0) (dx1, dy1)
   | not (isPolar coord) =
@@ -1689,18 +1701,30 @@ projectSegment coord l (dx0, dy0) (dx1, dy1)
       in [ uncurry Point (projectXY coord l (lerp dx0 dx1 t) (lerp dy0 dy1 t))
          | t <- ts ]
 
--- | Phase 64 A2: bar/box 系「data 空間の棒」 の座標系対応形状。 geom 側の
+-- | [日本語]: bar/box 系「data 空間の棒」 の座標系対応形状。 geom 側の
 --   @case coord of@ を「形状の case」 に置き換えるための戻り値型。
+--   [English]: The coordinate-aware shape of a "bar in data space" for the
+--   bar / box family. This return type replaces each geom's @case coord of@
+--   with a case on the shape instead.
 data BarShape = BarRect !Rect | BarWedge ![PathSegment]
   deriving (Show, Eq)
 
--- | Phase 64 A2: 棒 (中心 centerD ± halfWidthD、 base..value) の投影 dispatcher。
+-- | [日本語]: 棒 (中心 centerD ± halfWidthD、 base..value) の投影 dispatcher。
 --   直線座標系は 'projectBarRect' の px Rect (= bit 一致、 厚みは従来通り px 指定)、
 --   極座標は 'wedgeSegments' の扇形。 halfWidthD は data 単位の半幅 (bar 既定 0.45
 --   = resolution 0.9 の半分)、 thicknessPx は直線座標系専用の px 厚み (極座標では
---   未使用)。 renderBarSimple の旧 mkWedge (Basic.hs) と式レベルで同一:
---   PolarX = 角度帯 centerD±halfWidthD × 半径 base..value (rose)、
+--   未使用)。 PolarX = 角度帯 centerD±halfWidthD × 半径 base..value (rose)、
 --   PolarY = 角度 base..value × 半径帯 centerD±halfWidthD (内径は 0 で clamp)。
+--   [English]: The projection dispatcher for a bar (centered at centerD with
+--   half width halfWidthD, spanning base..value). Linear coordinate systems
+--   give the pixel 'Rect' of 'projectBarRect' (bit identical; thickness is
+--   still given in pixels), polar systems the annular sector of
+--   'wedgeSegments'. halfWidthD is the half width in data units (0.45 by
+--   default for bars, half of the 0.9 resolution); thicknessPx is the pixel
+--   thickness used only by linear systems. PolarX gives an angular band of
+--   centerD±halfWidthD over radius base..value (a rose); PolarY gives angle
+--   base..value over the radial band centerD±halfWidthD (inner radius clamped
+--   at 0).
 --   domain 退化 (span=0) 時の半幅 frac は 0.5 (= 旧 hwFrac の既定と同一)。
 projectBar :: Coord -> Layout -> Double -> Double -> Double -> Double -> Double
            -> BarShape
@@ -1716,26 +1740,49 @@ projectBar coord l centerD baseD valueD halfWidthD thicknessPx = case coord of
     spanX = lsDomainHi (lpXScale l) - lsDomainLo (lpXScale l)
     hf    = if spanX == 0 then 0.5 else halfWidthD / spanX
 
--- | Phase 64 A3: categorical-cross geom (box/violin/strip/swarm) の群中心指定。
+-- | [日本語]: categorical-cross geom (box/violin/strip/swarm) の群中心指定。
 --   'CrossAt' = cross 軸の data 座標 (categorical slot 位置 / dodge sub-slot 中心)、
 --   'CrossMid' = 単一群 (カテゴリ軸なし) の「plotArea 中央」。 CrossMid を px で
 --   なく変種として持つのは、 中央 px 自体が coord (Cartesian=横 / Flip=縦) に
 --   依存するため (= geom 側から case coord of を無くす)。
+--   [English]: Specifies the group center for categorical-cross geoms (box /
+--   violin / strip / swarm). 'CrossAt' is a data coordinate on the cross axis
+--   (a categorical slot position, or the center of a dodge sub-slot);
+--   'CrossMid' is "the middle of the plot area" for a single group with no
+--   categorical axis. 'CrossMid' is a constructor rather than a pixel value
+--   because that middle pixel itself depends on the coordinate system
+--   (horizontal under Cartesian, vertical under Flip) — which is exactly what
+--   lets each geom drop its @case coord of@.
 data CrossLoc = CrossAt !Double | CrossMid
   deriving (Show, Eq)
 
--- | CrossLoc の cross 軸 data 座標 (polar 経路用)。 CrossMid は x domain 中点
---   (= scale が plotArea を張る前提で plotArea 中央と affine 一致)。
+-- | [日本語]: CrossLoc の cross 軸 data 座標 (polar 経路用)。 CrossMid は
+--   x domain 中点 (= scale が plotArea を張る前提で plotArea 中央と affine 一致)。
+--   [English]: The cross-axis data coordinate of a 'CrossLoc', used by the
+--   polar path. 'CrossMid' is the midpoint of the x domain, which coincides
+--   affinely with the middle of the plot area given that the scale spans it.
 crossLocD :: Layout -> CrossLoc -> Double
 crossLocD _ (CrossAt d) = d
 crossLocD l CrossMid    = (lsDomainLo (lpXScale l) + lsDomainHi (lpXScale l)) / 2
 
--- | 極座標で「投影済み点を cross 軸方向へ offPx (px) ずらす」。 PolarX (cross=角度)
---   は接線方向 = 中心まわりの回転 (弧長 offPx)、 PolarY (cross=半径) は radial。
---   jitter / beeswarm / violin 幅は視覚 px 量 (点径・重なり回避) なので、 polar でも
---   data 角度でなく px 弧長で当てるのが正 (半径によらず点間隔が保たれる)。
---   半径 ≈ 0 は接線方向が定義できないため動かさない。 直線座標系は恒等
---   (linear 経路は projectCross* が px 加算で処理し、 ここへは来ない)。
+-- | [日本語]: 極座標で「投影済み点を cross 軸方向へ offPx (px) ずらす」。
+--   PolarX (cross=角度) は接線方向 = 中心まわりの回転 (弧長 offPx)、
+--   PolarY (cross=半径) は radial。 jitter / beeswarm / violin 幅は視覚 px 量
+--   (点径・重なり回避) なので、 polar でも data 角度でなく px 弧長で当てるのが正
+--   (半径によらず点間隔が保たれる)。 半径 ≈ 0 は接線方向が定義できないため
+--   動かさない。 直線座標系は恒等 (linear 経路は projectCross* が px 加算で
+--   処理し、 ここへは来ない)。
+--   [English]: Nudges an already-projected point by offPx pixels along the
+--   cross axis, in polar coordinates. Under PolarX (cross = angle) this is
+--   tangential — a rotation about the center by arc length offPx; under
+--   PolarY (cross = radius) it is radial. Jitter, beeswarm spread and violin
+--   width are visual pixel quantities (point diameter, overlap avoidance), so
+--   applying them as a pixel arc length rather than a data angle is the
+--   correct choice even in polar: point spacing is then preserved regardless
+--   of radius. At radius near 0 the tangential direction is undefined, so the
+--   point is left alone. Linear coordinate systems are the identity here (the
+--   linear path adds pixels inside projectCross* and never reaches this
+--   function).
 polarNudgePx :: Coord -> Layout -> Double -> Point -> Point
 polarNudgePx coord l offPx p@(Point px py) =
   let (cx, cy, _) = polarCenter l
@@ -1754,12 +1801,20 @@ polarNudgePx coord l offPx p@(Point px py) =
          in Point (cx + dx * k) (cy + dy * k)
        _ -> p
 
--- | Phase 64 A3: 「categorical cross × 連続 value」 geom の点投影。 box の外れ値・
+-- | [日本語]: 「categorical cross × 連続 value」 geom の点投影。 box の外れ値・
 --   strip の jitter 点・swarm の beeswarm 点・violin outline は全てここを通す。
 --   offPx = cross 軸方向の px offset (nudge / jitter / 幅)。 Cartesian/Flip は
 --   旧 geom 内 px 式と bit 一致: Cartesian = Point (sx cross + offPx) (sy v)、
 --   Flip = Point (syF v) (sxF cross + offPx)。 polar は projectXY 投影後に
 --   'polarNudgePx' で px nudge。
+--   [English]: Projects a point for a "categorical cross by continuous value"
+--   geom. Box outliers, strip jitter points, swarm beeswarm points and violin
+--   outlines all go through this. offPx is the pixel offset along the cross
+--   axis (nudge / jitter / width). Cartesian and Flip are bit identical to
+--   the pixel formulas previously inlined in each geom: Cartesian gives
+--   @Point (sx cross + offPx) (sy v)@ and Flip gives
+--   @Point (syF v) (sxF cross + offPx)@. Polar projects through 'projectXY'
+--   first and then nudges in pixels via 'polarNudgePx'.
 projectCrossPoint :: Coord -> Layout -> CrossLoc -> Double -> Double -> Point
 projectCrossPoint CoordCartesian l loc offPx v =
   let base = case loc of
@@ -1775,9 +1830,14 @@ projectCrossPoint coord l loc offPx v =
   polarNudgePx coord l offPx
     (uncurry Point (projectXY coord l (crossLocD l loc) v))
 
--- | Phase 64 A3: value 軸方向の px 座標 (単調)。 beeswarm binning 等「値どうしの
+-- | [日本語]: value 軸方向の px 座標 (単調)。 beeswarm binning 等「値どうしの
 --   px 間隔」 が要る geom 用。 Cartesian/Flip は旧 sy / flip 式と bit 一致。
 --   polar は PolarX (value=半径) = 半径 px、 PolarY (value=角度) = 外周弧長 px。
+--   [English]: A monotone pixel coordinate along the value axis, for geoms
+--   that need the pixel spacing between values (beeswarm binning and the
+--   like). Cartesian and Flip are bit identical to the previous sy / flipped
+--   formulas. In polar, PolarX (value = radius) gives the radius in pixels
+--   and PolarY (value = angle) gives the arc length along the outer circle.
 valueAxisPx :: Coord -> Layout -> Double -> Double
 valueAxisPx CoordCartesian l v = scaleApply (lpYScale l) v
 valueAxisPx CoordFlip      l v = scaleApply (lpYScaleFlipped l) v
@@ -1786,10 +1846,16 @@ valueAxisPx CoordPolarX    l v =
 valueAxisPx CoordPolarY    l v =
   let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * (2 * pi * maxR)
 
--- | Phase 64 A3: value 一定で cross 方向へ ±半幅の短線 (box の median / whisker cap)。
+-- | [日本語]: value 一定で cross 方向へ ±半幅の短線 (box の median / whisker cap)。
 --   直線座標系は px 半幅 halfPx の 2 点 (旧式 bit 一致: [base+offPx-halfPx,
 --   base+offPx+halfPx])、 polar は data 半幅 halfD の弧 ('projectSegment') を
 --   offPx だけ nudge した polyline (点列 ≥ 2)。
+--   [English]: A short span of ±half width along the cross axis at a fixed
+--   value (a box's median line or whisker cap). Linear coordinate systems
+--   give two points at pixel half width halfPx (bit identical to the previous
+--   formula: @[base+offPx-halfPx, base+offPx+halfPx]@); polar gives a
+--   polyline of at least two points — the arc of data half width halfD from
+--   'projectSegment', nudged by offPx.
 projectCrossSpan :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
                  -> Double -> [Point]
 projectCrossSpan coord l loc offPx halfPx halfD v
@@ -1801,9 +1867,14 @@ projectCrossSpan coord l loc offPx halfPx halfD v
       in map (polarNudgePx coord l offPx)
              (projectSegment coord l (d - halfD, v) (d + halfD, v))
 
--- | Phase 64 A3: box 本体等「cross 中心 ± 半幅 × value 区間」 の投影。 直線座標系は
+-- | [日本語]: box 本体等「cross 中心 ± 半幅 × value 区間」 の投影。 直線座標系は
 --   px 半幅 halfPx の Rect (旧 geom 内 mkRect 式と bit 一致)、 polar は 'projectBar'
 --   と同じ data 半幅 halfD の扇形 (wedge) を offPx だけ nudge。
+--   [English]: Projects "cross center ± half width by value interval" — the
+--   body of a box and the like. Linear coordinate systems give a 'Rect' at
+--   pixel half width halfPx (bit identical to the mkRect formula previously
+--   inlined in each geom); polar gives the annular sector of data half width
+--   halfD, as in 'projectBar', nudged by offPx.
 projectCrossBar :: Coord -> Layout -> CrossLoc -> Double -> Double -> Double
                 -> Double -> Double -> BarShape
 projectCrossBar CoordCartesian l loc offPx halfPx _halfD vLo vHi =
