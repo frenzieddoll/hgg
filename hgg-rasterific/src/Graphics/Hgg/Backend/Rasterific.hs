@@ -141,8 +141,8 @@ savePNGBound path (BoundPlot r spec diags) = do
 --   [English]: Saves with a 'PNGConfig' (explicit font / Hi-DPI).
 savePNGConfigured :: PNGConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
 savePNGConfigured cfg path r spec = do
-  reportFacetInlineWarnings r spec   -- ★ 描画は継続
-  -- ★ layout/prims は純 pt。PNG は raster なので k=dpi/72 を一度だけ
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  -- ★ Phase 33 B5: layout/prims は純 pt。PNG は raster なので k=dpi/72 を一度だけ
   --   掛けて device px へ (HS SVG backend と同一・唯一の dpi 適用点)。font size も
   --   scalePrimitives で device px になり、drawTextPrim の px→point 変換はそのまま整合。
   --   pngScale (Hi-DPI) は k と直交の追加倍率として savePrimitivesPNG 側で温存。
@@ -152,7 +152,7 @@ savePNGConfigured cfg path r spec = do
       ViewportSize wpt hpt = lpViewport layout
       w = round (fromIntegral wpt * k) :: Int
       h = round (fromIntegral hpt * k) :: Int
-      -- ★ 背景を塗らない theme (themePlotBg False) は init を透過に
+      -- ★ Phase 63 A18: 背景を塗らない theme (themePlotBg False) は init を透過に
       --   (背景 rect が無いので init 色がそのまま残るため)。 塗る theme は従来どおり
       --   白 init (= 既存図の bit 単位不変を保証。 透過 init だと全面 rect の縁 AA で
       --   端 pixel の alpha が変わり得る)。
@@ -185,7 +185,7 @@ savePrimitivesPNGBg bg cfg path w h prims = do
   let s  = max 1e-3 (pngScale cfg)
       wI = max 1 (ceiling (fromIntegral w * s)) :: Int
       hI = max 1 (ceiling (fromIntegral h * s)) :: Int
-  -- ★ 使用 family を先に収集して束を解決 (fontFamily の PNG 配線)
+  -- ★ Phase 63 A20.5: 使用 family を先に収集して束を解決 (fontFamily の PNG 配線)
   fonts <- loadPNGFontsFor cfg [ tsFamily ts | PText _ _ ts <- prims ]
   let img = R.renderDrawing wI hI bg $
               R.withTransformation (RTr.scale (f s) (f s)) $
@@ -601,7 +601,7 @@ drawTextPrim fonts (Point x y) txt ts =
     if tsRotate ts == 0
       then R.printTextAt font sizePt (R.V2 (f x + dx) (f y)) str
       else R.withTransformation
-             -- 内部 tsRotate は CCW 正 (canonical)。 Rasterific は y-down/CW ゆえ
+             -- Phase 50 A1: 内部 tsRotate は CCW 正 (canonical)。 Rasterific は y-down/CW ゆえ
              --   ここで符号反転して device CW へ (唯一の変換点)。
              (RTr.translate (R.V2 (f x) (f y))
                 <> RTr.rotate (f (negate (tsRotate ts)) * pi / 180))

@@ -164,7 +164,7 @@ resolveGrouped palRaw r ly f = do
     Nothing -> f ly xs ys                                  -- 単群 (B1/B3)
     Just gs0 -> do
       let gs      = V.map (gs0 V.!) valid                  -- 群列を有効行に整列
-          groups  = orderedCats (V.toList gs)              -- ggplot factor 既定 = アルファベット順
+          groups  = orderedCats (V.toList gs)              -- Phase 28: ggplot factor 既定 = アルファベット順
           -- ★ColorByCol scatter と同色: hue sentinel は群数で展開、 他は spec/theme palette を index 参照
           palette | palRaw == ["__ggplot_hue__"] = ggplotHue (length groups)
                   | otherwise                    = palRaw

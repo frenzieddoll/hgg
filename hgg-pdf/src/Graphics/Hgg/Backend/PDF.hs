@@ -73,8 +73,8 @@ savePDF path = savePDFWith path emptyResolver
 --   include @ColByName@.
 savePDFWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 savePDFWith path r spec = do
-  reportFacetInlineWarnings r spec   -- ★ 描画は継続
-  -- ★ PDF は point ネイティブ (PDFRect 単位 = pt) ゆえ k=1。layout/prims
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  -- ★ Phase 33 B5: PDF は point ネイティブ (PDFRect 単位 = pt) ゆえ k=1。layout/prims
   --   は純 pt なので scalePrimitives 不要 (恒等)・viewport pt をそのまま頁サイズに。
   --   raster backend のような dpi 乗算をするとサイズが二重変換になるので禁止。
   let layout = computeLayout r spec
@@ -401,7 +401,7 @@ drawTextPrim fonts h (Point x y) txt ts = P.withNewContext $ do
            P.displayText clean
     else do
       P.applyMatrix (P.translate (x :+ (h - y)))
-      -- 内部 tsRotate は CCW 正 (canonical)。 PDF/PostScript は y-up で CCW 正
+      -- Phase 50 A1: 内部 tsRotate は CCW 正 (canonical)。 PDF/PostScript は y-up で CCW 正
       --   ゆえ __恒等__ で渡す (旧: CW canonical を negate していた。 canonical CCW 化で解消)。
       P.applyMatrix (P.rotate (P.Degree (tsRotate ts)))
       P.drawText $ do

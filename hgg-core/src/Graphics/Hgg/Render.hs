@@ -47,7 +47,7 @@ module Graphics.Hgg.Render
     -- * Theme palette
   , ThemePalette(..)
   , themePalette
-  , specThemePalette   -- ★ raster backend の init 色分岐用
+  , specThemePalette   -- ★ Phase 63 A18: raster backend の init 色分岐用
     -- * Primitive
   , Primitive(..)
     -- * pt→device scale (backend の唯一の dpi 適用点)
@@ -60,7 +60,7 @@ module Graphics.Hgg.Render
   , edgePortPoint
   ) where
 
-import           Graphics.Hgg.Primitive       -- geometry/style/Primitive (leaf・re-export)
+import           Graphics.Hgg.Primitive       -- Phase 51: geometry/style/Primitive (leaf・re-export)
 import           Graphics.Hgg.Render.Common
 import           Graphics.Hgg.Render.Layer    (renderToPrimitives)
 import           Graphics.Hgg.Render.EdgeRoute (edgePortPoint)

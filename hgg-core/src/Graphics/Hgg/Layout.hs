@@ -1068,7 +1068,7 @@ allColorCategories r ls =
 data LegendGuide
   = ColorGuide !ColorEnc      -- [日本語]: 色 guide (categorical / continuous)。 [English]: A color guide (categorical or continuous).
   | ShapeGuide !ColRef        -- [日本語]: 形 guide (色とは別列・または色無しのとき)。 [English]: A shape guide (a column distinct from color, or used when there is no color).
-  | CountBarGuide !Double !Double  -- [日本語]: ★件数 colorbar (lo,hi)。 hexbin/bin2d-count 用 (列でなく集計値ゆえ ColorByContinuous と別。 ラベル = "count")。
+  | CountBarGuide !Double !Double  -- [日本語]: ★ Phase 40: 件数 colorbar (lo,hi)。 hexbin/bin2d-count 用 (列でなく集計値ゆえ ColorByContinuous と別。 ラベル = "count")。
                                    -- [English]: ★A count colorbar (lo,hi), for hexbin/bin2d-count (distinct from ColorByContinuous since it is an aggregate rather than a column; labeled "count").
 
 -- | [日本語]: spec から guide を ggplot 順 (color → shape) で収集。 形が色と

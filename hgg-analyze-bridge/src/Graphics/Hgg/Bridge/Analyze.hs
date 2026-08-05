@@ -131,7 +131,7 @@ modelGraphToDAGPlates = I.toDAGPlates
 modelGraphToVisualSpec :: ModelGraph -> Spec.VisualSpec
 modelGraphToVisualSpec mg =
   let (nodes, edges, plates) = modelGraphToDAGSpec mg
-      -- layout pipeline を直接適用 (= Graph rebuild ではなく [DAGNode] + [DAGEdge] 経由)
+      -- Phase 1 layout pipeline を直接適用 (= Graph rebuild ではなく [DAGNode] + [DAGEdge] 経由)
       -- これで isolated node + 多重所属 plate も保たれ、 O(N) で済む
       (positioned, routed) =
         DAG.layoutHierarchicalFullWithPlates nodes edges plates

@@ -199,7 +199,7 @@ luaLaTeXConfig = defaultTeXConfig
 --   [English]: Saves with a config (mirrors @savePNGConfigured@).
 saveTeXConfigured :: TeXConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
 saveTeXConfigured cfg path r spec = do
-  reportFacetInlineWarnings r spec   -- ★ 描画は継続
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
   TIO.writeFile path (renderTeXConfigured cfg r spec)
 
 -- | [日本語]: 設定付き render。

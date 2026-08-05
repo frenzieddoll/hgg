@@ -533,7 +533,7 @@ routeStage (StagePositioned raw chainMap rankOf coordMap) =
       -- 経由 chain を返すのみ (= rank-level waypoint)。 plate box 回避の幾何 routing は
       -- 障害物が pt で確定する Render 側 (pt 空間 routesplines・Phase 39 A2-8) に移譲。
       --
-      -- flat edge (= 同 rank edge、 rank group 由来)。
+      -- P7b 最小 (Phase 53 A3-4): flat edge (= 同 rank edge、 rank group 由来)。
       -- 間に他 real node が無ければ dePath 無し = 水平直線 (side port 同士)。
       -- 間に node があれば rank の上側 gap (= r - 0.5、 graphviz make_flat_edge が
       -- rank 上の空間へ逃がすのと同層) に waypoint を 1 点置き、 render 側の

@@ -76,7 +76,7 @@ renderSVG = renderSVGWith emptyResolver
 --   include @ColByName@.
 saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveSVGWith path r spec = do
-  reportFacetInlineWarnings r spec   -- ★ 描画は継続
+  reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
   TIO.writeFile path (renderSVGWith r spec)
 
 -- | [日本語]: SVG ファイルに保存。 Resolver 不要 (= inline 列のみの図、 = 通常)。
