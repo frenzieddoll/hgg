@@ -23,8 +23,9 @@ import           Graphics.Hgg.Layout (numToText,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical,
-                                      -- Phase 64 A4: 参照線を投影層へ通す
-                                      projectSegment)
+                                      -- Phase 64 A4/A4-b: 参照線と棒を投影層へ通す
+                                      projectSegment, CrossLoc (..), BarShape (..),
+                                      projectCrossPoint, projectCrossBar)
 import           Graphics.Hgg.Layout.RangeOf (qqPoints, ecdfPoints)  -- Phase 11 A6-2/A6-4
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Time.Format     as Data.Time.Format
@@ -97,53 +98,51 @@ renderAutocorr r layout thePal ly =
           Nothing           -> [("all", xs)]
         Nothing -> [("all", xs)]
       nCh    = max 1 (length groups)
-      -- 値 → pixel: x=lag (0..maxLag を plotArea 幅へ)、 y=相関 [-1,1] を高さへ
-      slotW  = rW area / fromIntegral (maxLag + 1)
-      barW   = max 1.5 (slotW / fromIntegral nCh * 0.7)
-      sy v   = rY area + rH area - ((v - (-1)) / 2) * rH area
-      base   = sy 0
-      -- Phase 10 A4: value 軸 = 相関 [-1,1] (Cartesian 縦 sy / flip 横 valPxF)、 cross 軸 = lag
-      -- (Cartesian 横 slot / flip 縦 slot・lag0 を下端)。 自前マッピングのまま coord で辺を入替。
-      coord  = flipOnly (lpCoord layout)   -- A7-c: autocorr は polar 非対象
-      slotV  = rH area / fromIntegral (maxLag + 1)
-      barWV  = max 1.5 (slotV / fromIntegral nCh * 0.7)
-      valPxF v = rX area + ((v + 1) / 2) * rW area
-      baseF  = valPxF 0
-      mkBar k ci rk = case coord of
-        CoordCartesian ->
-          let slotCx = rX area + (fromIntegral k + 0.5) * slotW
-              cx = slotCx - slotW * 0.5 + (fromIntegral ci + 0.5) * (slotW / fromIntegral nCh) - barW/2
-          in Rect cx (min (sy rk) base) barW (abs (sy rk - base))
-        CoordFlip ->
-          let slotCy = rY area + rH area - (fromIntegral k + 0.5) * slotV
-              cyTop = slotCy - slotV * 0.5 + (fromIntegral ci + 0.5) * (slotV / fromIntegral nCh) - barWV/2
-          in Rect (min (valPxF rk) baseF) cyTop (abs (valPxF rk - baseF)) barWV
+      -- ★ Phase 64 A4-b: 自前 plotArea マッピングを撤去し投影層へ。 lag は
+      --   __離散スロット__ (`CrossAt k`)、 相関は value 軸 (lpYScale) として扱う。
+      --   これで coordCartesianX/Y の zoom 指定が効くようになる (A4-b before 実測で
+      --   従来は完全に無視されていた)。 chain は slot 内の px offset で横並び。
+      coord  = lpCoord layout
+      slotW  = catUnitPx coord layout          -- 1 lag ぶんの cross 軸 px
+      subW   = slotW / fromIntegral nCh        -- chain 1 本ぶんの sub-slot
+      barW   = max 1.5 (subW * 0.7)
+      -- chain ci の slot 内 px offset (sub-slot 中心)。 A3 の dodge と同型。
+      chainOff ci = negate (slotW / 2) + (fromIntegral ci + 0.5) * subW
+      -- 極座標用の data 単位半幅 (1 slot = 1 data 単位)
+      halfD  = (0.7 / fromIntegral nCh) / 2
       drawChain ci (_lbl, vs) =
         let col = pal !! (ci `mod` length pal)
             rs  = map (autocorrAt vs) [0 .. maxLag]
-        in [ PRect (mkBar k ci rk) (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
-           | (k, rk) <- zip [0 :: Int ..] rs ]
+            mk k rk = case projectCrossBar coord layout (CrossAt (fromIntegral k))
+                                           (chainOff ci) (barW / 2) halfD 0 rk of
+              BarRect  rect -> PRect rect (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
+              BarWedge segs -> PPath segs (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
+        in [ mk k rk | (k, rk) <- zip [0 :: Int ..] rs ]
       bars = concat (zipWith drawChain [0..] groups)
-      -- significance band ±1.96/sqrt(N) (= 95% null) + 0 線。 value=t の参照線 (cross 軸全長)。
+      -- significance band ±1.96/sqrt(N) (= 95% null) + 0 線。 value=t を cross 軸全長に渡す。
       nTot = length xs
       sg = if nTot < 2 then 0 else 1.96 / sqrt (fromIntegral nTot :: Double)
-      valRefLine t = case coord of
-        CoordCartesian -> (Point (rX area) (sy t), Point (rX area + rW area) (sy t))
-        CoordFlip      -> (Point (valPxF t) (rY area), Point (valPxF t) (rY area + rH area))
-      sigBand = (let (z1, z2) = valRefLine 0 in [ PLine z1 z2 (solid (tpAxis thePal) 1.0) ])
-             ++ concat [ [ PLine a1 a2 (solid "#888" 0.8), PLine b1 b2 (solid "#888" 0.8) ]
-                       | sg > 0, let (a1, a2) = valRefLine sg, let (b1, b2) = valRefLine (negate sg) ]
-      -- value 軸目盛り (相関 -1..1。 Cartesian 左辺 / flip 下辺)
-      valAnchor = case coord of CoordCartesian -> AnchorEnd; CoordFlip -> AnchorMiddle
+      xLoD = lsDomainLo (lpXScale layout)
+      xHiD = lsDomainHi (lpXScale layout)
+      valRefPrims t col w =
+        let pts = projectSegment coord layout (xLoD, t) (xHiD, t)
+        in [ PLine p q (solid col w) | (p, q) <- zip pts (drop 1 pts) ]
+      sigBand = valRefPrims 0 (tpAxis thePal) 1.0
+             ++ concat [ valRefPrims sg "#888" 0.8 ++ valRefPrims (negate sg) "#888" 0.8
+                       | sg > 0 ]
+      -- value 軸目盛り (相関 -1..1)。 目盛の向きは coordYAxisPlacement で決める
+      -- (= 生の case coord of を持たない)。
+      valAtLeft = coordYAxisPlacement coord == AxisLeft
+      valAnchor = if valAtLeft then AnchorEnd else AnchorMiddle
       tsY = mkFontTS Nothing thePal TickF valAnchor 0
+      tickAnchorPt tv = projectCrossPoint coord layout (CrossAt xLoD) 0 tv
       yTicks = [ p | tv <- [-1.0, -0.5, 0, 0.5, 1.0]
-                   , p <- case coord of
-                       CoordCartesian ->
-                         [ PLine (Point (rX area) (sy tv)) (Point (rX area - 5) (sy tv)) (solid (tpAxis thePal) 1.0)
-                         , PText (Point (rX area - 8) (sy tv + 4)) (numToText tv) tsY ]
-                       CoordFlip ->
-                         [ PLine (Point (valPxF tv) (rY area + rH area)) (Point (valPxF tv) (rY area + rH area + 5)) (solid (tpAxis thePal) 1.0)
-                         , PText (Point (valPxF tv) (rY area + rH area + 18)) (numToText tv) tsY ] ]
+                   , let Point ax ay = tickAnchorPt tv
+                   , p <- if valAtLeft
+                            then [ PLine (Point ax ay) (Point (ax - 5) ay) (solid (tpAxis thePal) 1.0)
+                                 , PText (Point (ax - 8) (ay + 4)) (numToText tv) tsY ]
+                            else [ PLine (Point ax ay) (Point ax (ay + 5)) (solid (tpAxis thePal) 1.0)
+                                 , PText (Point ax (ay + 18)) (numToText tv) tsY ] ]
   in axisFrame layout thePal ++ yTicks ++ sigBand ++ bars
   where
     chainGroups :: [String] -> [Double] -> [(String, [Double])]

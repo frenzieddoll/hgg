@@ -425,8 +425,12 @@ histogramYRange r l = case getFirst (lyKind l) of
 lagXRange :: Resolver -> Layer -> Vector Double
 lagXRange r l = case getFirst (lyKind l) of
   Just MAutocorr ->
+    -- ★ Phase 64 A4-b: lag は連続値ではなく __離散スロット__。 各 lag が幅 1 の
+    --   スロットを持つよう ±0.5 を含む range を返す (categorical 軸と同じ規約)。
+    --   [0, maxLag] のままだと lag 0 が panel 左端に来て棒が半分はみ出す
+    --   (A4-b の実測: 3.59 px 突出)。
     let maxLag = maybe 40 id (getLast (lyMaxLag l))
-    in V.fromList [0, fromIntegral maxLag]
+    in V.fromList [-0.5, fromIntegral maxLag + 0.5]
   Just MEss ->
     -- chain 列が指定されていれば distinct chain 数、 未指定なら 1
     let nChain = case getLast (lyChain l) of
