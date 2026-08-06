@@ -20,7 +20,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       needsLegend, effectiveLegendPos,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
-                                      projectBarRect, catUnitPx, resolutionOf,
+                                      projectBarRect, projectSegment,
+                                      catUnitPx, resolutionOf,
                                       AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical)
@@ -135,20 +136,30 @@ renderRangeBar r layout pal ly withPoint asBox =
       halfW = 0.5 * capWFactor * resX * catUnitPx coord layout
       mkOne i =
         let x = xs !! i; y = ys !! i; e = es !! i
-            Point pcx pcyLo = pp x (y - e)
-            Point _   pcyHi = pp x (y + e)
-            Point pmx pmy   = pp x y
+            Point _ pcyLo = pp x (y - e)
+            Point _ pcyHi = pp x (y + e)
+            Point pmx pmy = pp x y
         in if asBox
              then -- crossbar: 箱 (px 幅) + 中央水平線
+               -- ★ Phase 64 A5: crossbar は箱の半幅が px 固定なので投影層へ寄せて
+               --   いない (data 単位の幅を持つ bar 族と違い、 polar で「px 幅の箱」 は
+               --   意味が定まらない)。 polar 対応は幅の data 単位化とセットで
+               --   §2 以降に送る (下記 linerange 側は A5 で投影層へ移行済)。
                [ PRect (Rect (pmx - halfW) (min pcyLo pcyHi) (2 * halfW) (abs (pcyHi - pcyLo)))
                        (FillStyle c 0.15) (Just (StrokeStyle c w))
                , PLine (Point (pmx - halfW) pmy) (Point (pmx + halfW) pmy) ls ]
-             else -- linerange: 縦線。 pointrange は中心点を追加
-               PLine (Point pcx pcyLo) (Point pcx pcyHi) ls
-               : (if withPoint
-                    then [ PCircle (Point pmx pmy) (ptSz / 2)
-                                   (FillStyle c 1.0) (Just (StrokeStyle c 1.0)) Nothing ]
-                    else [])
+             else -- linerange: 値軸方向の区間。 pointrange は中心点を追加
+               -- ★ Phase 64 A5: 旧実装は低端の px x を両端に流用して画面垂直の線分を
+               --   組んでいたため、 polar では半径方向にならず・flip では両端が同一点に
+               --   潰れて (= 長さ 0) 誤差棒が消えていた。 'projectSegment' に委譲すると
+               --   直線座標系は 2 点で旧 px 式と bit 一致、 polar は半径方向の線分、
+               --   CoordPolarY は弧になる。
+               let pts = projectSegment coord layout (x, y - e) (x, y + e)
+               in [ PLine p q ls | (p, q) <- zip pts (drop 1 pts) ]
+                  ++ (if withPoint
+                        then [ PCircle (Point pmx pmy) (ptSz / 2)
+                                       (FillStyle c 1.0) (Just (StrokeStyle c 1.0)) Nothing ]
+                        else [])
   in if n <= 0 then [] else concatMap mkOne [0 .. n - 1]
 
 -- | [日本語]: heatmap (= ggplot geom_tile)。 x/y はカテゴリ列、 value (= lyColor の

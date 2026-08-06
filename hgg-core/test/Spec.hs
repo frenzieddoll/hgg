@@ -2131,6 +2131,37 @@ main = hspec $ do
           ps = renderToPrimitives emptyResolver (computeLayout emptyResolver sp) sp
       in (length [() | PPath{} <- ps] >= 1) `shouldBe` True
 
+    -- ★ Phase 64 A5: linerange / pointrange の区間。 旧実装は低端の px x を両端に
+    --   流用して画面垂直の線分を組んでいたため、 flip では両端が同一点に潰れて
+    --   (= 長さ 0) 誤差棒が消え、 polar では半径方向にならなかった。 primitive の
+    --   「本数」 は旧実装でも変わらないので gallery count 回帰では捕まらない。
+    --   ここでは幾何 (長さ・向き) を直接押さえる。
+    it "pointRange flip: 誤差棒が長さ 0 に潰れない (Phase 64 A5)" $
+      let sp = layer (pointRange (inline [1.0, 2, 3]) (inline [4.0, 5, 6])
+                                 (inline [0.5, 0.5, 0.5]))
+                 <> coordFlip
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver sp) sp
+          degenerate = [ () | PLine (Point x1 y1) (Point x2 y2) _ <- ps
+                       , abs (x1 - x2) < 1e-9 && abs (y1 - y2) < 1e-9 ]
+      in length degenerate `shouldBe` 0
+
+    it "pointRange polar: 誤差棒が中心を向く半径方向の線分になる (Phase 64 A5)" $
+      let sp = layer (pointRange (inline [1.0, 2, 3, 4]) (inline [4.0, 5, 6, 5])
+                                 (inline [0.5, 0.5, 0.5, 0.5]))
+                 <> coordPolar
+          lay = computeLayout emptyResolver sp
+          ps  = renderToPrimitives emptyResolver lay sp
+          (cx, cy, _) = polarCenter lay
+          -- 誤差棒 = grid の spoke (中心が端点) 以外の線分。 その延長線が中心を通る
+          -- = 中心・両端が同一直線上 (外積 ≒ 0)。
+          atCenter x y = abs (x - cx) < 1e-6 && abs (y - cy) < 1e-6
+          bars = [ (x1, y1, x2, y2)
+                 | PLine (Point x1 y1) (Point x2 y2) _ <- ps
+                 , not (atCenter x1 y1), not (atCenter x2 y2) ]
+          radial (x1, y1, x2, y2) =
+            abs ((x1 - cx) * (y2 - cy) - (y1 - cy) * (x2 - cx)) < 1e-6
+      in (length bars, all radial bars) `shouldBe` (4, True)
+
     it "valueAxisPx: Cartesian = sy / Flip = syF と bit 一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
           layF = computeLayout emptyResolver
