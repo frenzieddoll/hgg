@@ -2162,6 +2162,16 @@ main = hspec $ do
             abs ((x1 - cx) * (y2 - cy) - (y1 - cy) * (x2 - cx)) < 1e-6
       in (length bars, all radial bars) `shouldBe` (4, True)
 
+    it "errorY の cap は polar で弧になる (弦のままでない、 Phase 64 A5)" $
+      let sp k = layer (scatter (inline [1.0, 2, 3]) (inline [4.0, 5, 6])
+                        <> errorY (inline [0.5, 0.5, 0.5])) <> k
+          nLine k = let s = sp k
+                    in length [ () | PLine{} <- renderToPrimitives emptyResolver
+                                                  (computeLayout emptyResolver s) s ]
+      -- 直線座標系では cap は 2 点 (1 本) のまま。 polar では x 方向に跨るので
+      -- 0.1 rad 刻みでサンプルされ本数が増える。
+      in (nLine coordPolar > nLine mempty) `shouldBe` True
+
     it "valueAxisPx: Cartesian = sy / Flip = syF と bit 一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
           layF = computeLayout emptyResolver

@@ -21,7 +21,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, resolutionOf,
-                                      BarShape (..), projectBar,
+                                      BarShape (..), projectBar, projectSegment,
                                       AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
                                       coordXGridIsVertical)
@@ -189,22 +189,21 @@ renderScatter r layout pal ly =
       resY = resolutionOf (filter finite (V.toList ys))
       capHalfX = 0.5 * capWFactor * resX  -- errorY の横 cap 半幅 (x データ単位)
       capHalfY = 0.5 * capWFactor * resY  -- errorX の縦 cap 半幅 (y データ単位)
+      -- ★ Phase 64 A5: 誤差棒/cap は data 空間の線分として 'projectSegment' に通す。
+      --   直線座標系は両端 2 点 = 旧 projectXY 直結と bit 一致、 polar では x 方向に
+      --   跨る線分 (errorY の cap・errorX の本体) が弦ではなく弧としてサンプルされる。
+      errSeg (dx0, dy0) (dx1, dy1) =
+        let pts = projectSegment coord layout (dx0, dy0) (dx1, dy1)
+        in [ PLine p q (solid (tpAxis pal) 1.0) | (p, q) <- zip pts (drop 1 pts) ]
       mkErrX i =
         let x  = xs V.! i; y = ys V.! i
             ex = errXVec V.!? i
         in case ex of
              Just dx ->
                -- errorX (x 方向誤差) の cap は y 方向 (高さ) にデータ単位で伸びる。
-               let pL  = uncurry Point (projectXY coord layout (x - dx) y)
-                   pR  = uncurry Point (projectXY coord layout (x + dx) y)
-                   cLlo = uncurry Point (projectXY coord layout (x - dx) (y - capHalfY))
-                   cLhi = uncurry Point (projectXY coord layout (x - dx) (y + capHalfY))
-                   cRlo = uncurry Point (projectXY coord layout (x + dx) (y - capHalfY))
-                   cRhi = uncurry Point (projectXY coord layout (x + dx) (y + capHalfY))
-               in [ PLine pL pR  (solid (tpAxis pal) 1.0)
-                  , PLine cLlo cLhi (solid (tpAxis pal) 1.0)
-                  , PLine cRlo cRhi (solid (tpAxis pal) 1.0)
-                  ]
+                  errSeg (x - dx, y) (x + dx, y)
+               <> errSeg (x - dx, y - capHalfY) (x - dx, y + capHalfY)
+               <> errSeg (x + dx, y - capHalfY) (x + dx, y + capHalfY)
              Nothing -> []
       mkErrY i =
         let x  = xs V.! i; y = ys V.! i
@@ -212,16 +211,9 @@ renderScatter r layout pal ly =
         in case ey of
              Just dy ->
                -- errorY (y 方向誤差) の cap は x 方向 (幅) にデータ単位で伸びる。
-               let pLo = uncurry Point (projectXY coord layout x (y - dy))
-                   pHi = uncurry Point (projectXY coord layout x (y + dy))
-                   cLoL = uncurry Point (projectXY coord layout (x - capHalfX) (y - dy))
-                   cLoR = uncurry Point (projectXY coord layout (x + capHalfX) (y - dy))
-                   cHiL = uncurry Point (projectXY coord layout (x - capHalfX) (y + dy))
-                   cHiR = uncurry Point (projectXY coord layout (x + capHalfX) (y + dy))
-               in [ PLine pLo pHi (solid (tpAxis pal) 1.0)
-                  , PLine cLoL cLoR (solid (tpAxis pal) 1.0)
-                  , PLine cHiL cHiR (solid (tpAxis pal) 1.0)
-                  ]
+                  errSeg (x, y - dy) (x, y + dy)
+               <> errSeg (x - capHalfX, y - dy) (x + capHalfX, y - dy)
+               <> errSeg (x - capHalfX, y + dy) (x + capHalfX, y + dy)
              Nothing -> []
       errorPrims = concatMap (\i -> mkErrX i <> mkErrY i) [0 .. n - 1]
       -- connect 線 (= Phase 26 §C-2 #5)
