@@ -20,6 +20,7 @@ import           Graphics.Hgg.Layout (Layout (..), Rect (..), Scale (..),
                                       Track (..), solveTracks,
                                       needsLegend, effectiveLegendPos,
                                       coordOf, isPolar, polarCenter, polarPoint,
+                                      polarClipPath,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -407,7 +408,12 @@ renderSingle r layout spec =
       --   (= 範囲外データが panel 外にはみ出すのを防ぐ)。 未指定では従来同一 (ゼロ diff)。
       hasCoordLim = getLast (vsCoordXLim spec) /= Nothing
                  || getLast (vsCoordYLim spec) /= Nothing
+      -- ★ Phase 64 A8 (B-2): polar は常に外周円で clip する。 それまでは
+      --   coordXLim/YLim 指定時の矩形 clip しか無く、 半径が範囲外の点が
+      --   外周円の外にはみ出して描かれていた。
       coordClip prims
+        | polar       = PClipPath [ Point x y | (x, y) <- polarClipPath mainLayout ]
+                        : prims ++ [PClipPop]
         | hasCoordLim = PClipPush (lpPlotArea mainLayout) : prims ++ [PClipPop]
         | otherwise   = prims
       -- Phase 11 A7-c: 極座標は直交 grid/枠/tick の代わりに polarGrid (同心円 + スポーク)。

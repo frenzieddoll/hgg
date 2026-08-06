@@ -2056,6 +2056,71 @@ main = hspec $ do
           ps = renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
       in length [() | PPath{} <- ps] `shouldBe` 4
 
+    -- =====================================================================
+    -- ★ Phase 64 A8: polar 外周円 clip (B-2) と θ ラベル位置 (B-3)。
+    --   ggplot2 coord-polar.R の npc 定数に準拠: データ最大半径 = 0.4・
+    --   θ ラベル / 外周円 = 0.45 (= polarOuterFrac)。 根拠は Layout.hs polarCenter。
+    -- =====================================================================
+    it "polarCenter: データ最大半径 = 0.4 * min(w,h) (ggplot2 npc donut 上限)" $
+      let ar = lpPlotArea lay
+      in abs (cmaxR - 0.4 * min (rW ar) (rH ar)) < 1e-9 `shouldBe` True
+
+    it "polarOuterFrac = 0.45 / 0.4 (θ ラベル npc 0.45 / データ npc 0.4)" $
+      abs (polarOuterFrac - 0.45 / 0.4) < 1e-12 `shouldBe` True
+
+    it "polarClipPath: 180 頂点で全点が外周円 (= maxR) 上に載る" $
+      let pts = polarClipPath lay
+          ds  = [ sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
+                | (x, y) <- pts ]
+      in ( length pts, maximum ds - minimum ds < 1e-6
+         , abs (maximum ds - cmaxR) < 1e-6 )
+           `shouldBe` (180, True, True)
+
+    it "polar は外周円で clip される: PClipPath が 1 本出て 180 頂点 (B-2)" $
+      let s  = layer (points [0, 1, 2, 3] [0, 1, 2, 3]) <> coordPolar
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
+      in [ length pts | PClipPath pts <- ps ] `shouldBe` [180]
+
+    it "Cartesian は PClipPath を出さない (polar 専用・既存図ゼロ diff)" $
+      let s  = layer (points [0, 1, 2, 3] [0, 1, 2, 3])
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
+      in [ () | PClipPath{} <- ps ] `shouldBe` []
+
+    it "θ ラベルは外周円上 (= polarOuterFrac の半径) に置かれる (B-3)" $
+      -- polar-errorbar 相当 (pointRange x=1..6)。 θ ラベルの中心が npc 0.45 の
+      -- 円周上に載る (= 旧 1.12 決め打ち + panel 内接 maxR による panel はみ出しの解消)。
+      let s   = layer (pointRange (inline [1.0, 2, 3, 4, 5, 6])
+                                  (inline [4.0, 5.5, 4.8, 6.2, 5.0, 5.8])
+                                  (inline [0.6, 0.5, 0.8, 0.4, 0.7, 0.5]))
+                  <> coordPolar
+          layE = computeLayout emptyResolver s
+          (ex, ey, emaxR) = polarCenter layE
+          ps  = renderToPrimitives emptyResolver layE s
+          -- θ ラベルは AnchorMiddle (r 軸ラベルは AnchorEnd) で区別できる。
+          --   数字は θ (x=1..6) と r 軸 tick (4,5,6) で衝突するため anchor で絞る。
+          --   +4 の y offset を戻して半径を測る。
+          labelRs = [ sqrt ((x - ex) ^ (2 :: Int) + (y - 4 - ey) ^ (2 :: Int))
+                    | PText (Point x y) t ts <- ps
+                    , t `elem` ["1","2","3","4","5","6"]
+                    , tsAnchor ts == AnchorMiddle ]
+      in ( length labelRs
+         , all (\r -> abs (r - emaxR * polarOuterFrac) < 1e-6) labelRs )
+           `shouldBe` (6, True)
+
+    it "θ ラベルが plotArea (panel) の内側に収まる (タイトルと重ならない)" $
+      let s   = layer (pointRange (inline [1.0, 2, 3, 4, 5, 6])
+                                  (inline [4.0, 5.5, 4.8, 6.2, 5.0, 5.8])
+                                  (inline [0.6, 0.5, 0.8, 0.4, 0.7, 0.5]))
+                  <> coordPolar
+          layE = computeLayout emptyResolver s
+          ar   = lpPlotArea layE
+          ps   = renderToPrimitives emptyResolver layE s
+          labelYs = [ y | PText (Point _ y) t ts <- ps
+                        , t `elem` ["1","2","3","4","5","6"]
+                        , tsAnchor ts == AnchorMiddle ]
+      in all (\y -> y >= rY ar - 1e-6 && y <= rY ar + rH ar + 1e-6) labelYs
+           `shouldBe` True
+
     -- ★ Phase 64 A3: categorical-cross geom 用の投影口 (CrossLoc 系)。
     -- 直線座標系は「旧 geom 内 px 式と bit 一致」 が契約 (golden 差分ゼロの根拠)。
     it "projectCrossPoint Cartesian: Point (sx d + off) (sy v) と bit 一致" $

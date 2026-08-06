@@ -27,6 +27,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       effectiveTagSize,
                                       effectiveShowAxisText, effectiveShowAxisTitle,
                                       coordOf, isPolar, polarCenter, polarPoint,
+                                      polarOuterFrac,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -544,25 +545,40 @@ polarGrid spec layout pal =
       -- 同心円 (半径 grid)。 domFrac が [0,1] のものだけ。
       circles = [ PCircle (Point cx cy) (domFrac radScale v * maxR) noFill circleStyle Nothing
                 | v <- radTicks, inUnit (domFrac radScale v) ]
-      -- 外周境界円。
-      boundary = [ PCircle (Point cx cy) maxR noFill (Just (StrokeStyle (tpAxis pal) 1.0)) Nothing ]
-      -- 放射スポーク (角度 grid)。 中心→外周。
-      spokes = [ PLine (Point cx cy) (uncurry Point (polarPointXY (domFrac thetaScale v) 1.0)) spokeStyle
+      -- 外周円。 ★ Phase 64 A8: ggplot2 に完全準拠させた (user 判断 2026-08-06)。
+      --   旧実装は Phase 11 A7-c 由来の**軸色の濃い円** (ggplot2 に対応物が無い独自
+      --   要素) をデータ最大半径に描いていた。 ggplot2 は radial grid の最外周を
+      --   θ ラベルと同じ npc 0.45 に、 **grid 線として**置く
+      --   (coord-polar.R の @rfine <- c(r_rescale(...), 0.45)@)。 これに合わせたので
+      --   θ ラベルが線に重なっても読める (細い grid 色) し、 grid off の theme では
+      --   ggplot2 と同じく円自体が消える。
+      boundary = [ PCircle (Point cx cy) (maxR * polarOuterFrac) noFill circleStyle Nothing ]
+      -- 放射スポーク (角度 grid)。 中心→外周円 (ggplot2 も中心→npc 0.45 =
+      --   coord-polar.R render_bg の @vec_interleave(0, 0.45 * sin(theta))@)。
+      spokes = [ PLine (Point cx cy)
+                       (uncurry Point (polarPointXY (domFrac thetaScale v) polarOuterFrac))
+                       spokeStyle
                | v <- thetaTicks ]
       -- r 軸ラベル (上スポーク θ=0 沿い、 各 rad tick)。
       tsR = mkFontTS (Just spec) pal TickF AnchorEnd 0
       radLabels = [ PText (Point (cx - 4) (cy - domFrac radScale v * maxR + 4)) (numToText v) tsR
                   | v <- radTicks, inUnit (domFrac radScale v), domFrac radScale v > 1e-6 ]
-      -- θ 軸ラベル (外周のやや外、 各 theta tick)。 categorical なら群名、 でなければ値。
+      -- θ 軸ラベル (外周円の上、 各 theta tick)。 categorical なら群名、 でなければ値。
+      --   ★ Phase 64 A8: 旧実装は根拠の無い @1.12@ 倍で、 maxR が panel 内接円
+      --   (= panel の縁) だったため必ず panel の外へ出てタイトルと重なっていた。
+      --   maxR を ggplot2 の npc 0.4 に合わせた今は 'polarOuterFrac' (0.45/0.4) が
+      --   そのまま ggplot2 の θ ラベル半径 npc 0.45 に一致し、 panel 内に収まる。
       tsT = mkFontTS (Just spec) pal TickF AnchorMiddle 0
       thetaLabelFor i v = if not (null thetaCats) && i < length thetaCats
                             then thetaCats !! i else numToText v
-      thetaLabels = [ let (lx, ly) = polarPointXY (domFrac thetaScale v) 1.12
+      thetaLabels = [ let (lx, ly) = polarPointXY (domFrac thetaScale v) polarOuterFrac
                       in PText (Point lx (ly + 4)) (thetaLabelFor i v) tsT
                     | (i, v) <- zip [0 ..] thetaTicks ]
       polarPointXY tf rf = polarPoint layout tf rf
+  -- ★ Phase 64 A8: 外周円は grid の一部になったので、 grid off の theme では
+  --   ggplot2 と同じく描かない (旧実装は軸要素扱いで常に描いていた)。
   in if tpShowGrid pal then circles <> spokes <> boundary <> radLabels <> thetaLabels
-     else boundary <> radLabels <> thetaLabels
+     else radLabels <> thetaLabels
 
 -- ★ Phase 64 A2: wedgeSegments (Phase 11 A7-c の扇形 path) は投影層 (Layout.hs) へ
 --   移設 (projectBar が共有するため)。

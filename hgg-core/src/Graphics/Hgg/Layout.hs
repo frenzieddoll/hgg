@@ -95,6 +95,9 @@ module Graphics.Hgg.Layout
   , isPolar
   , polarCenter
   , polarPoint
+    -- ★ Phase 64 A8: 外周円 (θ ラベル位置 = clip 境界) の比と clip path
+  , polarOuterFrac
+  , polarClipPath
   , domFrac
     -- ★ Phase 64 A2: 座標系依存の形状を投影層に集約する口 (§1 の受け皿)。
   , projectSegment
@@ -1588,15 +1591,63 @@ domFrac :: Scale -> Double -> Double
 domFrac s v = let lo = lsDomainLo s; hi = lsDomainHi s
               in if hi == lo then 0 else (v - lo) / (hi - lo)
 
--- | [日本語]: 極座標の中心と最大半径 (= panel に内接する円)。
---   [English]: The center and maximum radius of polar coordinates (the
---   circle inscribed in the panel).
+-- | [日本語]: 極座標の中心とデータ最大半径。
+--
+--   ★ Phase 64 A8: 半径は **ggplot2 の npc 定数に合わせる** (それまでは
+--   @min(w,h)/2@ = panel 内接円で、 外周が panel の縁にぴったり接するため
+--   θ ラベル (外周のやや外) が必ず panel の外へ出てタイトルと重なっていた)。
+--   ggplot2 @coord-polar.R@ (2026-08-06 時点 main) の実装:
+--
+--     * @r_rescale(x, range, donut = c(0, 0.4))@ (287-290 行) =
+--       __データの最大半径は npc 0.4__
+--     * @render_fg@ (240-249 行) が θ ラベルを @0.45 * sin/cos + 0.5@ =
+--       __npc 半径 0.45__ に中心揃えで置く
+--     * panel 矩形の縁は中心から npc 0.5
+--
+--   つまり 0.4 (データ) \< 0.45 (θ ラベル・外周円) \< 0.5 (panel 縁) で、
+--   ggplot2 は__ラベルを panel の内側に収めることで余白予約を不要にしている__
+--   (@render_axis_h@ は空軸を返すだけ・@layout.R@ に θ 用の帯予約は無い)。
+--   本実装もこれに倣うので 'computeLayout' は座標系を見る必要が無い。
+--
+--   [English]: The center and maximum data radius of polar coordinates.
+--   Phase 64 A8 switched the radius to ggplot2's npc constants (it used to
+--   be @min(w,h)/2@, the circle inscribed in the panel, which forced the
+--   theta labels just outside it to leave the panel and collide with the
+--   title). In ggplot2's @coord-polar.R@: data is rescaled into the donut
+--   @c(0, 0.4)@, theta labels are centered at npc radius 0.45, and the
+--   panel edge is at 0.5 — so labels stay inside the panel and no margin
+--   reservation is needed. We follow the same ratios.
 polarCenter :: Layout -> (Double, Double, Double)
 polarCenter l = let a = lpPlotArea l
                     cx = rX a + rW a / 2
                     cy = rY a + rH a / 2
-                    maxR = min (rW a) (rH a) / 2
+                    maxR = 0.4 * min (rW a) (rH a)
                 in (cx, cy, maxR)
+
+-- | [日本語]: θ ラベルを置く半径を、 データ最大半径 ('polarCenter' の maxR) との比で
+--   表したもの = @0.45 / 0.4 = 1.125@。 ggplot2 の npc 定数から導出
+--   (根拠は 'polarCenter' の注記)。 境界円 (= clip 境界) は maxR のままなので、
+--   ラベルは境界円の少し外・panel の内側という位置になる。
+--   [English]: The radius at which theta labels sit, as a ratio to the max
+--   data radius: @0.45 / 0.4 = 1.125@, derived from ggplot2's npc constants
+--   (see the note on 'polarCenter'). The boundary circle (and the clip
+--   boundary) stays at maxR, so labels land just outside it but still
+--   inside the panel.
+polarOuterFrac :: Double
+polarOuterFrac = 0.45 / 0.4
+
+-- | [日本語]: 境界円 (= データ最大半径の円) を多角形近似した clip path
+--   (Phase 64 A8 = B-2)。 @PClipPath@ に渡して「外周円の外に glyph が
+--   描かれない」 を実現する。 180 分割 (2°刻み) で、 半径 200px でも矢高誤差は
+--   0.03px 未満。
+--   [English]: A polygonal approximation of the boundary circle (at the max
+--   data radius), for use with @PClipPath@ (Phase 64 A8 / B-2) so that no
+--   glyph is drawn outside it. 180 segments (2 degrees each): the sagitta
+--   error stays below 0.03px even at a 200px radius.
+polarClipPath :: Layout -> [(Double, Double)]
+polarClipPath l =
+  [ polarPoint l (fromIntegral i / n) 1.0 | i <- [0 .. round n - 1 :: Int] ]
+  where n = 180 :: Double
 
 -- | [日本語]: (角度 frac, 半径 frac) → px。 角度 0 を上 (12 時) とし時計回り、
 --   半径 frac=1 が外周。
