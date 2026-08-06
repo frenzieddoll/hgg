@@ -40,6 +40,8 @@ module Graphics.Hgg.Spec.Mark
   , Position(..)
   , Side(..)
   , Coord(..)
+  , PolarOpts(..)
+  , defaultPolarOpts
   , FacetScales(..)
   , freeScaleX
   , freeScaleY
@@ -54,8 +56,10 @@ module Graphics.Hgg.Spec.Mark
   , lineTypeForIndex
   ) where
 
-import           Data.Aeson      (FromJSON, ToJSON)
+import           Data.Aeson      (FromJSON (..), ToJSON (..), Value (..),
+                                  object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson      as Aeson
+import qualified Data.Aeson.Types as Aeson (typeMismatch)
 import qualified Data.Char       as Char
 import           Data.Monoid     (Last (..))
 import           Data.Text       (Text)
@@ -402,36 +406,102 @@ instance ToJSON Side where
 instance FromJSON Side where
   parseJSON = Aeson.genericParseJSON sideJsonOptions
 
+-- | [日本語]: 極座標の角度パラメータ (= ggplot @coord_polar(start=, direction=)@)。
+--   'polarStart' = θ 軸の開始角 (rad)。 0 = 真上 (12 時)。 'polarDirection' =
+--   回転方向の符号。 +1 = 時計回り (既定)、 -1 = 反時計回り。 投影は
+--   @Layout.polarPoint@ 1 箇所に閉じており、 @theta = start + dir * frac * 2π@
+--   に一般化される (grid / スポーク / θ ラベルも同じ関数を通る)。
+--   'defaultPolarOpts' = @start=0, direction=+1@ で、 Phase 64 A8 以前の
+--   「真上始点・時計回り固定」 と完全一致する (= 既存図は不変)。
+--   [English]: The angular parameters of polar coordinates (equivalent to
+--   ggplot's @coord_polar(start=, direction=)@). 'polarStart' is the starting
+--   angle of the theta axis in radians (0 = straight up, 12 o'clock).
+--   'polarDirection' is the sign of the rotation direction: +1 clockwise
+--   (default), -1 counter-clockwise. Projection is confined to
+--   @Layout.polarPoint@ and generalized to @theta = start + dir * frac * 2π@
+--   (grid, spokes, and theta labels all go through the same function).
+--   'defaultPolarOpts' (@start=0, direction=+1@) exactly matches the previous
+--   fixed "top-start, clockwise" behavior, so existing figures are unchanged.
+data PolarOpts = PolarOpts
+  { polarStart     :: !Double   -- ^ 開始角 (rad)。 0 = 真上
+  , polarDirection :: !Double   -- ^ 回転方向。 +1 = 時計回り (既定)、 -1 = 反時計回り
+  } deriving (Show, Eq, Generic)
+
+-- | [日本語]: 極座標の既定 (@start=0, direction=+1@ = 真上始点・時計回り)。
+--   [English]: The default polar options (@start=0, direction=+1@: top-start,
+--   clockwise).
+defaultPolarOpts :: PolarOpts
+defaultPolarOpts = PolarOpts { polarStart = 0, polarDirection = 1 }
+
 -- | [日本語]: 座標系 (= ggplot coord_*)。 'CoordCartesian' (既定) = 通常の
 --   直交座標。 'CoordFlip' = x/y 軸を入れ替える (= coord_flip、 横棒グラフ等)。
 --   'CoordPolarX' / 'CoordPolarY' = 極座標 (= coord_polar(theta="x"|"y"))。 theta 軸を
---   角度 (0..2π、 上始点・時計回り)、 他軸を半径に写す。 PolarY + stacked bar = 円グラフ。
---   JSON tag: "cartesian" / "flip" / "polarx" / "polary" (PS Codec と一致)。
+--   角度 ('PolarOpts' で start/direction 可変)、 他軸を半径に写す。 PolarY +
+--   stacked bar = 円グラフ。 'CoordTernary' = 三角座標 (組成データ、 3 成分を
+--   正三角形の 3 頂点へ; Phase 64 §3 で投影・grid を実装)。
+--   JSON tag: "cartesian" / "flip" / "polarx" / "polary" / "ternary"
+--   (PS Codec と一致)。 ★ 後方互換: polar は既定 'PolarOpts' なら従来どおり
+--   文字列 tag ("polarx") を出力し、 start/direction を指定したときだけ
+--   @{"tag":"polarx","start":..,"direction":..}@ の object 形になる。 読込は
+--   両形を受ける (旧 spec の "polarx" 文字列も既定 opts で読める)。
 --   [English]: The coordinate system (equivalent to ggplot's coord_*).
 --   'CoordCartesian' (default) is the usual orthogonal coordinate system.
---   'CoordFlip' swaps the x/y axes (equivalent to coord_flip, for example
---   horizontal bar charts). 'CoordPolarX' / 'CoordPolarY' are polar
---   coordinates (equivalent to coord_polar(theta="x"|"y")); the theta axis
---   maps to an angle (0..2π, starting at the top, clockwise) and the other
---   axis maps to the radius. PolarY combined with a stacked bar produces a
---   pie chart. JSON tag: "cartesian" / "flip" / "polarx" / "polary"
---   (matches the PS Codec).
-data Coord = CoordCartesian | CoordFlip | CoordPolarX | CoordPolarY
+--   'CoordFlip' swaps the x/y axes (equivalent to coord_flip). 'CoordPolarX' /
+--   'CoordPolarY' are polar coordinates (coord_polar(theta="x"|"y")); the
+--   theta axis maps to an angle (start/direction configurable via 'PolarOpts')
+--   and the other axis to the radius. 'CoordTernary' is the ternary
+--   (compositional) coordinate system, mapping three components to the corners
+--   of an equilateral triangle (projection/grid implemented in Phase 64 §3).
+--   JSON tag: "cartesian" / "flip" / "polarx" / "polary" / "ternary" (matches
+--   the PS Codec). Backward compatible: a polar coord with default 'PolarOpts'
+--   still encodes as the bare string tag ("polarx"); only a non-default
+--   start/direction produces the object form
+--   @{"tag":"polarx","start":..,"direction":..}@. Decoding accepts both forms
+--   (an old spec's "polarx" string reads back with the default opts).
+data Coord
+  = CoordCartesian
+  | CoordFlip
+  | CoordPolarX !PolarOpts
+  | CoordPolarY !PolarOpts
+  | CoordTernary
   deriving (Show, Eq, Generic)
 
-coordJsonOptions :: Aeson.Options
-coordJsonOptions = Aeson.defaultOptions
-  { Aeson.constructorTagModifier = \s -> case s of
-      'C':'o':'o':'r':'d':rest -> map Char.toLower rest
-      other                    -> other
-  }
+-- | [日本語]: polar coord の 'PolarOpts' を JSON 化する共通部。 既定なら文字列
+--   tag のまま (後方互換)、 非既定なら object 形。
+--   [English]: Shared JSON encoding for a polar coord's 'PolarOpts'. Default
+--   opts keep the bare string tag (backward compatible); non-default opts use
+--   the object form.
+polarCoordJson :: Text -> PolarOpts -> Value
+polarCoordJson tag o
+  | o == defaultPolarOpts = String tag
+  | otherwise = object [ "tag" .= tag
+                       , "start" .= polarStart o
+                       , "direction" .= polarDirection o ]
 
 instance ToJSON Coord where
-  toJSON = Aeson.genericToJSON coordJsonOptions
-  toEncoding = Aeson.genericToEncoding coordJsonOptions
+  toJSON CoordCartesian  = String "cartesian"
+  toJSON CoordFlip       = String "flip"
+  toJSON CoordTernary    = String "ternary"
+  toJSON (CoordPolarX o) = polarCoordJson "polarx" o
+  toJSON (CoordPolarY o) = polarCoordJson "polary" o
 
 instance FromJSON Coord where
-  parseJSON = Aeson.genericParseJSON coordJsonOptions
+  parseJSON (String s) = case s of
+    "cartesian" -> pure CoordCartesian
+    "flip"      -> pure CoordFlip
+    "polarx"    -> pure (CoordPolarX defaultPolarOpts)
+    "polary"    -> pure (CoordPolarY defaultPolarOpts)
+    "ternary"   -> pure CoordTernary
+    _           -> fail ("Coord: unknown tag " ++ show s)
+  parseJSON v@(Object o) = do
+    tag <- o .: "tag"
+    opts <- PolarOpts <$> o .:? "start" .!= polarStart defaultPolarOpts
+                      <*> o .:? "direction" .!= polarDirection defaultPolarOpts
+    case (tag :: Text) of
+      "polarx" -> pure (CoordPolarX opts)
+      "polary" -> pure (CoordPolarY opts)
+      _        -> Aeson.typeMismatch "Coord" v
+  parseJSON v = Aeson.typeMismatch "Coord" v
 
 -- | [日本語]: facet の scale 共有方式 (= ggplot facet_wrap(scales=))。
 --   'FacetFixed' (既定) = 全 panel 共通 domain (値比較可)。 'FacetFreeX' = x 軸のみ

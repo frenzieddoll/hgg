@@ -122,7 +122,7 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     LegendPosition (..), LegendSpec (..),
                                     MarkKind (..), Resolver,
                                     ThemeName (..), ThemeOverride (..), TickDir (..),
-                                    Margin (..), Coord (..),
+                                    Margin (..), Coord (..), PolarOpts (..),
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
                                     axTickValsOf, axTickLabelsOf, distGroupRef,
@@ -1577,9 +1577,15 @@ projectXY CoordCartesian l dx dy =
 projectXY CoordFlip l dx dy =
   (scaleApply (lpYScaleFlipped l) dy, scaleApply (lpXScaleFlipped l) dx)
 -- Phase 11 A7-c: 極座標。 theta 軸 (PolarX=x / PolarY=y) を角度 (0..2π、 上始点・
---   時計回り)、 他軸を半径 (中心=domain 下端、 外周=domain 上端) に写す。
-projectXY CoordPolarX l dx dy = polarPoint l (domFrac (lpXScale l) dx) (domFrac (lpYScale l) dy)
-projectXY CoordPolarY l dx dy = polarPoint l (domFrac (lpYScale l) dy) (domFrac (lpXScale l) dx)
+--   時計回り; start/direction は Phase 64 A16 で可変)、 他軸を半径 (中心=domain
+--   下端、 外周=domain 上端) に写す。
+projectXY (CoordPolarX _) l dx dy = polarPoint l (domFrac (lpXScale l) dx) (domFrac (lpYScale l) dy)
+projectXY (CoordPolarY _) l dx dy = polarPoint l (domFrac (lpYScale l) dy) (domFrac (lpXScale l) dx)
+-- ★ Phase 64 §3 (A12) で ternaryPoint による正三角座標を実装予定。 A10 時点では
+--   投影は未実装のため Cartesian に fallback する placeholder (ternary を当てた図は
+--   まだ無い = render される経路が無い)。
+projectXY CoordTernary l dx dy =
+  (scaleApply (lpXScale l) dx, scaleApply (lpYScale l) dy)
 
 -- | [日本語]: scale の domain における正規化位置 [0,1] (= (v - dLo)/(dHi -
 --   dLo))。 極座標で角度/半径の比率を出すのに使う。 domain が退化していれば
@@ -1649,15 +1655,31 @@ polarClipPath l =
   [ polarPoint l (fromIntegral i / n) 1.0 | i <- [0 .. round n - 1 :: Int] ]
   where n = 180 :: Double
 
--- | [日本語]: (角度 frac, 半径 frac) → px。 角度 0 を上 (12 時) とし時計回り、
+-- | [日本語]: 極座標の開始角/回転方向を Layout の 'lpCoord' から取り出す
+--   (= Phase 64 A16 = coord_polar(start=, direction=))。 polar でなければ既定
+--   (start=0, dir=+1)。 投影が 'polarPoint' 1 箇所に閉じているので、 grid /
+--   スポーク / θ ラベルもこの opts を通る。
+--   [English]: Extracts the polar start angle / direction from the Layout's
+--   'lpCoord' (Phase 64 A16 = coord_polar(start=, direction=)). Returns the
+--   default (start=0, dir=+1) for non-polar coords. Since projection is
+--   confined to 'polarPoint', grid / spokes / theta labels all honor these.
+polarOptsOf :: Coord -> (Double, Double)
+polarOptsOf (CoordPolarX o) = (polarStart o, polarDirection o)
+polarOptsOf (CoordPolarY o) = (polarStart o, polarDirection o)
+polarOptsOf _               = (0, 1)
+
+-- | [日本語]: (角度 frac, 半径 frac) → px。 角度は 'lpCoord' の 'PolarOpts' で
+--   @theta = start + dir * frac * 2π@ (既定 start=0=真上・dir=+1=時計回り)、
 --   半径 frac=1 が外周。
---   [English]: Maps (angle fraction, radius fraction) to px. Angle 0 is at
---   the top (12 o'clock) going clockwise; radius fraction 1 is the outer
---   edge.
+--   [English]: Maps (angle fraction, radius fraction) to px. The angle is
+--   @theta = start + dir * frac * 2π@ from the 'PolarOpts' in 'lpCoord'
+--   (default start=0 = top, dir=+1 = clockwise); radius fraction 1 is the
+--   outer edge.
 polarPoint :: Layout -> Double -> Double -> (Double, Double)
 polarPoint l thetaFrac rFrac =
   let (cx, cy, maxR) = polarCenter l
-      theta = thetaFrac * 2 * pi
+      (start, dir)   = polarOptsOf (lpCoord l)
+      theta = start + dir * thetaFrac * 2 * pi
       r     = rFrac * maxR
   in (cx + r * sin theta, cy - r * cos theta)
 
@@ -1699,9 +1721,12 @@ projectBarRect CoordFlip l centerD baseD valueD thicknessPx =
 -- 極座標の bar は wedge (扇形) で描くため Rect では表せない。
 --   renderBar が極座標を検出して PPath で arc を描く (= projectBarRect は使わない)。
 --   ここは totality 維持のための placeholder (Cartesian 同式・極座標 bar 経路では未使用)。
-projectBarRect CoordPolarX l centerD baseD valueD thicknessPx =
+projectBarRect (CoordPolarX _) l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
-projectBarRect CoordPolarY l centerD baseD valueD thicknessPx =
+projectBarRect (CoordPolarY _) l centerD baseD valueD thicknessPx =
+  projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
+-- ★ Phase 64 §3 (A12) までは ternary も Cartesian placeholder (未 render 経路)。
+projectBarRect CoordTernary l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
 
 -- | [日本語]: 扇形 (annular sector) の path。 (tf0..tf1) = 角度 frac 帯、
@@ -1743,8 +1768,8 @@ projectSegment coord l (dx0, dy0) (dx1, dy1)
       , uncurry Point (projectXY coord l dx1 dy1) ]
   | otherwise =
       let (tf0, tf1) = case coord of
-            CoordPolarY -> (domFrac (lpYScale l) dy0, domFrac (lpYScale l) dy1)
-            _           -> (domFrac (lpXScale l) dx0, domFrac (lpXScale l) dx1)
+            CoordPolarY _ -> (domFrac (lpYScale l) dy0, domFrac (lpYScale l) dy1)
+            _             -> (domFrac (lpXScale l) dx0, domFrac (lpXScale l) dx1)
           dTheta = abs (tf1 - tf0) * 2 * pi
           nSeg   = max 1 (ceiling (dTheta / 0.1)) :: Int
           lerp a b t = a + (b - a) * t
@@ -1780,11 +1805,11 @@ data BarShape = BarRect !Rect | BarWedge ![PathSegment]
 projectBar :: Coord -> Layout -> Double -> Double -> Double -> Double -> Double
            -> BarShape
 projectBar coord l centerD baseD valueD halfWidthD thicknessPx = case coord of
-  CoordPolarX -> BarWedge (wedgeSegments l (cfx - hf) (cfx + hf)
-                                           (dfy baseD) (dfy valueD))
-  CoordPolarY -> BarWedge (wedgeSegments l (dfy baseD) (dfy valueD)
-                                           (max 0 (cfx - hf)) (cfx + hf))
-  _           -> BarRect (projectBarRect coord l centerD baseD valueD thicknessPx)
+  CoordPolarX _ -> BarWedge (wedgeSegments l (cfx - hf) (cfx + hf)
+                                             (dfy baseD) (dfy valueD))
+  CoordPolarY _ -> BarWedge (wedgeSegments l (dfy baseD) (dfy valueD)
+                                             (max 0 (cfx - hf)) (cfx + hf))
+  _             -> BarRect (projectBarRect coord l centerD baseD valueD thicknessPx)
   where
     cfx   = domFrac (lpXScale l) centerD
     dfy   = domFrac (lpYScale l)
@@ -1841,13 +1866,13 @@ polarNudgePx coord l offPx p@(Point px py) =
       dy = py - cy
       r  = sqrt (dx * dx + dy * dy)
   in if r < 1e-9 then p else case coord of
-       CoordPolarX ->
+       CoordPolarX _ ->
          -- 弧長 offPx = 角度 offPx/r の回転 (polarPoint と同じ時計回りが正)。
          let dTh = offPx / r
              c = cos dTh
              s = sin dTh
          in Point (cx + dx * c - dy * s) (cy + dx * s + dy * c)
-       CoordPolarY ->
+       CoordPolarY _ ->
          let k = (r + offPx) / r
          in Point (cx + dx * k) (cy + dy * k)
        _ -> p
@@ -1892,10 +1917,12 @@ projectCrossPoint coord l loc offPx v =
 valueAxisPx :: Coord -> Layout -> Double -> Double
 valueAxisPx CoordCartesian l v = scaleApply (lpYScale l) v
 valueAxisPx CoordFlip      l v = scaleApply (lpYScaleFlipped l) v
-valueAxisPx CoordPolarX    l v =
+valueAxisPx (CoordPolarX _) l v =
   let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * maxR
-valueAxisPx CoordPolarY    l v =
+valueAxisPx (CoordPolarY _) l v =
   let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * (2 * pi * maxR)
+-- ★ Phase 64 §3 (A11) までは ternary の value 軸は Cartesian に fallback。
+valueAxisPx CoordTernary   l v = scaleApply (lpYScale l) v
 
 -- | [日本語]: value 一定で cross 方向へ ±半幅の短線 (box の median / whisker cap)。
 --   直線座標系は px 半幅 halfPx の 2 点 (旧式 bit 一致: [base+offPx-halfPx,
@@ -1988,8 +2015,9 @@ catUnitPx :: Coord -> Layout -> Double
 catUnitPx CoordCartesian l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 catUnitPx CoordFlip      l =
   abs (scaleApply (lpXScaleFlipped l) 1 - scaleApply (lpXScaleFlipped l) 0)
-catUnitPx CoordPolarX l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
-catUnitPx CoordPolarY l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
+catUnitPx (CoordPolarX _) l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
+catUnitPx (CoordPolarY _) l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
+catUnitPx CoordTernary l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 
 -- | [日本語]: 軸が物理的にどの辺に来るか。 Cartesian: データ x=下・y=左。
 --   Flip: データ x=左・y=下。 極座標は直交的な辺軸を持たない (Render の polar
@@ -2018,9 +2046,9 @@ coordXGridIsVertical _              = True
 -- | [日本語]: 極座標か (= CoordPolarX / CoordPolarY)。
 --   [English]: Whether this is polar (CoordPolarX or CoordPolarY).
 isPolar :: Coord -> Bool
-isPolar CoordPolarX = True
-isPolar CoordPolarY = True
-isPolar _           = False
+isPolar (CoordPolarX _) = True
+isPolar (CoordPolarY _) = True
+isPolar _               = False
 
 -- | [日本語]: D3 風 nice tick (= 1/2/5 × 10^k の刻み)。
 --   [English]: D3-style nice ticks (steps of 1/2/5 × 10^k).

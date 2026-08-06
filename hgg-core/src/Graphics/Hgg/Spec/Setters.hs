@@ -57,7 +57,8 @@ module Graphics.Hgg.Spec.Setters
   , marginal, marginalX, marginalY
   , palette, paletteGGplot, continuousPalette
   , scaleColorManual, scaleColorGradient2, scaleSize
-  , coordFlip, coordPolar, coordPolarY, coordCartesian, coordCartesianX, coordCartesianY
+  , coordFlip, coordPolar, coordPolarY, coordPolarWith, coordPolarYWith, coordTernary
+  , coordCartesian, coordCartesianX, coordCartesianY
   , reverseX, reverseY, aspectRatio
   , width, height, widthUnit, heightUnit, widthMm, heightMm, dpi
     -- * font setter
@@ -1142,7 +1143,7 @@ coordFlip = mempty { vsCoord = Last (Just CoordFlip) }
 --   the top, clockwise) and data y to radius. Turns line/point marks into
 --   a radar / spiral shape.
 coordPolar :: VisualSpec
-coordPolar = mempty { vsCoord = Last (Just CoordPolarX) }
+coordPolar = mempty { vsCoord = Last (Just (CoordPolarX defaultPolarOpts)) }
 
 -- | [日本語]: 極座標 (= ggplot @coord_polar(theta="y")@)。 データ y を角度、
 --   データ x を半径に写す。 単一カテゴリの stacked bar と併せると円グラフに
@@ -1151,7 +1152,39 @@ coordPolar = mempty { vsCoord = Last (Just CoordPolarX) }
 --   @coord_polar(theta="y")@). Maps data y to angle and data x to radius.
 --   Combined with a single-category stacked bar, it becomes a pie chart.
 coordPolarY :: VisualSpec
-coordPolarY = mempty { vsCoord = Last (Just CoordPolarY) }
+coordPolarY = mempty { vsCoord = Last (Just (CoordPolarY defaultPolarOpts)) }
+
+-- | [日本語]: 極座標 (theta="x") を開始角・回転方向つきで (= ggplot
+--   @coord_polar(theta="x", start=, direction=)@)。 @start@ = θ=0 の向き
+--   (rad、 0 = 真上)、 @direction@ = 回転方向の符号 (+1 = 時計回り \/ 既定、
+--   -1 = 反時計回り)。 'coordPolar' は @coordPolarWith 0 1@ と等価。
+--   [English]: Polar coordinates (theta="x") with a start angle and direction
+--   (like ggplot's @coord_polar(theta="x", start=, direction=)@). @start@ is
+--   the direction of theta=0 (radians, 0 = up), @direction@ the sign of the
+--   rotation (+1 clockwise / default, -1 counter-clockwise). 'coordPolar'
+--   equals @coordPolarWith 0 1@.
+coordPolarWith :: Double -> Double -> VisualSpec
+coordPolarWith start dir =
+  mempty { vsCoord = Last (Just (CoordPolarX (PolarOpts start dir))) }
+
+-- | [日本語]: 極座標 (theta="y") を開始角・回転方向つきで。 'coordPolarWith' の
+--   theta="y" 版 (= ggplot @coord_polar(theta="y", start=, direction=)@)。
+--   [English]: Polar coordinates (theta="y") with a start angle and direction;
+--   the theta="y" counterpart of 'coordPolarWith' (like ggplot's
+--   @coord_polar(theta="y", start=, direction=)@).
+coordPolarYWith :: Double -> Double -> VisualSpec
+coordPolarYWith start dir =
+  mempty { vsCoord = Last (Just (CoordPolarY (PolarOpts start dir))) }
+
+-- | [日本語]: 三角座標 (= 組成データ用の ternary plot)。 3 成分 (a,b,c) を正
+--   三角形の 3 頂点へ写す。 ★ Phase 64 §3 (A11-A13) で投影/grid を実装する。
+--   A10 時点では 'Coord' の枝と JSON codec のみが揃った状態 (render は未接続)。
+--   [English]: Ternary coordinates (a ternary plot for compositional data),
+--   mapping three components (a,b,c) to the corners of an equilateral
+--   triangle. Projection/grid are implemented in Phase 64 §3 (A11-A13); at A10
+--   only the 'Coord' constructor and JSON codec exist (rendering not wired up).
+coordTernary :: VisualSpec
+coordTernary = mempty { vsCoord = Last (Just CoordTernary) }
 
 -- | [日本語]: X 軸反転 (= ggplot @scale_x_reverse()@)。 大値が左、 小値が右へ。
 --   coord_flip と独立合成可。

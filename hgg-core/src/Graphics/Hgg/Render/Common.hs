@@ -537,8 +537,8 @@ polarGrid spec layout pal =
       spokeStyle = solid gridCol 0.5
       -- theta / radius を担う scale と tick / category ラベルを coord で選ぶ。
       (thetaScale, thetaTicks, thetaCats, radScale, radTicks) = case coord of
-        CoordPolarY -> ( lpYScale layout, lpYTicks layout, lpYCategoryLabels layout
-                       , lpXScale layout, lpXTicks layout )
+        CoordPolarY _ -> ( lpYScale layout, lpYTicks layout, lpYCategoryLabels layout
+                         , lpXScale layout, lpXTicks layout )
         _           -> ( lpXScale layout, lpXTicks layout, lpXCategoryLabels layout
                        , lpYScale layout, lpYTicks layout )
       inUnit f = f >= -1e-9 && f <= 1 + 1e-9

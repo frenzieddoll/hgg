@@ -1987,14 +1987,15 @@ main = hspec $ do
         (ccx, ccy, cmaxR) = polarCenter lay
 
     it "coordPolar setter は vsCoord = CoordPolarX を立てる" $
-      getLast (vsCoord coordPolar) `shouldBe` Just CoordPolarX
+      getLast (vsCoord coordPolar) `shouldBe` Just (CoordPolarX defaultPolarOpts)
 
     it "coordPolarY setter は vsCoord = CoordPolarY を立てる" $
-      getLast (vsCoord coordPolarY) `shouldBe` Just CoordPolarY
+      getLast (vsCoord coordPolarY) `shouldBe` Just (CoordPolarY defaultPolarOpts)
 
     it "isPolar: polar のみ True" $
-      map isPolar [CoordCartesian, CoordFlip, CoordPolarX, CoordPolarY]
-        `shouldBe` [False, False, True, True]
+      map isPolar [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
+                  , CoordPolarY defaultPolarOpts, CoordTernary ]
+        `shouldBe` [False, False, True, True, False]
 
     it "polarPoint: r=0 は中心、 θ=0 r=1 は真上 (cx, cy-maxR)" $
       let (x0, y0) = polarPoint lay 0 0
@@ -2008,6 +2009,52 @@ main = hspec $ do
       in ( abs (xr - (ccx + cmaxR)) < 1e-6, abs (yr - ccy) < 1e-6 )
            `shouldBe` (True, True)
 
+    -- ★ Phase 64 A10 (= §3 + §4-1 合流): Coord ADT の JSON codec 後方互換 +
+    --   CoordTernary + polar start/direction。
+    it "Coord JSON: 既定 polar / cartesian / flip / ternary は文字列 tag (後方互換)" $
+      map encode [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
+                 , CoordPolarY defaultPolarOpts, CoordTernary ]
+        `shouldBe` [ "\"cartesian\"", "\"flip\"", "\"polarx\"", "\"polary\"", "\"ternary\"" ]
+
+    it "Coord JSON: 旧 spec の \"polarx\"/\"polary\" 文字列は既定 opts で読める" $
+      ( eitherDecode "\"polarx\"", eitherDecode "\"polary\"", eitherDecode "\"ternary\"" )
+        `shouldBe` ( Right (CoordPolarX defaultPolarOpts)
+                   , Right (CoordPolarY defaultPolarOpts)
+                   , Right CoordTernary )
+
+    it "Coord JSON: 非既定 start/direction は object 形で往復する (文字列でなくなる)" $
+      let c = CoordPolarX (PolarOpts 1.5 (-1))
+      in ( eitherDecode (encode c), encode c /= "\"polarx\"" )
+           `shouldBe` ( Right c, True )
+
+    it "Coord JSON: object 形で start/direction 欠落は既定で補完" $
+      ( eitherDecode "{\"tag\":\"polarx\"}"
+      , eitherDecode "{\"tag\":\"polary\",\"start\":0.5}" )
+        `shouldBe` ( Right (CoordPolarX defaultPolarOpts)
+                   , Right (CoordPolarY (PolarOpts 0.5 1)) )
+
+    it "coordPolarWith / coordPolarYWith / coordTernary setter" $
+      ( getLast (vsCoord (coordPolarWith 1 (-1)))
+      , getLast (vsCoord (coordPolarYWith 0 1))
+      , getLast (vsCoord coordTernary) )
+        `shouldBe` ( Just (CoordPolarX (PolarOpts 1 (-1)))
+                   , Just (CoordPolarY defaultPolarOpts)
+                   , Just CoordTernary )
+
+    it "polarPoint: start=π/2 は θ=0 r=1 を右へ回す (既定の真上から 90° 回転)" $
+      let layS = computeLayout emptyResolver
+                   (overlay [points [0, 1, 2, 3] [0, 1, 2, 3]] <> coordPolarWith (pi / 2) 1)
+          (sx0, sy0) = polarPoint layS 0 1
+      in ( abs (sx0 - (ccx + cmaxR)) < 1e-6, abs (sy0 - ccy) < 1e-6 )
+           `shouldBe` (True, True)
+
+    it "polarPoint: direction=-1 は θ=0.25 を右ではなく左へ (反時計回り)" $
+      let layR = computeLayout emptyResolver
+                   (overlay [points [0, 1, 2, 3] [0, 1, 2, 3]] <> coordPolarWith 0 (-1))
+          (rx, ry) = polarPoint layR 0.25 1
+      in ( abs (rx - (ccx - cmaxR)) < 1e-6, abs (ry - ccy) < 1e-6 )
+           `shouldBe` (True, True)
+
     -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
     it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
@@ -2017,12 +2064,12 @@ main = hspec $ do
       in pts `shouldBe` [p0, p1]
 
     it "projectSegment polar: θ 不変 (純 radial) は 2 点のまま" $
-      length (projectSegment CoordPolarX lay (1, 0) (1, 3)) `shouldBe` 2
+      length (projectSegment (CoordPolarX defaultPolarOpts) lay (1, 0) (1, 3)) `shouldBe` 2
 
     it "projectSegment polar: r 一定の 1/4 周は弧にサンプルされ全点が同半径" $
       -- x domain 0..3 の x=0→x=1.5 は θfrac 0.5×(expansion 補正)。 サンプル数 ≥ 3 と
       -- 「全点が中心から同距離」 (= 弧、 直線なら中点が凹む) を確認する。
-      let ptsArc = projectSegment CoordPolarX lay (0, 3) (1.5, 3)
+      let ptsArc = projectSegment (CoordPolarX defaultPolarOpts) lay (0, 3) (1.5, 3)
           ds     = [ sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
                    | Point x y <- ptsArc ]
       in ( length ptsArc > 2
@@ -2042,7 +2089,7 @@ main = hspec $ do
           hw    = 0.45 / spanX
           dfx   = domFrac (lpXScale layP)
           dfy   = domFrac (lpYScale layP)
-      in projectBar CoordPolarX layP 1 0 4 0.45 999
+      in projectBar (CoordPolarX defaultPolarOpts) layP 1 0 4 0.45 999
            `shouldBe` BarWedge (wedgeSegments layP (dfx 1 - hw) (dfx 1 + hw)
                                                    (dfy 0) (dfy 4))
 
@@ -2146,12 +2193,12 @@ main = hspec $ do
            `shouldBe` Point (rX ar + rW ar / 2 + 3) (sy 0.5)
 
     it "projectCrossPoint PolarX off=0: projectXY と一致" $
-      projectCrossPoint CoordPolarX lay (CrossAt 1) 0 2
-        `shouldBe` uncurry Point (projectXY CoordPolarX lay 1 2)
+      projectCrossPoint (CoordPolarX defaultPolarOpts) lay (CrossAt 1) 0 2
+        `shouldBe` uncurry Point (projectXY (CoordPolarX defaultPolarOpts) lay 1 2)
 
     it "projectCrossPoint PolarX の px offset は接線方向 (半径不変・弧長 ≈ off)" $
-      let Point x0 y0 = projectCrossPoint CoordPolarX lay (CrossAt 1) 0 2
-          Point x1 y1 = projectCrossPoint CoordPolarX lay (CrossAt 1) 5 2
+      let Point x0 y0 = projectCrossPoint (CoordPolarX defaultPolarOpts) lay (CrossAt 1) 0 2
+          Point x1 y1 = projectCrossPoint (CoordPolarX defaultPolarOpts) lay (CrossAt 1) 5 2
           rOf x y = sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
           chord   = sqrt ((x1 - x0) ^ (2 :: Int) + (y1 - y0) ^ (2 :: Int))
       in ( abs (rOf x1 y1 - rOf x0 y0) < 1e-9   -- 半径が変わらない (= 回転)
@@ -2163,8 +2210,8 @@ main = hspec $ do
                    (overlay [points [0, 1, 2, 3] [0, 1, 2, 3]] <> coordPolarY)
           (cyx, cyy, _) = polarCenter layY
           rOf (Point x y) = sqrt ((x - cyx) ^ (2 :: Int) + (y - cyy) ^ (2 :: Int))
-          p0 = projectCrossPoint CoordPolarY layY (CrossAt 2) 0 1
-          p1 = projectCrossPoint CoordPolarY layY (CrossAt 2) 5 1
+          p0 = projectCrossPoint (CoordPolarY defaultPolarOpts) layY (CrossAt 2) 0 1
+          p1 = projectCrossPoint (CoordPolarY defaultPolarOpts) layY (CrossAt 2) 5 1
       in abs (rOf p1 - (rOf p0 + 5)) < 1e-9 `shouldBe` True
 
     it "projectCrossSpan Cartesian: [off-half, off+half] の 2 点で bit 一致" $
@@ -2174,7 +2221,7 @@ main = hspec $ do
                       , projectCrossPoint CoordCartesian layC (CrossAt 1) (2 + 8) 0.5 ]
 
     it "projectCrossSpan polar: data 半幅の弧 (3 点以上・全点同半径)" $
-      let ptsA = projectCrossSpan CoordPolarX lay (CrossAt 1.5) 0 999 1.0 3
+      let ptsA = projectCrossSpan (CoordPolarX defaultPolarOpts) lay (CrossAt 1.5) 0 999 1.0 3
           ds   = [ sqrt ((x - ccx) ^ (2 :: Int) + (y - ccy) ^ (2 :: Int))
                  | Point x y <- ptsA ]
       in ( length ptsA > 2, maximum ds - minimum ds < 1e-6 )
@@ -2190,8 +2237,8 @@ main = hspec $ do
                                    (2 * 8) (abs (sy 0.7 - sy 0.2)))
 
     it "projectCrossBar polar: off=0 は projectBar の wedge と一致" $
-      projectCrossBar CoordPolarX lay (CrossAt 1) 0 999 0.45 0 2
-        `shouldBe` projectBar CoordPolarX lay 1 0 2 0.45 0
+      projectCrossBar (CoordPolarX defaultPolarOpts) lay (CrossAt 1) 0 999 0.45 0 2
+        `shouldBe` projectBar (CoordPolarX defaultPolarOpts) lay 1 0 2 0.45 0
 
     -- A1 実測の決定的証拠 (box は coordPolar 有無で geom PRect 完全一致 = Cartesian
     -- 落ち) の解消ゲート: polar box の箱は wedge (PPath) で出る。

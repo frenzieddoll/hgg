@@ -259,9 +259,14 @@ module Graphics.Hgg.Spec
   , Position(..)
   , position
   , Coord(..)
+  , PolarOpts(..)
+  , defaultPolarOpts
   , coordFlip
   , coordPolar
   , coordPolarY
+  , coordPolarWith
+  , coordPolarYWith
+  , coordTernary
   , reverseX
   , reverseY
   , coordCartesianX
