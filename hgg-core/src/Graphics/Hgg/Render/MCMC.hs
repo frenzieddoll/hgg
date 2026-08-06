@@ -188,48 +188,49 @@ renderESS r layout thePal ly =
       sy v  = if yMax <= 0 then rY area + rH area
               else rY area + rH area - v / yMax * rH area
       nB    = length pairs
-      step  = if nB == 0 then 0 else rW area / fromIntegral nB
-      stepV = if nB == 0 then 0 else rH area / fromIntegral nB
-      barW  = step * 0.6
-      -- Phase 10 A4: value 軸 = ESS 値 (Cartesian 縦 sy / flip 横 valPxF)、 cross 軸 = 名前
-      -- (Cartesian 横 cx / flip 縦 cy・先頭を下端に)。 自前マッピングのまま coord で辺を入替。
-      coord = flipOnly (lpCoord layout)   -- A7-c: ess は polar 非対象
-      valPxF v = rX area + (if yMax <= 0 then 0 else v / yMax) * rW area
-      cxFor i = rX area + (fromIntegral i + 0.5) * step
-      cyFor i = rY area + rH area - (fromIntegral i + 0.5) * stepV
-      mkBarRect i v = case coord of
-        CoordCartesian -> Rect (cxFor i - barW/2) (sy v) barW (rY area + rH area - sy v)
-        CoordFlip      -> Rect (rX area) (cyFor i - barW/2) (valPxF v - rX area) barW
-      valRefLine t = case coord of
-        CoordCartesian -> (Point (rX area) (sy t), Point (rX area + rW area) (sy t))
-        CoordFlip      -> (Point (valPxF t) (rY area), Point (valPxF t) (rY area + rH area))
-      catAnchor = case coord of CoordCartesian -> AnchorMiddle; CoordFlip -> AnchorEnd
-      valAnchor = case coord of CoordCartesian -> AnchorEnd;    CoordFlip -> AnchorMiddle
+      -- ★ Phase 64 A4-b: autocorr と同型に投影層へ。 名前 (chain) は __離散スロット__
+      --   (`CrossAt i`)、 ESS 値は value 軸 (lpYScale)。 これで coordCartesianX/Y の
+      --   zoom 指定が効く (従来の自前マッピングは無視していた)。
+      coord = lpCoord layout
+      slotW = catUnitPx coord layout          -- 1 名前ぶんの cross 軸 px
+      barW  = slotW * 0.6
+      halfD = 0.3                              -- 極座標用の data 単位半幅 (0.6 の半分)
+      xLoD  = lsDomainLo (lpXScale layout)
+      xHiD  = lsDomainHi (lpXScale layout)
+      -- 軸の向きは placement helper で決める (= 生の case coord of を持たない)
+      valAtLeft = coordYAxisPlacement coord == AxisLeft
+      catAtBottom = coordXAxisPlacement coord == AxisBottom
+      catAnchor = if catAtBottom then AnchorMiddle else AnchorEnd
+      valAnchor = if valAtLeft   then AnchorEnd    else AnchorMiddle
       tsCat = mkFontTS Nothing thePal TickF catAnchor 0
       drawOne i (nm, v) =
         let col | v < 100   = "#d9534f"   -- 低い (要注意)
                 | v < 400   = "#f0ad4e"   -- 中
                 | otherwise = "#5cb85c"   -- 良い
-            lblPt = case coord of
-              CoordCartesian -> Point (cxFor i) (rY area + rH area + 16)
-              CoordFlip      -> Point (rX area - 6) (cyFor i + 4)
-        in [ PRect (mkBarRect i v) (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
-           , PText lblPt nm tsCat ]
-      -- ESS 閾値の参照線 (100 / 400)
-      refLines =
-        [ PLine p1 p2 (solid "#888888" 0.8)
-        | t <- [100, 400], t <= yMax, let (p1, p2) = valRefLine t ]
-      -- value 軸目盛り (Cartesian 左辺 / flip 下辺)
+            barPrim = case projectCrossBar coord layout (CrossAt (fromIntegral i))
+                                           0 (barW / 2) halfD 0 v of
+              BarRect  rect -> PRect rect (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
+              BarWedge segs -> PPath segs (FillStyle col 0.85) (Just (StrokeStyle col 0.5))
+            -- 名前ラベルは cross 軸の外側 (Cartesian = panel 下、 Flip = panel 左)
+            Point bx by = projectCrossPoint coord layout (CrossAt (fromIntegral i)) 0 0
+            lblPt | catAtBottom = Point bx (rY area + rH area + 16)
+                  | otherwise   = Point (rX area - 6) (by + 4)
+        in [ barPrim, PText lblPt nm tsCat ]
+      -- ESS 閾値の参照線 (100 / 400)。 value=t を cross 軸全長に渡す。
+      valRefPrims t =
+        let pts = projectSegment coord layout (xLoD, t) (xHiD, t)
+        in [ PLine p q (solid "#888888" 0.8) | (p, q) <- zip pts (drop 1 pts) ]
+      refLines = concat [ valRefPrims t | t <- [100, 400], t <= yMax ]
+      -- value 軸目盛り
       tsY = mkFontTS Nothing thePal TickF valAnchor 0
       yTicks =
         [ p | tv <- niceTicks 5 0 yMax
-            , p <- case coord of
-                CoordCartesian ->
-                  [ PLine (Point (rX area) (sy tv)) (Point (rX area - 5) (sy tv)) (solid (tpAxis thePal) 1.0)
-                  , PText (Point (rX area - 8) (sy tv + 4)) (numToText tv) tsY ]
-                CoordFlip ->
-                  [ PLine (Point (valPxF tv) (rY area + rH area)) (Point (valPxF tv) (rY area + rH area + 5)) (solid (tpAxis thePal) 1.0)
-                  , PText (Point (valPxF tv) (rY area + rH area + 18)) (numToText tv) tsY ] ]
+            , let Point ax ay = projectCrossPoint coord layout (CrossAt xLoD) 0 tv
+            , p <- if valAtLeft
+                     then [ PLine (Point ax ay) (Point (ax - 5) ay) (solid (tpAxis thePal) 1.0)
+                          , PText (Point (ax - 8) (ay + 4)) (numToText tv) tsY ]
+                     else [ PLine (Point ax ay) (Point ax (ay + 5)) (solid (tpAxis thePal) 1.0)
+                          , PText (Point ax (ay + 18)) (numToText tv) tsY ] ]
   in axisFrame layout thePal ++ yTicks ++ refLines
        ++ concatMap (uncurry drawOne) (zip [0..] pairs)
 

@@ -439,7 +439,9 @@ lagXRange r l = case getFirst (lyKind l) of
             Just (NumData v) -> length (uniqList (V.toList v))
             Nothing          -> 1
           Nothing -> 1
-    in V.fromList [0, fromIntegral (max 1 nChain)]
+    -- ★ Phase 64 A4-b: autocorr の lag と同じく、 名前 (chain) も __離散スロット__。
+    --   slot 0..n-1 が各々幅 1 を持つよう ±0.5 を含む range にする。
+    in V.fromList [-0.5, fromIntegral (max 1 nChain) - 0.5]
   _ -> V.empty
   where
     uniqList :: Eq a => [a] -> [a]
