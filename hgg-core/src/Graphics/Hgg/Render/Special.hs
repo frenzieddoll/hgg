@@ -331,6 +331,7 @@ affinePrim s tx ty = go
       PPath segs fs mss      -> PPath (map seg segs) fs (fmap sst mss)
       PText q t ts           -> PText (pt q) t (sts ts)
       PClipPush r            -> PClipPush (rect r)
+      PClipPath ps           -> PClipPath (map pt ps)
       PClipPop               -> PClipPop
       PTransformPush tr      -> PTransformPush tr
       PTransformPop          -> PTransformPop

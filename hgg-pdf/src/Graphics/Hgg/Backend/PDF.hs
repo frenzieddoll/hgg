@@ -157,6 +157,13 @@ drawPrims fonts h = go
               clipRectOf h rect
               go inner
             go after
+    -- Phase 64 §2: 多角形 clip。 矩形と同じく Pop までを withNewContext で囲う。
+    go (PClipPath pts : rest) =
+      let (inner, after) = breakMatch isClipPush isClipPop rest
+      in do P.withNewContext $ do
+              clipPolyOf h pts
+              go inner
+            go after
     go (PTransformPush tr : rest) =
       let (inner, after) = breakMatch isTrPush isTrPop rest
       in do P.withNewContext $ do
@@ -167,7 +174,8 @@ drawPrims fonts h = go
     go (PTransformPop : rest) = go rest
     go (p : rest)             = drawOne fonts h p >> go rest
 
-    isClipPush p = case p of { PClipPush _ -> True; _ -> False }
+    -- clip push は矩形版 / 多角形版の 2 種。 入れ子の数え上げでは同じ「push」 扱い。
+    isClipPush p = case p of { PClipPush _ -> True; PClipPath _ -> True; _ -> False }
     isClipPop  p = case p of { PClipPop    -> True; _ -> False }
     isTrPush   p = case p of { PTransformPush _ -> True; _ -> False }
     isTrPop    p = case p of { PTransformPop    -> True; _ -> False }
@@ -208,6 +216,22 @@ clipRectOf :: Double -> Rect -> P.Draw ()
 clipRectOf h (Rect x y w rh) = do
   P.addShape (P.Rectangle (x :+ (h - y - rh)) ((x + w) :+ (h - y)))
   P.setAsClipPath
+
+-- | [日本語]: 多角形 clip: 頂点列を path にして閉じ、 'P.setAsClipPath'。
+--   3 点未満は path を作らず何もしない (= clip 無しで素通し。 'PClipPath' の規約)。
+--   [English]: Polygon clip: builds a closed path from the vertices and calls
+--   'P.setAsClipPath'. Fewer than 3 vertices builds no path and does nothing
+--   (pass-through with no clip — the 'PClipPath' contract).
+clipPolyOf :: Double -> [Point] -> P.Draw ()
+clipPolyOf h pts
+  | length pts < 3 = pure ()
+  | otherwise      = do
+      case pts of
+        (p0 : rest) -> P.beginPath (pdfPt h p0)
+                       >> mapM_ (P.addLineToPath . pdfPt h) rest
+        []          -> pure ()
+      P.closePath
+      P.setAsClipPath
 
 -- | [日本語]: SVG 系 Transform → PDF Matrix。 y 反転 F (y↦h−y) は per-primitive に
 --   掛かるため、 SVG 空間の変換 M は __F∘M∘F (共役)__ で PDF 空間に写す:

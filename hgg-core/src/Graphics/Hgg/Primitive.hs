@@ -128,6 +128,21 @@ data Primitive
   | PPath          ![PathSegment] !FillStyle (Maybe StrokeStyle)
   | PText          !Point !Text !TextStyle
   | PClipPush      !Rect
+  -- | [日本語]: 多角形 clip (Phase 64 §2)。 頂点列は 'PRect' と同じ左上原点 y-down
+  --   空間で、 **最後の頂点から最初の頂点へ暗黙に閉じる** (明示 close 不要)。
+  --   矩形 clip は高速経路として 'PClipPush' を使い続ける (本 primitive は
+  --   polar の外周・ternary の三角形など矩形で表せない panel 用)。
+  --   ★ 頂点が 3 点未満の退化列は **clip 無し (素通し)** として扱う — 全 backend で
+  --   統一。 「全消し」 にすると図が黙って白紙になるので fail-open を採る。
+  --   [English]: Polygon clip (Phase 64 §2). The vertex list lives in the
+  --   same top-left-origin, y-down space as 'PRect', and is **implicitly
+  --   closed** from the last vertex back to the first. Rectangular clips
+  --   keep using 'PClipPush' as the fast path; this primitive is for panels
+  --   that a rectangle cannot express (a polar boundary, a ternary
+  --   triangle, ...). A degenerate list of fewer than 3 vertices is treated
+  --   as __no clip at all__ (pass-through) in every backend: failing open
+  --   avoids silently blanking a figure.
+  | PClipPath      ![Point]
   | PClipPop
   | PTransformPush !Transform
   | PTransformPop
@@ -167,6 +182,7 @@ scalePrimitives k
       PPath segs fs mss      -> PPath (map sseg segs) fs (fmap sst mss)
       PText pt txt ts        -> PText (sp pt) txt (sts ts)
       PClipPush r            -> PClipPush (sr r)
+      PClipPath ps           -> PClipPath (map sp ps)
       PClipPop               -> PClipPop
       PTransformPush tr      -> PTransformPush (str tr)
       PTransformPop          -> PTransformPop

@@ -356,6 +356,12 @@ drawPrims cfg h = go
       let (inner, after) = breakMatch isClipPush isClipPop rest
       in ("\\begin{scope}" : clipRectOf h rect : go inner)
          ++ ("\\end{scope}" : go after)
+    -- Phase 64 §2: 多角形 clip。 3 点未満は \clip を出さず scope だけ開く (素通し)。
+    go (PClipPath pts : rest) =
+      let (inner, after) = breakMatch isClipPush isClipPop rest
+          clipLine = [clipPolyOf h pts | length pts >= 3]
+      in (("\\begin{scope}" : clipLine) ++ go inner)
+         ++ ("\\end{scope}" : go after)
     go (PTransformPush tr : rest) =
       let (inner, after) = breakMatch isTrPush isTrPop rest
       in ("\\begin{scope}[cm={" <> cmOf h tr <> "}]" : go inner)
@@ -364,7 +370,8 @@ drawPrims cfg h = go
     go (PTransformPop : rest) = go rest
     go (p : rest)             = drawOne cfg h p ++ go rest
 
-    isClipPush p = case p of { PClipPush _ -> True; _ -> False }
+    -- clip push は矩形版 / 多角形版の 2 種。 入れ子の数え上げでは同じ「push」 扱い。
+    isClipPush p = case p of { PClipPush _ -> True; PClipPath _ -> True; _ -> False }
     isClipPop  p = case p of { PClipPop    -> True; _ -> False }
     isTrPush   p = case p of { PTransformPush _ -> True; _ -> False }
     isTrPop    p = case p of { PTransformPop    -> True; _ -> False }
@@ -393,6 +400,15 @@ breakMatch isPush isPop = walk (0 :: Int)
 clipRectOf :: Double -> Rect -> Text
 clipRectOf h (Rect x y w rh) =
   "\\clip " <> xy x (h - y - rh) <> " rectangle " <> xy (x + w) (h - y) <> ";"
+
+-- | [日本語]: 多角形 clip ('PClipPath')。 頂点を @--@ で繋ぎ @-- cycle@ で閉じる。
+--   y は viewport 高さで反転 ('clipRectOf' と同じ)。
+--   [English]: Polygon clip (for 'PClipPath'). Joins vertices with @--@ and
+--   closes with @-- cycle@. y is flipped by the viewport height (as in
+--   'clipRectOf').
+clipPolyOf :: Double -> [Point] -> Text
+clipPolyOf h pts =
+  "\\clip " <> T.intercalate " -- " [xy x (h - y) | Point x y <- pts] <> " -- cycle;"
 
 -- | [日本語]: SVG 系 Transform → TikZ cm= 明示行列 (a,b,c,d,(tx,ty))。 y 反転 F が
 --   per-primitive に掛かるため __F∘M∘F (共役)__ で写す — PDF backend の

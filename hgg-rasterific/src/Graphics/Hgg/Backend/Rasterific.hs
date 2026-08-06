@@ -425,6 +425,13 @@ drawPrims fonts = go
       let (inner, after) = breakMatch isClipPush isClipPop rest
       in do R.withClipping (R.fill (rectShape rect)) (go inner)
             go after
+    -- Phase 64 §2: 多角形 clip。 3 点未満は clip 無しで内側をそのまま描く (素通し)。
+    go (PClipPath pts : rest) =
+      let (inner, after) = breakMatch isClipPush isClipPop rest
+      in do if length pts < 3
+              then go inner
+              else R.withClipping (R.fill (polyShape pts)) (go inner)
+            go after
     go (PTransformPush tr : rest) =
       let (inner, after) = breakMatch isTrPush isTrPop rest
       in do R.withTransformation (transformOf tr) (go inner)
@@ -433,7 +440,8 @@ drawPrims fonts = go
     go (PTransformPop : rest) = go rest
     go (p : rest)             = drawOne fonts p >> go rest
 
-    isClipPush p = case p of { PClipPush _ -> True; _ -> False }
+    -- clip push は矩形版 / 多角形版の 2 種。 入れ子の数え上げでは同じ「push」 扱い。
+    isClipPush p = case p of { PClipPush _ -> True; PClipPath _ -> True; _ -> False }
     isClipPop  p = case p of { PClipPop    -> True; _ -> False }
     isTrPush   p = case p of { PTransformPush _ -> True; _ -> False }
     isTrPop    p = case p of { PTransformPop    -> True; _ -> False }
@@ -497,6 +505,17 @@ strokeMaybeDashed dash w geom = case dash of
 
 rectShape :: Rect -> [R.Primitive]
 rectShape (Rect x y w h) = R.rectangle (R.V2 (f x) (f y)) (f w) (f h)
+
+-- | [日本語]: 多角形 shape ('PClipPath' 用)。 頂点列を辺で繋ぎ、 **最後→最初も
+--   繋いで閉じる** ('PClipPath' の暗黙 close 規約)。
+--   [English]: Polygon shape (for 'PClipPath'). Connects the vertices with
+--   edges and **closes the loop from last back to first** (the implicit
+--   close contract of 'PClipPath').
+polyShape :: [Point] -> [R.Primitive]
+polyShape []  = []
+polyShape pts = concat (zipWith seg pts (drop 1 pts ++ [head pts]))
+  where
+    seg a b = R.line (v2 a) (v2 b)
 
 -- | [日本語]: 矩形: fill (+ 任意 stroke)。 'Rect' は左上基準 = Rasterific と同じ。
 --   [English]: Rectangle: fill (+ optional stroke). 'Rect' is anchored at

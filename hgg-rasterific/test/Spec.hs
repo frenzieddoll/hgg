@@ -7,13 +7,16 @@ module Main (main) where
 import           Graphics.Hgg.Backend.Rasterific (PNGConfig (..), PNGFonts (..),
                                                   defaultPNGConfig, loadPNGFonts,
                                                   loadPNGFontsFor, normFamily,
-                                                  savePNG, savePNGConfigured)
+                                                  savePNG, savePNGConfigured,
+                                                  savePrimitivesPNG)
 import           Graphics.Hgg.Easy
-import           Graphics.Hgg.Layout             (computeLayout)
-import           Graphics.Hgg.Render             (Primitive (..),
+import           Graphics.Hgg.Layout             (Rect (..), computeLayout)
+import           Graphics.Hgg.Render             (FillStyle (..), Point (..),
+                                                  Primitive (..),
                                                   renderToPrimitives)
-import           Codec.Picture                   (Image (..), PixelRGBA8,
-                                                  convertRGBA8, decodePng)
+import           Codec.Picture                   (Image (..), PixelRGBA8 (..),
+                                                  convertRGBA8, decodePng,
+                                                  pixelAt)
 import qualified Data.ByteString                 as BS
 import qualified Graphics.Text.TrueType          as F
 import           System.Directory                (doesFileExist,
@@ -85,6 +88,38 @@ main = hspec $ do
         layer (line (inline [1, 2, 3, 4, 5, 6]) (inline [2, 4, 1, 3, 2, 5]))
           <> coordPolar
       w `shouldSatisfy` (> 100)
+
+  describe "Phase 64 A7: PClipPath (多角形 clip)" $ do
+    -- 200x200 の全面赤 rect を三角形 (100,20)-(180,180)-(20,180) で clip し、
+    -- 三角形の内外を pixel で直接確かめる (= clip が実際に効いている証拠)。
+    let triClip pts =
+          [ PClipPath pts
+          , PRect (Rect 0 0 200 200) (FillStyle "#ff0000" 1) Nothing
+          , PClipPop ]
+        tri = [Point 100 20, Point 180 180, Point 20 180]
+        renderPrims name prims = do
+          tmp <- getTemporaryDirectory
+          let path = tmp </> name
+          savePrimitivesPNG defaultPNGConfig path 200 200 prims
+          bs <- BS.readFile path
+          removeFile path
+          case decodePng bs of
+            Left err  -> error ("PNG decode 失敗: " ++ err)
+            Right dyn -> pure (convertRGBA8 dyn)
+        isRed (PixelRGBA8 r g b _) = r > 200 && g < 60 && b < 60
+
+    it "三角形の内側だけが塗られる (外側の角は背景のまま)" $ do
+      img <- renderPrims "hgg-png-test-clippath.png" (triClip tri)
+      isRed (pixelAt img 100 150) `shouldBe` True   -- 三角形の内側
+      isRed (pixelAt img   5   5) `shouldBe` False  -- 左上の角 (外側)
+      isRed (pixelAt img 195   5) `shouldBe` False  -- 右上の角 (外側)
+      isRed (pixelAt img 100   5) `shouldBe` False  -- 頂点より上 (外側)
+
+    it "頂点 3 点未満は clip 無し = 全面が塗られる (素通し)" $ do
+      img <- renderPrims "hgg-png-test-clippath-degenerate.png"
+               (triClip [Point 10 10, Point 20 20])
+      isRed (pixelAt img 100 150) `shouldBe` True
+      isRed (pixelAt img   5   5) `shouldBe` True
 
   describe "Phase 22 A3: PText (TrueType・anchor/rotate・日本語)" $ do
     it "title + 軸ラベル (回転 y ラベル含む) が例外なく書ける" $ do

@@ -272,6 +272,18 @@ primsToSvg = T.concat . go (0 :: Int)
             , "\" width=\"", numD w, "\" height=\"", numD h, "\"/></clipPath>"
             , "<g clip-path=\"url(#", cid, ")\">" ]
       in open : go (n + 1) rest
+    -- Phase 64 §2: 多角形 clip。 <polygon> は暗黙に閉じるので points をそのまま出す。
+    --   3 点未満は clip 無し (= <g> だけ開く) — Primitive の fail-open 規約。
+    go n (PClipPath pts : rest)
+      | length pts < 3 = "<g>" : go n rest
+      | otherwise =
+          let cid  = T.concat ["clip", num n]
+              open = T.concat
+                [ "<clipPath id=\"", cid, "\"><polygon points=\""
+                , T.intercalate " " [T.concat [numD x, ",", numD y] | Point x y <- pts]
+                , "\"/></clipPath>"
+                , "<g clip-path=\"url(#", cid, ")\">" ]
+          in open : go (n + 1) rest
     go n (PClipPop : rest) = "</g>" : go n rest
     go n (p : rest)        = primToSvg p : go n rest
 
@@ -346,6 +358,7 @@ primToSvg p = case p of
       , "/>"
       ]
   PClipPush{}      -> ""
+  PClipPath{}      -> ""
   PClipPop         -> ""
   PTransformPush{} -> ""
   PTransformPop    -> ""

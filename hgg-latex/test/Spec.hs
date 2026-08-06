@@ -105,6 +105,35 @@ main = hspec $ do
       T.count "\\begin{scope}" tex `shouldBe` 2
       T.count "\\end{scope}" tex `shouldBe` 2
 
+    -- Phase 64 A7: 多角形 clip。 y は viewport 高さ (100) で反転する。
+    it "PClipPath → \\clip の多角形 (-- で繋ぎ -- cycle で閉じる)" $ do
+      let prims = [ PClipPath [Point 50 10, Point 90 90, Point 10 90]
+                  , PLine (Point 0 0) (Point 9 9) (LineStyle "#000000" 1 [])
+                  , PClipPop ]
+          tex   = renderPrimitivesTeX 100 100 prims
+      tex `shouldSatisfy` has
+        "\\clip (50.000bp,90.000bp) -- (90.000bp,10.000bp) -- (10.000bp,10.000bp) -- cycle;"
+      T.count "\\begin{scope}" tex `shouldBe` 1
+      T.count "\\end{scope}" tex `shouldBe` 1
+
+    it "PClipPath が 3 点未満なら \\clip を出さない (素通し) が scope は対応する" $ do
+      let prims = [ PClipPath [Point 50 10, Point 90 90]
+                  , PLine (Point 0 0) (Point 9 9) (LineStyle "#000000" 1 [])
+                  , PClipPop ]
+          tex   = renderPrimitivesTeX 100 100 prims
+      tex `shouldSatisfy` (not . has "\\clip")
+      T.count "\\begin{scope}" tex `shouldBe` 1
+      T.count "\\end{scope}" tex `shouldBe` 1
+
+    it "PClipPath と PClipPush の入れ子も scope が対応する" $ do
+      let prims = [ PClipPath [Point 50 10, Point 90 90, Point 10 90]
+                  , PClipPush (Rect 0 0 50 50)
+                  , PLine (Point 0 0) (Point 9 9) (LineStyle "#000000" 1 [])
+                  , PClipPop, PClipPop ]
+          tex   = renderPrimitivesTeX 100 100 prims
+      T.count "\\begin{scope}" tex `shouldBe` 2
+      T.count "\\end{scope}" tex `shouldBe` 2
+
     it "PTransformPush → cm= 共役行列 (PDF backend の matrixOf と同式)" $ do
       let prims = [ PTransformPush (TranslateT 5 7)
                   , PLine (Point 0 0) (Point 1 1) (LineStyle "#000000" 1 [])

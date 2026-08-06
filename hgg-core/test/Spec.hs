@@ -211,6 +211,10 @@ main = hspec $ do
     it "k=2: text 位置+font size を倍化" $
       scalePrimitives 2 [txt] `shouldBe`
         [PText (Point 4 6) "x" (TextStyle "#000" 22 "sans-serif" AnchorStart 0 "normal" False)]
+    -- Phase 64 A7: 多角形 clip も dpi scale の対象 (頂点を全て k 倍)
+    it "k=2: PClipPath の全頂点を倍化" $
+      scalePrimitives 2 [PClipPath [Point 1 2, Point 3 4, Point 5 6]] `shouldBe`
+        [PClipPath [Point 2 4, Point 6 8, Point 10 12]]
 
   describe "Annotation Pos API (Phase 33 B6)" $ do
     it "annotTextP は Pos をそのまま格納" $
@@ -3499,6 +3503,7 @@ ctorName p = case p of
   PPath{}          -> "PPath"
   PText{}          -> "PText"
   PClipPush{}      -> "PClipPush"
+  PClipPath{}      -> "PClipPath"
   PClipPop         -> "PClipPop"
   PTransformPush{} -> "PTransformPush"
   PTransformPop    -> "PTransformPop"
