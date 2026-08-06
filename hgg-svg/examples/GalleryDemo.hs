@@ -423,6 +423,34 @@ main = do
     <> title "swarm + coord_flip (横向き)"
     <> xLabel "genotype" <> yLabel "weight gain (g/d)"
 
+  -- Phase 64 §1 (A5): coord_polar + distribution 族。 §1 の座標集約前は box/violin/
+  --   errorbar が polar でも Cartesian の軸平行図形のまま落ちていた (= polar 負債。
+  --   before 図は design/phase64-coord-ternary/before-polar-{box,violin,pointrange}.png)。
+  --   集約後は cat 軸が角度・値軸が半径に写り、 box は扇形帯・violin は弧に沿った
+  --   輪郭・errorbar は半径方向の線分として描かれる。 この 3 枚が解消の証拠。
+  emit "coord/polar-box.svg" $
+       purePlot
+    <> layer (boxplot grpNum <> groupBy grpCat)
+    <> coordPolar
+    <> title "coord_polar + box (群が角度・値が半径)"
+    <> xLabel "genotype" <> yLabel "weight gain (g/d)"
+
+  emit "coord/polar-violin.svg" $
+       purePlot
+    <> layer (violin grpNum <> groupBy grpCat)
+    <> coordPolar
+    <> title "coord_polar + violin (群が角度・値が半径)"
+    <> xLabel "genotype" <> yLabel "weight gain (g/d)"
+
+  emit "coord/polar-errorbar.svg" $
+       purePlot
+    <> layer (pointRange (inline ([1,2,3,4,5,6] :: [Double]))
+                         (inline ([4.0,5.5,4.8,6.2,5.0,5.8] :: [Double]))
+                         (inline ([0.6,0.5,0.8,0.4,0.7,0.5] :: [Double])))
+    <> coordPolar
+    <> title "coord_polar + pointRange (誤差棒が半径方向)"
+    <> xLabel "condition" <> yLabel "mean ± CI"
+
   -- Phase 10 A5 ②: waterfall の flip (standalone・自前 baseline/y tick/cat ラベル)。
   emit "coord/waterfall-flip.svg" $
        purePlot
