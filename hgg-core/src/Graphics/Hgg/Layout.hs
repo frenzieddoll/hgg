@@ -95,6 +95,9 @@ module Graphics.Hgg.Layout
   , isPolar
   , isTernary
   , normalizeTernary
+  , ternaryCenter
+  , ternaryVertices
+  , ternaryPoint
   , polarCenter
   , polarPoint
     -- ★ Phase 64 A8: 外周円 (θ ラベル位置 = clip 境界) の比と clip path
@@ -1598,11 +1601,11 @@ projectXY CoordFlip l dx dy =
 --   下端、 外周=domain 上端) に写す。
 projectXY (CoordPolarX _) l dx dy = polarPoint l (domFrac (lpXScale l) dx) (domFrac (lpYScale l) dy)
 projectXY (CoordPolarY _) l dx dy = polarPoint l (domFrac (lpYScale l) dy) (domFrac (lpXScale l) dx)
--- ★ Phase 64 §3 (A12) で ternaryPoint による正三角座標を実装予定。 A10 時点では
---   投影は未実装のため Cartesian に fallback する placeholder (ternary を当てた図は
---   まだ無い = render される経路が無い)。
-projectXY CoordTernary l dx dy =
-  (scaleApply (lpXScale l) dx, scaleApply (lpYScale l) dy)
+-- ★ Phase 64 A12: 三角座標。 'projectXY' は 2 引数 (a,b) しか受けないので、
+--   第 3 成分は @c = 1 - a - b@ と補完する (= a/b を既に fraction で渡す入力様式)。
+--   3 列 (encX/encY/encZ) を直接投影する経路は §3-4 (A13) で geom 側が
+--   'ternaryPoint' を 3 引数で呼ぶ。 grid/tick は 'ternaryPoint' を直接使う。
+projectXY CoordTernary l dx dy = ternaryPoint l (dx, dy, 1 - dx - dy)
 
 -- | [日本語]: scale の domain における正規化位置 [0,1] (= (v - dLo)/(dHi -
 --   dLo))。 極座標で角度/半径の比率を出すのに使う。 domain が退化していれば
@@ -1699,6 +1702,50 @@ polarPoint l thetaFrac rFrac =
       theta = start + dir * thetaFrac * 2 * pi
       r     = rFrac * maxR
   in (cx + r * sin theta, cy - r * cos theta)
+
+-- | [日本語]: 三角座標 (ternary) の中心と外接円半径 (= Phase 64 A12、 'polarCenter'
+--   の対)。 正三角形は panel 矩形に内接し、 **極座標と同じ短辺基準の npc 0.4** で
+--   寸法を決める (中心から各頂点まで @R = 0.4*min(w,h)@)。 三角形の高さは @1.5R@・
+--   幅は @√3 R@ で、 どちらも @min(w,h)@ 未満に収まり四方に軸ラベルの余白が残る。
+--   [English]: The center and circumradius of ternary coordinates (Phase 64
+--   A12; the counterpart of 'polarCenter'). The equilateral triangle is
+--   inscribed in the panel rectangle and sized on the short side at npc 0.4
+--   (@R = 0.4*min(w,h)@ from the center to each vertex), matching polar. The
+--   triangle's height @1.5R@ and width @√3 R@ both stay within @min(w,h)@,
+--   leaving margin on all sides for axis labels.
+ternaryCenter :: Layout -> (Double, Double, Double)
+ternaryCenter l = let a = lpPlotArea l
+                      cx = rX a + rW a / 2
+                      cy = rY a + rH a / 2
+                      r  = 0.4 * min (rW a) (rH a)
+                  in (cx, cy, r)
+
+-- | [日本語]: 三角座標の 3 頂点の px。 成分 @(a,b,c)@ と頂点の対応 = **a=上 (12 時)・
+--   b=左下・c=右下** (中心から 90°/210°/330° = 反時計回り)。 'ternaryPoint' /
+--   'ternaryGrid' / clip path が共有する単一情報源。
+--   [English]: The pixel positions of the three ternary vertices. Component ↔
+--   vertex: **a = top (12 o'clock), b = bottom-left, c = bottom-right** (at
+--   90°/210°/330° from the center). Shared single source of truth for
+--   'ternaryPoint', the grid, and the clip path.
+ternaryVertices :: Layout -> ((Double, Double), (Double, Double), (Double, Double))
+ternaryVertices l =
+  let (cx, cy, r) = ternaryCenter l
+      s = sqrt 3 / 2
+  in ( (cx, cy - r)               -- a: 上
+     , (cx - r * s, cy + r / 2)    -- b: 左下
+     , (cx + r * s, cy + r / 2) )  -- c: 右下
+
+-- | [日本語]: 正規化済み成分 @(a,b,c)@ (合計 1 前提) → px。 重心座標
+--   @P = a*A + b*B + c*C@ ('ternaryVertices' の 3 頂点)。 正規化は呼出側で
+--   'normalizeTernary' を通す (= 退化行はそこで Nothing となり描画対象から落ちる)。
+--   [English]: Maps normalized components @(a,b,c)@ (assumed to sum to 1) to
+--   pixels via barycentric coordinates @P = a*A + b*B + c*C@ over the three
+--   'ternaryVertices'. Callers normalize through 'normalizeTernary' first (so
+--   degenerate rows become Nothing and are dropped from rendering).
+ternaryPoint :: Layout -> (Double, Double, Double) -> (Double, Double)
+ternaryPoint l (a, b, c) =
+  let ((ax, ay), (bx, by), (cx, cy)) = ternaryVertices l
+  in (a * ax + b * bx + c * cx, a * ay + b * by + c * cy)
 
 -- | [日本語]: データ空間の矩形 (x/y の min/max) → px Rect。 Flip では bbox が
 --   縦横転置される。 2 隅を projectXY して min/abs で正規化するだけ (= 向きに

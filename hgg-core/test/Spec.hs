@@ -2098,6 +2098,41 @@ main = hspec $ do
                 <> coordTernary <> zLabel "C"
       in eitherDecode (encode s) `shouldBe` Right s
 
+    -- ★ Phase 64 A12 (= §3-3): ternaryPoint 投影の幾何。
+    it "ternaryPoint: 3 純成分は 3 頂点 (a=上・b=左下・c=右下)" $
+      let layT = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordTernary)
+          (tcx, tcy, tr) = ternaryCenter layT
+          s = sqrt 3 / 2
+          near (x, y) (x', y') = abs (x - x') < 1e-6 && abs (y - y') < 1e-6
+      in ( near (ternaryPoint layT (1, 0, 0)) (tcx, tcy - tr)          -- 上
+         , near (ternaryPoint layT (0, 1, 0)) (tcx - tr * s, tcy + tr / 2)  -- 左下
+         , near (ternaryPoint layT (0, 0, 1)) (tcx + tr * s, tcy + tr / 2) )  -- 右下
+           `shouldBe` (True, True, True)
+
+    it "ternaryPoint: 重心 (1/3,1/3,1/3) は三角形の中心" $
+      let layT = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordTernary)
+          (tcx, tcy, _) = ternaryCenter layT
+          (px, py) = ternaryPoint layT (1/3, 1/3, 1/3)
+      in ( abs (px - tcx) < 1e-6, abs (py - tcy) < 1e-6 ) `shouldBe` (True, True)
+
+    it "ternaryVertices: 正三角形 (3 辺長が等しい)" $
+      let layT = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordTernary)
+          ((ax, ay), (bx, by), (cx, cy)) = ternaryVertices layT
+          dist (x0, y0) (x1, y1) = sqrt ((x1-x0)^(2::Int) + (y1-y0)^(2::Int))
+          dAB = dist (ax, ay) (bx, by)
+          dBC = dist (bx, by) (cx, cy)
+          dCA = dist (cx, cy) (ax, ay)
+      in ( abs (dAB - dBC) < 1e-6, abs (dBC - dCA) < 1e-6 ) `shouldBe` (True, True)
+
+    it "projectXY CoordTernary: (a,b) は c=1-a-b を補完して ternaryPoint と一致" $
+      let layT = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1]] <> coordTernary)
+      in projectXY CoordTernary layT 0.5 0.3
+           `shouldBe` ternaryPoint layT (0.5, 0.3, 0.2)
+
     -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
     it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])

@@ -21,6 +21,7 @@ import           Graphics.Hgg.Layout (Layout (..), Rect (..), Scale (..),
                                       needsLegend, effectiveLegendPos,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       polarClipPath,
+                                      isTernary, ternaryVertices,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -414,12 +415,19 @@ renderSingle r layout spec =
       coordClip prims
         | polar       = PClipPath [ Point x y | (x, y) <- polarClipPath mainLayout ]
                         : prims ++ [PClipPop]
+        -- ★ Phase 64 A12: ternary は正三角形で clip (辺をまたぐ line/area を辺で切る)。
+        | ternary     = let ((ax, ay), (bx, by), (cx, cy)) = ternaryVertices mainLayout
+                        in PClipPath [Point ax ay, Point bx by, Point cx cy]
+                           : prims ++ [PClipPop]
         | hasCoordLim = PClipPush (lpPlotArea mainLayout) : prims ++ [PClipPop]
         | otherwise   = prims
       -- Phase 11 A7-c: 極座標は直交 grid/枠/tick の代わりに polarGrid (同心円 + スポーク)。
+      --   Phase 64 A12: 三角座標は ternaryGrid (三角形外周 + 3 方向格子線 + 三辺 tick)。
       polar = isPolar (coordOf spec)
+      ternary = isTernary (coordOf spec)
       gridAxisPrims
         | polar     = polarGrid spec mainLayout pal
+        | ternary   = ternaryGrid spec mainLayout pal
         | otherwise = gridLines mainLayout spec pal
                    <> axisFrame mainLayout pal
                    <> tickMarks (Just spec) mainLayout pal fmtX fmtY rotX rotY showX showY

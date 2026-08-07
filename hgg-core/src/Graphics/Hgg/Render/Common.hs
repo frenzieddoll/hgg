@@ -28,6 +28,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       effectiveShowAxisText, effectiveShowAxisTitle,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       polarOuterFrac,
+                                      isTernary, ternaryCenter, ternaryVertices,
+                                      ternaryPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -580,6 +582,69 @@ polarGrid spec layout pal =
   in if tpShowGrid pal then circles <> spokes <> boundary <> radLabels <> thetaLabels
      else radLabels <> thetaLabels
 
+-- | [日本語]: 三角座標 (ternary) の grid + 軸 (= Phase 64 A12、 'polarGrid' の対)。
+--   直交 gridLines/axisFrame/tickMarks の代わりに、 正三角形の外周 3 辺 + 3 方向の
+--   格子線 + 三辺の数値 tick ラベル + 3 頂点の軸タイトルを描く。 成分 ↔ 頂点は
+--   'ternaryVertices' に従う (a=上・b=左下・c=右下)。 grid off の theme では格子線を
+--   落とし、 外周 3 辺 + tick/タイトルは残す ('polarGrid' の外周円と同方針)。
+--   [English]: The ternary grid + axes (Phase 64 A12; the counterpart of
+--   'polarGrid'). Instead of the Cartesian gridLines/axisFrame/tickMarks, it
+--   draws the equilateral triangle's three outer edges, three families of grid
+--   lines, numeric tick labels along the three edges, and the three vertex
+--   axis titles. Component ↔ vertex follows 'ternaryVertices' (a=top,
+--   b=bottom-left, c=bottom-right). Under a grid-off theme the grid lines are
+--   dropped while the outer edges, ticks, and titles remain (matching how
+--   'polarGrid' keeps its boundary).
+ternaryGrid :: VisualSpec -> Layout -> ThemePalette -> [Primitive]
+ternaryGrid spec layout pal =
+  let (ctrX, ctrY, _) = ternaryCenter layout
+      gridCol   = tpGrid pal
+      axisCol   = tpAxis pal
+      edgeStyle = solid axisCol 1.0
+      gridStyle = solid gridCol 0.5
+      tp abc = uncurry Point (ternaryPoint layout abc)
+      -- 外周 3 辺 (a=上 A, b=左下 B, c=右下 C)。
+      edges = [ PLine (tp (1, 0, 0)) (tp (0, 1, 0)) edgeStyle    -- A→B (c=0)
+              , PLine (tp (0, 1, 0)) (tp (0, 0, 1)) edgeStyle    -- B→C (a=0)
+              , PLine (tp (0, 0, 1)) (tp (1, 0, 0)) edgeStyle ]  -- C→A (b=0)
+      -- 3 方向の格子線 (内部 tick fraction のみ)。 a=const は a=0 辺に平行、 以下同様。
+      inner = [ t | t <- lpZTicks layout, t > 1e-9, t < 1 - 1e-9 ]
+      gridA = [ PLine (tp (t, 1 - t, 0)) (tp (t, 0, 1 - t)) gridStyle | t <- inner ]
+      gridB = [ PLine (tp (1 - t, t, 0)) (tp (0, t, 1 - t)) gridStyle | t <- inner ]
+      gridC = [ PLine (tp (1 - t, 0, t)) (tp (0, 1 - t, t)) gridStyle | t <- inner ]
+      -- 中心から外向きへ d px 押し出す (tick ラベル/タイトルを辺の外側に置く)。
+      outward (px, py) d =
+        let dx = px - ctrX; dy = py - ctrY; m = sqrt (dx * dx + dy * dy)
+        in if m < 1e-9 then (px, py) else (px + dx / m * d, py + dy / m * d)
+      -- 三辺の数値 tick ラベル。 a=左辺 A-B / b=下辺 B-C / c=右辺 C-A 上の各 tick 点を
+      --   少し外側へ。
+      tsTick = mkFontTS (Just spec) pal TickF AnchorMiddle 0
+      -- 端点 (0/1 = 三角形の頂点) は 2 軸の tick が重なる上に頂点タイトルと被るので
+      --   除き、 内部 tick (0.2..0.8) のみラベルする。
+      edgeLabels = inner
+      mkLabel abc t =
+        let (lx, ly) = outward (ternaryPoint layout abc) 12
+        in PText (Point lx (ly + 3)) (numToText t) tsTick
+      tickA = [ mkLabel (t, 1 - t, 0) t | t <- edgeLabels ]
+      tickB = [ mkLabel (0, t, 1 - t) t | t <- edgeLabels ]
+      tickC = [ mkLabel (1 - t, 0, t) t | t <- edgeLabels ]
+      -- 3 頂点の軸タイトル (vsXLabel/vsYLabel/vsZLabel、 無ければ encX/encY/encZ 列名)。
+      tsTitle = mkFontTS (Just spec) pal AxisLabelF AnchorMiddle 0
+      firstLay = case vsLayers spec of (l0 : _) -> Just l0; [] -> Nothing
+      titleFor lbl enc = case getLast lbl of
+        Just t  -> Just t
+        Nothing -> fmap colRefName (firstLay >>= getLast . enc)
+      vertexTitle abc mtxt = case mtxt of
+        Nothing  -> []
+        Just txt -> let (lx, ly) = outward (ternaryPoint layout abc) 22
+                    in [ PText (Point lx (ly + 3)) txt tsTitle ]
+      titles = vertexTitle (1, 0, 0) (titleFor (vsXLabel spec) lyEncX)
+            <> vertexTitle (0, 1, 0) (titleFor (vsYLabel spec) lyEncY)
+            <> vertexTitle (0, 0, 1) (titleFor (vsZLabel spec) lyEncZ)
+  in if tpShowGrid pal
+       then gridA <> gridB <> gridC <> edges <> tickA <> tickB <> tickC <> titles
+       else edges <> tickA <> tickB <> tickC <> titles
+
 -- ★ Phase 64 A2: wedgeSegments (Phase 11 A7-c の扇形 path) は投影層 (Layout.hs) へ
 --   移設 (projectBar が共有するため)。
 
@@ -818,13 +883,16 @@ labels layout spec pal =
       -- ★ Phase 63 A19: axis.title の表示 (ThemeVoid 既定 False = element_blank)。
       --   Layout の margin 予約 (hasXLabel/hasYLabel gating) と単一情報源。
       showAxTitle = effectiveShowAxisTitle spec
+      -- ★ Phase 64 A12: ternary は 3 頂点の軸タイトルを ternaryGrid が描くので、
+      --   直交 (bottom/left) の x/y タイトルは抑止して二重描画を防ぐ。
+      isTern = isTernary (coordOf spec)
       -- x 軸タイトル: baseline = panel 下端 + offset + ascent。
       xLP = case getLast (vsXLabel spec) of
-        Just t | showAxTitle -> [ PText (Point cx (rY a + rH a + lpXTitleOff layout + labelSize * 0.8)) t tsLabel ]
+        Just t | showAxTitle && not isTern -> [ PText (Point cx (rY a + rH a + lpXTitleOff layout + labelSize * 0.8)) t tsLabel ]
         _ -> []
       -- y 軸タイトル (rot 90 CCW = ascent が -x 側): baseline = panel 左端 - offset - descent。
       yLP = case getLast (vsYLabel spec) of
-        Just t | showAxTitle -> [ PText (Point (rX a - lpYTitleOff layout - labelSize * 0.2) cy) t tsLabelV ]
+        Just t | showAxTitle && not isTern -> [ PText (Point (rX a - lpYTitleOff layout - labelSize * 0.2) cy) t tsLabelV ]
         _ -> []
       -- ★ Phase 11 A5-a: subtitle (title 直下、 小フォント) / caption (図右下・
       --   小フォント・右寄せ) / tag (左上隅・やや大・左寄せ太字)。 Layout の margin 予約
