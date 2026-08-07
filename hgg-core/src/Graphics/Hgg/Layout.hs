@@ -93,6 +93,8 @@ module Graphics.Hgg.Layout
   , coordXGridIsVertical
   , coordOf
   , isPolar
+  , isTernary
+  , normalizeTernary
   , polarCenter
   , polarPoint
     -- ★ Phase 64 A8: 外周円 (θ ラベル位置 = clip 境界) の比と clip path
@@ -192,6 +194,13 @@ data Layout = Layout
     -- ★ Phase 10 A2: spec の座標系 (= coordOf spec)。 spec を持たない各 mark renderer が
     --   projectXY/projectPoint で参照するため Layout に保持 (Cartesian は従来と bit 一致)。
   , lpCoord :: !Coord
+    -- ★ Phase 64 A11: 三角座標 (ternary) 第 3 軸 (encZ 成分)。 CoordTernary のときだけ
+    --   'Just' の [0,1] fraction scale + tick を持ち、 それ以外は 'Nothing' / [] で
+    --   既存 2 軸の図に一切影響しない。 投影 (ternaryPoint) と grid は §3 A12 で consume。
+  , lpZScale :: !(Maybe Scale)
+  , lpZTicks :: ![Double]
+  , lpZCategoryLabels :: ![T.Text]
+  , lpZTickLabels :: ![T.Text]
     -- ★ Phase 8 B22: dual Y 軸 (右側)。 vsYAxisRight が指定された / 右軸 layer が
     --   ある場合のみ Just。 右軸 layer の y 値だけから独立に scale を作る (= 左軸とは
     --   別 domain)。 Nothing なら従来通り単一 Y 軸。
@@ -713,6 +722,14 @@ computeLayout r spec0 =
        , lpXScaleFlipped = applyRevX sxF
        , lpYScaleFlipped = applyRevY syF
        , lpCoord    = coordOf spec
+         -- ★ Phase 64 A11: ternary の第 3 軸。 CoordTernary 時のみ [0,1] fraction
+         --   scale + nice tick、 それ以外は Nothing/[] (既存図は不変)。 カテゴリ/tick
+         --   ラベル上書きは continuous 軸ゆえ空 (A12 の grid が数値 tick を描く)。
+       , lpZScale   = if isTernary (coordOf spec)
+                        then Just (LinearScale 0 1 0 1) else Nothing
+       , lpZTicks   = if isTernary (coordOf spec) then niceTicks 5 0 1 else []
+       , lpZCategoryLabels = []
+       , lpZTickLabels = []
        , lpYScaleRight = fmap applyRevY syR
        , lpXTicks   = xTicks
        , lpYTicks   = yTicks
@@ -2049,6 +2066,33 @@ isPolar :: Coord -> Bool
 isPolar (CoordPolarX _) = True
 isPolar (CoordPolarY _) = True
 isPolar _               = False
+
+-- | [日本語]: 三角座標か (= 'CoordTernary')。 直交 tick の抑止 / grid ディスパッチ
+--   (Phase 64 §3 A12) の判定に使う。 'isPolar' と同型。
+--   [English]: Whether this is ternary (CoordTernary). Used to suppress the
+--   orthogonal ticks and to dispatch the grid (Phase 64 §3 A12); analogous to
+--   'isPolar'.
+isTernary :: Coord -> Bool
+isTernary CoordTernary = True
+isTernary _            = False
+
+-- | [日本語]: 三角座標の 3 成分 @(a,b,c)@ を合計 1 へ正規化 (= Phase 64 A11)。
+--   組成データは合計が 1 (100%) でなくてもよく、 内部で @a\/(a+b+c)@ に正規化する。
+--   ★ 退化行の扱い (2026-08-07 user 判断 = 行ごと除外): **いずれかの成分が負** または
+--   **合計 \<= 0** の行は組成データとして不正なので 'Nothing' を返し、 呼出側
+--   (§3 A12 の投影) が描画対象から落とす (= 欠損データと同じ扱い)。
+--   [English]: Normalizes a ternary triple @(a,b,c)@ to sum 1 (Phase 64 A11).
+--   Compositional data need not already sum to 1; it is normalized internally
+--   to @a\/(a+b+c)@. Degenerate-row policy (user decision 2026-08-07 = drop the
+--   row): a row with **any negative component** or a **sum \<= 0** is invalid
+--   compositional data, so 'Nothing' is returned and the caller (the §3 A12
+--   projection) drops it from rendering (treated like missing data).
+normalizeTernary :: (Double, Double, Double) -> Maybe (Double, Double, Double)
+normalizeTernary (a, b, c)
+  | a < 0 || b < 0 || c < 0 = Nothing
+  | s <= 0                  = Nothing
+  | otherwise              = Just (a / s, b / s, c / s)
+  where s = a + b + c
 
 -- | [日本語]: D3 風 nice tick (= 1/2/5 × 10^k の刻み)。
 --   [English]: D3-style nice ticks (steps of 1/2/5 × 10^k).

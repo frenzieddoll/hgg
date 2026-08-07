@@ -74,6 +74,7 @@ module Graphics.Hgg.Spec
   , customMarkWith
   , encX
   , encY
+  , encZ
     -- * Layer constructors (= Layer 返却)
   , scatter
   , line
@@ -340,6 +341,7 @@ module Graphics.Hgg.Spec
   , facetSpace
   , xLabel
   , yLabel
+  , zLabel
   , legendTitle
   , subtitle
   , caption

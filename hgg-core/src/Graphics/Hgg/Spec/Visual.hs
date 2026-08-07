@@ -28,7 +28,9 @@ module Graphics.Hgg.Spec.Visual
   , TagStyle(..)
   ) where
 
-import           Data.Aeson      (FromJSON, ToJSON)
+import           Data.Aeson      (FromJSON (..), ToJSON, Value (Object))
+import qualified Data.Aeson        as Aeson
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.List
 import           Data.Monoid     (Last (..))
 import           Data.Text       (Text)
@@ -92,6 +94,7 @@ data VisualSpec = VisualSpec
   , vsFacet  :: !(Last ColRef)
   , vsXLabel :: !(Last Text)
   , vsYLabel :: !(Last Text)
+  , vsZLabel :: !(Last Text)            -- ★ Phase 64 A11: 三角座標 (ternary) 第 3 軸ラベル
   , vsXAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
   , vsYAxis  :: !(Last AxisSpec)        -- ★ Phase 26 §C-2 #1
   , vsYAxisRight :: !(Last AxisSpec)    -- ★ dual Y 軸 (右側)
@@ -204,7 +207,17 @@ data VisualSpec = VisualSpec
   } deriving (Generic, Show, Eq)
 
 instance ToJSON   VisualSpec
-instance FromJSON VisualSpec
+-- ★ Phase 64 A11: vsZLabel は後付けフィールドゆえ、 旧 JSON (= gallery
+--   specs/**.json 等・ternary 導入前に生成) にキーが無くても decode できるよう、
+--   generic parse の前に欠損キーを既定値 (null = Last Nothing) で補う
+--   ('Layer' の lyOverlay/lyCustom/lyEncZ と同方針)。
+instance FromJSON VisualSpec where
+  parseJSON v = case v of
+    Object o ->
+      let o1 = if KM.member "vsZLabel" o then o
+               else KM.insert "vsZLabel" Aeson.Null o
+      in Aeson.genericParseJSON Aeson.defaultOptions (Object o1)
+    _ -> Aeson.genericParseJSON Aeson.defaultOptions v
 
 -- | [日本語]: 図全体の合成。 list 系 (layers/refLines/subplots/annotations/insets) は
 --   concat、 残りは 'Last' で後勝ち、 themeOverride は element 単位 Monoid。
@@ -231,6 +244,7 @@ instance Semigroup VisualSpec where
     , vsFacet        = vsFacet a        <> vsFacet b
     , vsXLabel       = vsXLabel a       <> vsXLabel b
     , vsYLabel       = vsYLabel a       <> vsYLabel b
+    , vsZLabel       = vsZLabel a       <> vsZLabel b
     , vsXAxis        = vsXAxis a        <> vsXAxis b
     , vsYAxis        = vsYAxis a        <> vsYAxis b
     , vsYAxisRight   = vsYAxisRight a   <> vsYAxisRight b
@@ -286,7 +300,7 @@ instance Monoid VisualSpec where
   -- 一律 mempty。レコード形式により field 追加時の位置ズレ事故が起きない。
   mempty = VisualSpec
     { vsLayers = mempty, vsTitle = mempty, vsTheme = mempty, vsFacet = mempty
-    , vsXLabel = mempty, vsYLabel = mempty, vsXAxis = mempty, vsYAxis = mempty
+    , vsXLabel = mempty, vsYLabel = mempty, vsZLabel = mempty, vsXAxis = mempty, vsYAxis = mempty
     , vsYAxisRight = mempty, vsRefLines = mempty, vsMarginal = mempty
     , vsSubplots = mempty, vsSubplotCols = mempty, vsLegend = mempty
     , vsSubplotWidths = mempty, vsSubplotHeights = mempty, vsSubplotTags = mempty

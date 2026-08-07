@@ -56,6 +56,7 @@ bakeLayer :: Resolver -> Layer -> Layer
 bakeLayer r l = l
   { lyEncX    = bakeColRef r <$> lyEncX l
   , lyEncY    = bakeColRef r <$> lyEncY l
+  , lyEncZ    = bakeColRef r <$> lyEncZ l   -- ★ Phase 64 A11: ternary 第 3 成分列
   , lyEncY2   = bakeColRef r <$> lyEncY2 l
   , lyErrorX  = bakeColRef r <$> lyErrorX l
   , lyErrorY  = bakeColRef r <$> lyErrorY l

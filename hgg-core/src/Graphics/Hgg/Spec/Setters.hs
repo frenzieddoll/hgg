@@ -24,7 +24,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 module Graphics.Hgg.Spec.Setters
   ( -- * layer 装着 + 基本 setter
-    layer, layers, purePlot, title, subtitle, caption, tag, xLabel, yLabel
+    layer, layers, purePlot, title, subtitle, caption, tag, xLabel, yLabel, zLabel
   , Labs(..), labs, emptyLabs
   , theme, facet, facetWrap, facetGrid, facetCols, facetScales, facetSpace
   , subplots, subplotCols, subplotWidths, subplotHeights, subplotTags
@@ -120,10 +120,12 @@ layer l = mempty { vsLayers = [l] }
 layers :: [Layer] -> VisualSpec
 layers = layer . mconcat
 
-title, xLabel, yLabel :: Text -> VisualSpec
+title, xLabel, yLabel, zLabel :: Text -> VisualSpec
 title  t = mempty { vsTitle  = Last (Just t) }
 xLabel t = mempty { vsXLabel = Last (Just t) }
 yLabel t = mempty { vsYLabel = Last (Just t) }
+-- ★ Phase 64 A11: 三角座標 (ternary) 第 3 軸 (encZ 成分) のタイトル。
+zLabel t = mempty { vsZLabel = Last (Just t) }
 
 -- | [日本語]: 凡例タイトル (= ggplot scale_color_*(name=) / labs(color=))。
 --   color/fill/shape/linetype の凡例ヘッダに表示。 軸タイトルは

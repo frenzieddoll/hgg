@@ -26,7 +26,7 @@ module Graphics.Hgg.Spec.Constructors
   , heatmap, boxplot, density, densityFill, freqpoly
   , scatterPoints, linePoints, unzipPoint2
     -- * custom mark
-  , customMark, customMarkWith, encX, encY
+  , customMark, customMarkWith, encX, encY, encZ
     -- * 統計 / 分布 mark
   , trace, traceLines, forest, forestNull, funnel, autocorr, autocorrMaxLag, ess
   , violin, strip, swarm, raincloud, ridge
@@ -130,6 +130,17 @@ encX x = mempty { lyEncX = Last (Just x) }
 
 encY :: ColRef -> Layer
 encY y = mempty { lyEncY = Last (Just y) }
+
+-- | [日本語]: 三角座標 (ternary) の第 3 成分 aesthetic (= Phase 64 A11)。 encX/encY
+--   と合わせ 3 成分 (a,b,c) を直接受ける。 'coordTernary' と併用したときのみ意味を
+--   持つ (直交/極座標では未使用)。 正規化 (合計→1) は library 側 ('normalizeTernary')。
+--   [English]: The third-component aesthetic of ternary coordinates (Phase 64
+--   A11). Together with encX/encY it takes the three components (a,b,c)
+--   directly. It only has meaning when combined with 'coordTernary' (unused in
+--   Cartesian / polar). Normalization (summing to 1) is done library-side
+--   ('normalizeTernary').
+encZ :: ColRef -> Layer
+encZ z = mempty { lyEncZ = Last (Just z) }
 
 -- | [日本語]: 2D scatter ('Point2' 直入れ・3D
 --   'Graphics.Hgg.ThreeD.Spec.scatter3DPoints' と対称)。 内部は

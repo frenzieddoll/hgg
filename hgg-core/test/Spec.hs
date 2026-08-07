@@ -2055,6 +2055,49 @@ main = hspec $ do
       in ( abs (rx - (ccx - cmaxR)) < 1e-6, abs (ry - ccy) < 1e-6 )
            `shouldBe` (True, True)
 
+    -- ★ Phase 64 A11 (= §3-2): ternary 第 3 位置 aesthetic (encZ) + 第 3 scale + 正規化。
+    it "isTernary: CoordTernary のみ True" $
+      map isTernary [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
+                    , CoordPolarY defaultPolarOpts, CoordTernary ]
+        `shouldBe` [False, False, False, False, True]
+
+    it "normalizeTernary: 合計≠1 は a/(a+b+c) に正規化" $
+      normalizeTernary (1, 1, 2) `shouldBe` Just (0.25, 0.25, 0.5)
+
+    it "normalizeTernary: 合計=1 は恒等" $
+      normalizeTernary (0.2, 0.3, 0.5) `shouldBe` Just (0.2, 0.3, 0.5)
+
+    it "normalizeTernary: 退化行 (負値 / 合計≤0) は Nothing (行ごと除外)" $
+      ( normalizeTernary (-1, 2, 3)   -- 負値
+      , normalizeTernary (0, 0, 0)    -- 合計 0
+      , normalizeTernary (2, -1, -1) )  -- 合計 0 かつ負値
+        `shouldBe` (Nothing, Nothing, Nothing)
+
+    it "encZ setter は lyEncZ を立てる / zLabel は vsZLabel を立てる" $
+      ( getLast (lyEncZ (encZ (ColByName "c")))
+      , getLast (vsZLabel (zLabel "third")) )
+        `shouldBe` (Just (ColByName "c"), Just "third")
+
+    it "第 3 scale: ternary のみ Just [0,1] + tick、 非 ternary は Nothing/[]" $
+      let layT = computeLayout emptyResolver
+                   (overlay [points [0, 1] [0, 1] <> encZ (ColByName "c")] <> coordTernary)
+          layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])
+      in ( lpZScale layT, null (lpZTicks layT), lpZScale layC, lpZTicks layC )
+           `shouldBe`
+             ( Just (LinearScale 0 1 0 1), False, Nothing, [] )
+
+    it "既存 2 軸の図に無影響: 非 ternary の lpXScale/lpYScale は encZ 追加で不変" $
+      let base = overlay [points [0, 1, 2] [0, 3, 6]]
+          withZ = overlay [points [0, 1, 2] [0, 3, 6] <> encZ (ColByName "c")]
+          lb = computeLayout emptyResolver base
+          lz = computeLayout emptyResolver withZ
+      in (lpXScale lb, lpYScale lb) `shouldBe` (lpXScale lz, lpYScale lz)
+
+    it "ternary spec (coordTernary + encZ + zLabel) は JSON 往復する" $
+      let s = layer (scatter (ColByName "a") (ColByName "b") <> encZ (ColByName "c"))
+                <> coordTernary <> zLabel "C"
+      in eitherDecode (encode s) `shouldBe` Right s
+
     -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
     it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])

@@ -77,6 +77,7 @@ data Layer = Layer
   { lyKind    :: !(First MarkKind)
   , lyEncX    :: !(Last ColRef)
   , lyEncY    :: !(Last ColRef)
+  , lyEncZ    :: !(Last ColRef)             -- ★ Phase 64 A11: 三角座標 (ternary) の第 3 成分列。 CoordTernary 時のみ意味を持つ
   , lyColor   :: !(Last ColorEnc)
   , lyAlpha   :: !(Last Double)
   , lySize    :: !(Last Double)
@@ -141,7 +142,10 @@ instance FromJSON Layer where
                else KM.insert "lyOverlay" (toJSON ([] :: [Layer])) o
           o2 = if KM.member "lyCustom" o1 then o1
                else KM.insert "lyCustom" Aeson.Null o1
-      in Aeson.genericParseJSON Aeson.defaultOptions (Object o2)
+          -- ★ Phase 64 A11: lyEncZ も後付けゆえ旧 JSON (gallery specs 等) に無い。
+          o3 = if KM.member "lyEncZ" o2 then o2
+               else KM.insert "lyEncZ" Aeson.Null o2
+      in Aeson.genericParseJSON Aeson.defaultOptions (Object o3)
     _ -> Aeson.genericParseJSON Aeson.defaultOptions v
 
 -- | [日本語]: 1 layer 内の属性合成。 'lyKind' のみ 'First' (= 最初の mark が勝ち、 後続の
@@ -167,6 +171,7 @@ instance Semigroup Layer where
     { lyKind        = lyKind a <> lyKind b
     , lyEncX        = lyEncX a <> lyEncX b
     , lyEncY        = lyEncY a <> lyEncY b
+    , lyEncZ        = lyEncZ a <> lyEncZ b
     , lyColor       = lyColor a <> lyColor b
     , lyAlpha       = lyAlpha a <> lyAlpha b
     , lySize        = lySize a <> lySize b
@@ -218,7 +223,7 @@ instance Semigroup Layer where
 
 instance Monoid Layer where
   mempty = Layer
-    { lyKind = mempty, lyEncX = mempty, lyEncY = mempty, lyColor = mempty
+    { lyKind = mempty, lyEncX = mempty, lyEncY = mempty, lyEncZ = mempty, lyColor = mempty
     , lyAlpha = mempty, lySize = mempty, lyStroke = mempty, lyHover = []
     , lyConnect = mempty, lyErrorX = mempty, lyErrorY = mempty, lyEncY2 = mempty
     , lyDAG = mempty, lyJitterX = mempty, lyJitterY = mempty, lyYAxisSide = mempty
