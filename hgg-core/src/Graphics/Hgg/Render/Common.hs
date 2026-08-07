@@ -631,9 +631,14 @@ ternaryGrid spec layout pal =
       -- 3 頂点の軸タイトル (vsXLabel/vsYLabel/vsZLabel、 無ければ encX/encY/encZ 列名)。
       tsTitle = mkFontTS (Just spec) pal AxisLabelF AnchorMiddle 0
       firstLay = case vsLayers spec of (l0 : _) -> Just l0; [] -> Nothing
+      -- ★ Phase 64 A13: 無名 inline 列の sentinel ("<inline-num>"/"<inline-txt>") は
+      --   頂点タイトルに出さず Nothing に潰す (= 他の軸タイトル経路 Layout.hs/Special.hs/
+      --   Layer.hs と同じ規律。 A12 で潰し漏れていた)。 ラベルは vsX/Y/ZLabel か名前付き列で。
       titleFor lbl enc = case getLast lbl of
         Just t  -> Just t
-        Nothing -> fmap colRefName (firstLay >>= getLast . enc)
+        Nothing -> case fmap colRefName (firstLay >>= getLast . enc) of
+          Just nm | nm /= "<inline-num>" && nm /= "<inline-txt>" -> Just nm
+          _                                                      -> Nothing
       vertexTitle abc mtxt = case mtxt of
         Nothing  -> []
         Just txt -> let (lx, ly) = outward (ternaryPoint layout abc) 22
