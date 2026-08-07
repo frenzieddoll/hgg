@@ -19,6 +19,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       Track (..), solveTracks,
                                       needsLegend, effectiveLegendPos,
                                       coordOf, isPolar, polarCenter, polarPoint,
+                                      isTernary,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, resolutionOf,
                                       BarShape (..), projectBar, projectSegment,
@@ -72,7 +73,10 @@ import           Graphics.Hgg.Render.Common
 --   upper bound. Drawn as a single filled 'PPath' (forward along x-yLow,
 --   backward along x-yHigh, then close). alpha is a layer modifier (default 0.2).
 renderBand :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
-renderBand r layout pal ly =
+renderBand r layout pal ly
+  -- ★ Phase 64 A13: ternary では下/上境界を encZ 正規化して塗る (別経路)。
+  | isTernary (lpCoord layout) = renderBandTernary r layout pal ly
+  | otherwise =
   let xs   = V.toList (vecOr (lyEncX ly) r)
       yLo  = V.toList (vecOr (lyEncY ly) r)
       yHi  = case getLast (lyEncY2 ly) of
@@ -100,6 +104,45 @@ renderBand r layout pal ly =
                        <> [ClosePath]
        in if null segs then []
           else [ PPath segs (FillStyle c a) Nothing ]
+
+-- | [日本語]: ★ Phase 64 A13: 三角座標 (ternary) の area band (ribbon)。 下境界
+--   (encX=a, encY=b, encZ=c) と上境界 (encX=a, encY2=b, encZ=c) をそれぞれ
+--   'ternaryRemap' で正規化 fraction 化し、 forward(下) + backward(上 reverse) の
+--   塗り polygon を作る。 退化/NaN 頂点は落とす。 三角形外への spill は dispatch 側
+--   (Render/Layer.hs) の三角形 clip が切る (= データ側で事前フィルタしない)。
+--   [English]: Phase 64 A13 ternary area band (ribbon). Normalizes the lower
+--   boundary (encX=a, encY=b, encZ=c) and the upper boundary (encX=a,
+--   encY2=b, encZ=c) each via 'ternaryRemap', then builds a filled polygon
+--   forward along the lower boundary and backward along the (reversed) upper
+--   boundary. Degenerate / NaN vertices are dropped. Any spill outside the
+--   triangle is clipped by the triangle clip in the dispatch (Render/Layer.hs);
+--   no data-side pre-filtering.
+renderBandTernary :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
+renderBandTernary r layout pal ly =
+  let coord = lpCoord layout
+      pp    = projectPoint coord layout
+      xsRaw = vecOrFull (lyEncX ly) r
+      loRaw = vecOrFull (lyEncY ly) r
+      hiRaw = case getLast (lyEncY2 ly) of
+        Just c  -> vecOrFull (Last (Just c)) r
+        Nothing -> V.empty
+      c  = staticColorOr ly (tpDefault pal)
+      a  = doubleOr (lyAlpha ly) 0.2
+      (xsLo, bLo) = ternaryRemap r layout ly xsRaw loRaw
+      (xsHi, bHi) = ternaryRemap r layout ly xsRaw hiRaw
+      -- 正規化済 (a,b) 対を px へ。 NaN (退化 / 欠損) 頂点は落とす。
+      ptsOf axV bxV =
+        [ pp av bv
+        | i <- [0 .. min (V.length axV) (V.length bxV) - 1]
+        , let av = axV V.! i; bv = bxV V.! i
+        , not (isNaN av), not (isNaN bv) ]
+      forwardPts  = ptsOf xsLo bLo
+      backwardPts = reverse (ptsOf xsHi bHi)
+      segs = case forwardPts of
+        []     -> []
+        (h:tl) -> [MoveTo h] <> map LineTo tl <> map LineTo backwardPts <> [ClosePath]
+  in if length forwardPts < 2 || null backwardPts then []
+     else [ PPath segs (FillStyle c a) Nothing ]
 
 -- | [日本語]: streamgraph (= 中心化積層 area、 ThemeRiver 風)。 color aes で系列分割し
 --   (= 'renderBarGrouped' と同型の群キー取得)、 各 x 値で系列 y を積層、 baseline を
@@ -161,8 +204,9 @@ renderScatter :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderScatter r layout pal ly =
   -- NA 行を整列したまま落とすため vecOrFull (= 長さ保持) を使い、 点生成時に
   -- NaN を skip する (色/サイズ vector との index 整列を保つ = ggplot 行単位 na.rm)。
-  let xs = vecOrFull (lyEncX ly) r
-      ys = vecOrFull (lyEncY ly) r
+  -- ★ Phase 64 A13: ternary は 'ternaryRemap' で (x,y) を encZ 正規化した fraction へ
+  --   写す (退化行→NaN で下の NaN skip に乗る)。 非 ternary は素通し = byte 不変。
+  let (xs, ys) = ternaryRemap r layout ly (vecOrFull (lyEncX ly) r) (vecOrFull (lyEncY ly) r)
       n  = min (V.length xs) (V.length ys)
       cs = colorVector r layout pal ly n
       a  = doubleOr (lyAlpha ly) 0.85
@@ -331,8 +375,11 @@ renderLine :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderLine r layout pal ly =
   -- NA 行を整列したまま落とすため vecOrFull (長さ保持) で取り、 seg で NaN 点を
   -- 除いてから線分化する (= ggplot が NA で線を切らず詰める na.rm 既定相当)。
-  let xs = V.toList $ vecOrFull (lyEncX ly) r
-      ys = V.toList $ vecOrFull (lyEncY ly) r
+  -- ★ Phase 64 A13: ternary は 'ternaryRemap' で (x,y) を encZ 正規化 fraction へ写す
+  --   (退化行→NaN で seg が詰める)。 群/linetype 分割も変換後の xs/ys で従来どおり動く。
+  let (xsV, ysV) = ternaryRemap r layout ly (vecOrFull (lyEncX ly) r) (vecOrFull (lyEncY ly) r)
+      xs = V.toList xsV
+      ys = V.toList ysV
       w  = doubleOr (lyStroke ly) defaultLineWidth
       coord = lpCoord layout
       pp = projectPoint coord layout

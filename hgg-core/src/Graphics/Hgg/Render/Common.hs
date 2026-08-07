@@ -29,7 +29,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       polarOuterFrac,
                                       isTernary, ternaryCenter, ternaryVertices,
-                                      ternaryPoint,
+                                      ternaryPoint, normalizeTernary,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -961,6 +961,46 @@ renderRightYAxis layout pal fmtYR = case lpYScaleRight layout of
 --   same as the previous `Point (sx x) (sy y)`, so it produces zero diff).
 projectPoint :: Coord -> Layout -> Double -> Double -> Point
 projectPoint c l dx dy = let (px, py) = projectXY c l dx dy in Point px py
+
+-- | [日本語]: ★ Phase 64 A13: 三角座標 (ternary) の geom 前処理。 各行の (x,y) を
+--   encZ 列と合わせて 'normalizeTernary' で成分和 1 の fraction (a',b') へ写す。
+--   __第 3 成分 c は @projectXY CoordTernary@ が @c = 1-a'-b'@ で補完する__ので、
+--   正規化後の (a',b') をそのまま既存の 'projectXY' / 'projectPoint' に渡せば
+--   'ternaryPoint' と一致する (geom 側の投影呼出は無改造で 3 列を正しく使える)。
+--   退化行 (負値 / 合計≤0、 および NaN) は @(NaN, NaN)@ にして既存の NA 除外
+--   (点 skip / 線の詰め) に乗せる (= 色/サイズ vector との行整列を保ったまま脱落)。
+--   encZ 未指定時は @c = 1-x-y@ で補完 (A12 の 2 引数挙動と互換)。
+--   __非 ternary 座標系では (xs, ys) を素通し (byte 不変)__。
+--   [English]: Phase 64 A13. Ternary geom preprocessing: normalizes each row's
+--   (x, y) together with the encZ column into fractions summing to 1 via
+--   'normalizeTernary', returning (a', b'). Since @projectXY CoordTernary@ fills
+--   the third component as @c = 1 - a' - b'@, passing the normalized (a', b')
+--   straight to the existing 'projectXY' / 'projectPoint' reproduces
+--   'ternaryPoint' — so a geom's projection call sites need no change to use the
+--   three columns correctly. Degenerate rows (negative component / non-positive
+--   sum / NaN) become @(NaN, NaN)@ so the existing NA handling (point skip /
+--   line contraction) drops them while preserving row alignment with the
+--   color/size vectors. A missing encZ falls back to @c = 1 - x - y@ (compatible
+--   with A12's two-argument behavior). For non-ternary coords, passes (xs, ys)
+--   through unchanged (byte-identical).
+ternaryRemap :: Resolver -> Layout -> Layer
+             -> V.Vector Double -> V.Vector Double
+             -> (V.Vector Double, V.Vector Double)
+ternaryRemap r layout ly xs ys
+  | not (isTernary (lpCoord layout)) = (xs, ys)
+  | otherwise =
+      let zs = vecOrFull (lyEncZ ly) r
+          n  = min (V.length xs) (V.length ys)
+          nan = 0 / 0 :: Double
+          remap i =
+            let x = xs V.! i
+                y = ys V.! i
+                z = if i < V.length zs then zs V.! i else 1 - x - y
+            in case normalizeTernary (x, y, z) of
+                 Just (a, b, _) -> (a, b)
+                 Nothing        -> (nan, nan)
+          pairs = V.generate n remap
+      in (V.map fst pairs, V.map snd pairs)
 
 -- | [日本語]: 極座標を解さない standalone renderer (ess/autocorr/forest/funnel/
 --   box/violin/strip/swarm/waterfall = 直交/flip 専用 2-way 分岐) 用に coord を

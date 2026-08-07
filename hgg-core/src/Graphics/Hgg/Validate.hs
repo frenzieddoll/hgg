@@ -67,6 +67,8 @@ module Graphics.Hgg.Validate
   , validatePlotWith
   , facetInlineDiagnostics        -- ★ Phase 62 A4 (§3)
   , reportFacetInlineWarnings     -- ★ Phase 62 A4: backend save 系共用の stderr 報告
+  , ternaryMarkWarningsFor        -- ★ Phase 64 A13
+  , reportTernaryMarkWarnings     -- ★ Phase 64 A13: coordTernary 非対応 mark の stderr 報告
   , suggest
   , CompiledPlot
   , compiledSpec
@@ -176,6 +178,15 @@ data PlotWarningKind
     --   column (inline length / facet length). Facet splitting has no
     --   effect on this column, so the same data is drawn on every panel.
     --   Rendering continues regardless.
+  | TernaryUnsupportedMark MarkKind
+    -- ^ [日本語]: ★ Phase 64 A13: 三角座標 (coordTernary) で意味を成さない mark。
+    --   ternary は point/line/area/text 系の mark のみ意味を持つ。 それ以外の mark は
+    --   投影自体は行われる (= 黙って Cartesian に落ちはしない) が結果は意味を持たない。
+    --   描画は継続する。
+    --   [English]: A mark meaningless under ternary coordinates (coordTernary).
+    --   Ternary only makes sense for point/line/area/text marks; other marks
+    --   are still projected (they do not silently fall back to Cartesian) but
+    --   the result is not meaningful. Rendering continues regardless.
   deriving (Show, Eq)
 
 data PlotDiagnostic
@@ -232,6 +243,10 @@ renderDiagnostic d = case d of
         <> " 列 (" <> tshow m <> " 行) があります。 facet 分割がこの列に効かず、"
         <> "全 panel に同一データが描かれます。 列長を facet 列と揃えるか、"
         <> "名前参照 + Resolver (saveSVGWith / savePNGWith 等) を使ってください。"
+    TernaryUnsupportedMark m ->
+      "三角座標 (coordTernary) は point / line / area / text 系の mark のみ意味を持ちます。 "
+        <> markName m <> " は三角座標で意味を持ちません (投影は行われますが結果は不定です)。 "
+        <> "scatter / line / band / text へ変えるか、 coordTernary を外してください。"
   expName ExpNumeric     = "数値列"
   expName ExpCategorical = "カテゴリ列"
   expName ExpAny         = "任意の列"
@@ -336,15 +351,58 @@ validatePlot = validatePlotWith []
 --   supply) attaches an edit-distance suggestion to 'ColumnNotFound'.
 validatePlotWith :: [Text] -> Resolver -> VisualSpec -> [PlotDiagnostic]
 validatePlotWith known r spec =
-  emptyCheck ++ layerDiags ++ subDiags
+  emptyCheck ++ layerDiags ++ ternaryDiags ++ subDiags
  where
   ls = vsLayers spec
   emptyCheck
     | null ls && null (vsSubplots spec) = [PlotError EmptyPlot topCtx]
     | otherwise                         = []
   layerDiags = concat (zipWith (validateLayer known r) [0 ..] ls)
+  -- ★ Phase 64 A13: coordTernary で point/line/area/text 以外の mark を警告 (= 黙って
+  --   Cartesian に落とさない・A13 の要件)。 subplot 再帰は subDiags 側が担う。
+  ternaryDiags = ternaryMarkWarningsFor spec
   -- subplots は独立 spec なので再帰 (layer index は各 sub で 0 始まり)
   subDiags = concatMap (validatePlotWith known r) (vsSubplots spec)
+
+-- | [日本語]: ★ Phase 64 A13: 単一 spec について、 coordTernary 下で 'ternaryValidMarks'
+--   に無い mark (= point/line/area/text 以外) を 'TernaryUnsupportedMark' 警告にする。
+--   subplot 再帰はしない (呼出側が担う)。 mark 未指定 layer / 'MCustom' は対象外。
+--   [English]: Phase 64 A13. For a single spec, flags any mark not in
+--   'ternaryValidMarks' (i.e. not point/line/area/text) under coordTernary as a
+--   'TernaryUnsupportedMark' warning. Does not recurse into subplots (the caller
+--   does). Mark-less layers and 'MCustom' are exempt.
+ternaryMarkWarningsFor :: VisualSpec -> [PlotDiagnostic]
+ternaryMarkWarningsFor spec
+  | getLast (vsCoord spec) == Just CoordTernary =
+      [ PlotWarning (TernaryUnsupportedMark m) (DiagnosticContext (Just i) (Just m))
+      | (i, ly) <- zip [0 ..] (vsLayers spec)
+      , Just m <- [getFirst (lyKind ly)]
+      , m `notElem` ternaryValidMarks ]
+  | otherwise = []
+
+-- | [日本語]: ★ Phase 64 A13: 'ternaryMarkWarningsFor' を stderr へ報告する backend 共用
+--   helper (SVG / PNG / PDF / TeX の save 系入口から 'reportFacetInlineWarnings' と並べて
+--   呼ぶ)。 診断ゼロなら無音。 描画は止めない (= 描画継続 + 警告)。 'validatePlot' 経由で
+--   subplot も再帰的に拾い、 'TernaryUnsupportedMark' 警告のみに絞る。
+--   [English]: Phase 64 A13. A backend-shared helper that reports
+--   'ternaryMarkWarningsFor' to stderr (called alongside
+--   'reportFacetInlineWarnings' from the SVG / PNG / PDF / TeX save entry
+--   points). Silent when there are none. Does not stop rendering. Goes through
+--   'validatePlot' to also pick up subplots recursively, filtering to only the
+--   'TernaryUnsupportedMark' warnings.
+reportTernaryMarkWarnings :: Resolver -> VisualSpec -> IO ()
+reportTernaryMarkWarnings r spec =
+  mapM_ (hPutStrLn stderr . T.unpack . renderDiagnostic)
+        [ d | d@(PlotWarning (TernaryUnsupportedMark _) _) <- validatePlot r spec ]
+
+-- | [日本語]: ★ Phase 64 A13: 三角座標 (ternary) で意味を持つ mark。 point (scatter) /
+--   line (line/trace) / area (band) / text (text/label)。 user 定義の 'MCustom' は
+--   判定不能ゆえ対象外 (警告しない)。
+--   [English]: Marks meaningful under ternary coordinates: point (scatter),
+--   line (line/trace), area (band), text (text/label). User-defined 'MCustom'
+--   is exempt (undecidable, so not warned).
+ternaryValidMarks :: [MarkKind]
+ternaryValidMarks = [MScatter, MLine, MTrace, MBand, MText, MLabel, MCustom]
 
 -- | [日本語]: 1 layer の検証: 必須 aesthetic 欠落 + 列解決 + 型チェック。
 --   [English]: Validates a single layer: missing required aesthetics,

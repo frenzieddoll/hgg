@@ -35,7 +35,8 @@ import           Graphics.Hgg.Spec     (MarkKind (..), Resolver, VisualSpec (..)
 import           Data.Monoid           (getFirst, getLast)
 import           Graphics.Hgg.Validate (PlotDiagnostic, Severity (..),
                                         diagnosticSeverity, renderDiagnostic,
-                                        reportFacetInlineWarnings)
+                                        reportFacetInlineWarnings,
+                                        reportTernaryMarkWarnings)
 import           Data.Text             (Text)
 import qualified Data.Text             as T
 import qualified Data.Text.IO          as TIO
@@ -77,6 +78,7 @@ renderSVG = renderSVGWith emptyResolver
 saveSVGWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveSVGWith path r spec = do
   reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  reportTernaryMarkWarnings r spec   -- Phase 64 A13: coordTernary unsupported mark
   TIO.writeFile path (renderSVGWith r spec)
 
 -- | [日本語]: SVG ファイルに保存。 Resolver 不要 (= inline 列のみの図、 = 通常)。
@@ -172,6 +174,7 @@ renderSVGInteractive r spec =
 saveSVGInteractive :: FilePath -> Resolver -> VisualSpec -> IO ()
 saveSVGInteractive path r spec = do
   reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3)
+  reportTernaryMarkWarnings r spec   -- Phase 64 A13: coordTernary unsupported mark
   TIO.writeFile path (renderSVGInteractive r spec)
 
 -- | [日本語]: '[Primitive]' を直接 SVG にする helper。

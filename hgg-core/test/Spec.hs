@@ -2133,6 +2133,64 @@ main = hspec $ do
       in projectXY CoordTernary layT 0.5 0.3
            `shouldBe` ternaryPoint layT (0.5, 0.3, 0.2)
 
+    -- ★ Phase 64 A13 (= §3-4): geom が encZ を解決し 3 列で ternary 投影する経路。
+    it "A13 ternary scatter: encZ を解決し正規化 (c≠1-a-b でも真の点)" $
+      -- 行 (a,b,c)=(1,1,2): 合計 4 → 正規化 (0.25,0.25,0.5)。 旧 2 引数補完 (c=1-1-1=-1)
+      -- とは別の位置になる = encZ を実際に使っている証拠。
+      let spec = overlay [ points [1] [1] <> encZ (inline [2 :: Double]) ] <> coordTernary
+          layT = computeLayout emptyResolver spec
+          ps   = renderToPrimitives emptyResolver layT spec
+          centers = [ (x, y) | PCircle (Point x y) _ _ _ _ <- ps ]
+          near (x, y) (x', y') = abs (x - x') < 1e-6 && abs (y - y') < 1e-6
+      in ( length centers
+         , all (\p -> near p (ternaryPoint layT (0.25, 0.25, 0.5))) centers )
+           `shouldBe` (1, True)
+
+    it "A13 ternary scatter: 退化行 (負 encZ) は落ちる (点数が減る)" $
+      -- 中央行 z=-5 は normalizeTernary が Nothing → NaN → 描画対象から除外。
+      let spec = overlay [ points [1, 1, 1] [1, 1, 1]
+                             <> encZ (inline [1, -5, 1 :: Double]) ] <> coordTernary
+          ps   = renderToPrimitives emptyResolver (computeLayout emptyResolver spec) spec
+      in length [() | PCircle{} <- ps] `shouldBe` 2
+
+    it "A13 ternary line: 退化行は詰められ線分が n'-1 本 (NaN 除外)" $
+      -- 3 行のうち中央が退化 → 有効 2 点 → PLine 1 本 (line layer 由来)。 grid/frame の
+      -- PLine と区別するため、 退化を含む場合 (1 本) と含まない場合 (2 本) の差で見る。
+      let mk zs = let spec = overlay [ line (inline [0, 1, 2 :: Double]) (inline [0, 1, 2])
+                                        <> encZ (inline zs) ] <> coordTernary
+                  in length [() | PLine{} <- renderToPrimitives emptyResolver
+                                    (computeLayout emptyResolver spec) spec ]
+      in (mk [1, 1, 1 :: Double] - mk [1, -5, 1 :: Double]) `shouldBe` 1
+
+    it "A13 ternary warn: 非対応 mark (bar) は TernaryUnsupportedMark 警告" $
+      let spec = layer (bar (inline [0, 1 :: Double]) (inline [1, 2 :: Double]))
+                   <> coordTernary
+          ws = [ () | PlotWarning (TernaryUnsupportedMark _) _
+                        <- validatePlot emptyResolver spec ]
+      in length ws `shouldBe` 1
+
+    it "A13 ternary warn: point/line/area/text は警告なし" $
+      let mkWarns mk = length
+            [ () | PlotWarning (TernaryUnsupportedMark _) _
+                     <- validatePlot emptyResolver (layer mk <> coordTernary) ]
+      in map mkWarns
+           [ scatter (inline [0, 1 :: Double]) (inline [1, 2 :: Double])
+           , line    (inline [0, 1 :: Double]) (inline [1, 2 :: Double])
+           , band    (inline [0, 1 :: Double]) (inline [0, 0 :: Double])
+                     (inline [1, 2 :: Double])
+           , text    (inline [0, 1 :: Double]) (inline [1, 2 :: Double])
+                     (inlineCat ["a", "b" :: Data.Text.Text]) ]
+           `shouldBe` [0, 0, 0, 0]
+
+    it "A13 非 ternary は encZ 追加で PCircle 位置不変 (byte 無影響)" $
+      -- Cartesian に encZ を足しても scatter の点位置は変わらない (ternary 専用経路)。
+      let base = layer (scatter (inline [0, 1, 2 :: Double]) (inline [0, 1, 4 :: Double]))
+          withZ = layer (scatter (inline [0, 1, 2 :: Double]) (inline [0, 1, 4 :: Double])
+                          <> encZ (inline [9, 9, 9 :: Double]))
+          centers s = [ (x, y) | PCircle (Point x y) _ _ _ _
+                          <- renderToPrimitives emptyResolver (computeLayout emptyResolver s) s ]
+      in centers base `shouldBe` centers withZ
+
     -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
     it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
       let layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]])

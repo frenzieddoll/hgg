@@ -47,7 +47,8 @@ import           Graphics.Hgg.Render   (FillStyle (..), LineStyle (..),
 import           Graphics.Hgg.Spec     (Resolver, VisualSpec, emptyResolver)
 import           Graphics.Hgg.Validate (Severity (..), diagnosticSeverity,
                                         renderDiagnostic,
-                                        reportFacetInlineWarnings)
+                                        reportFacetInlineWarnings,
+                                        reportTernaryMarkWarnings)
 import           Data.Char             (digitToInt, isHexDigit)
 import           Data.Complex          (Complex ((:+)))
 import           Data.Text             (Text)
@@ -74,6 +75,7 @@ savePDF path = savePDFWith path emptyResolver
 savePDFWith :: FilePath -> Resolver -> VisualSpec -> IO ()
 savePDFWith path r spec = do
   reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  reportTernaryMarkWarnings r spec   -- Phase 64 A13: coordTernary unsupported mark
   -- ★ Phase 33 B5: PDF は point ネイティブ (PDFRect 単位 = pt) ゆえ k=1。layout/prims
   --   は純 pt なので scalePrimitives 不要 (恒等)・viewport pt をそのまま頁サイズに。
   --   raster backend のような dpi 乗算をするとサイズが二重変換になるので禁止。

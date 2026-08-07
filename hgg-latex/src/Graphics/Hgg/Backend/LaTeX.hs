@@ -70,7 +70,8 @@ import           Graphics.Hgg.Render   (FillStyle (..), LineStyle (..),
 import           Graphics.Hgg.Spec     (Resolver, VisualSpec, emptyResolver)
 import           Graphics.Hgg.Validate (Severity (..), diagnosticSeverity,
                                         renderDiagnostic,
-                                        reportFacetInlineWarnings)
+                                        reportFacetInlineWarnings,
+                                        reportTernaryMarkWarnings)
 import           Data.Char             (isHexDigit, toUpper)
 import           Data.List             (nub)
 import           Data.Text             (Text)
@@ -200,6 +201,7 @@ luaLaTeXConfig = defaultTeXConfig
 saveTeXConfigured :: TeXConfig -> FilePath -> Resolver -> VisualSpec -> IO ()
 saveTeXConfigured cfg path r spec = do
   reportFacetInlineWarnings r spec   -- ★ Phase 62 A4 (§3): 描画は継続
+  reportTernaryMarkWarnings r spec   -- Phase 64 A13: coordTernary unsupported mark
   TIO.writeFile path (renderTeXConfigured cfg r spec)
 
 -- | [日本語]: 設定付き render。

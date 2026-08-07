@@ -19,6 +19,7 @@ import           Graphics.Hgg.Layout (numToText,
                                       Track (..), solveTracks,
                                       needsLegend, effectiveLegendPos,
                                       coordOf, isPolar, polarCenter, polarPoint,
+                                      isTernary,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, catUnitPx, AxisPlacement (..),
                                       -- Phase 64 A4: 棒を投影層の形状 dispatcher へ
@@ -772,8 +773,13 @@ catmullRomToBezier ps = go (0 :: Int) ps
 --   (default 11).
 renderText :: Resolver -> Layout -> ThemePalette -> Layer -> Bool -> [Primitive]
 renderText r layout pal ly withBox =
-  let xs   = V.toList (vecOr (lyEncX ly) r)
-      ys   = V.toList (vecOr (lyEncY ly) r)
+  -- ★ Phase 64 A13: ternary は (x,y) を encZ 正規化 fraction へ写す (vecOrFull で z と
+  --   行整列、 退化行→NaN は下の mkOne 前 filter で落とす)。 非 ternary は従来の vecOr。
+  let (xs, ys) = if isTernary (lpCoord layout)
+                   then let (vx, vy) = ternaryRemap r layout ly
+                                         (vecOrFull (lyEncX ly) r) (vecOrFull (lyEncY ly) r)
+                        in (V.toList vx, V.toList vy)
+                   else (V.toList (vecOr (lyEncX ly) r), V.toList (vecOr (lyEncY ly) r))
       labs = case getLast (lyLabel ly) of
         Just cr -> case resolveCol r cr of
           Just (TxtData v) -> V.toList v
@@ -800,7 +806,10 @@ renderText r layout pal ly withBox =
             -- 文字 baseline を矩形中央に合わせる (= py + fontSize*0.35)。
             textP = [ PText (Point px (py + fontSz * 0.35)) lab ts ]
         in (if withBox then box else []) <> textP
-  in if n <= 0 then [] else concatMap mkOne [0 .. n - 1]
+  -- ★ Phase 64 A13: NaN (ternary 退化行) 点を落とす。 非 ternary は vecOr で NaN 無し=無影響。
+  in if n <= 0 then []
+     else concatMap mkOne [ i | i <- [0 .. n - 1]
+                              , not (isNaN (xs !! i)), not (isNaN (ys !! i)) ]
 
 -- | [日本語]: HBM ModelGraph DAG 描画。
 --   node 位置 (dnX, dnY) は domain 座標として scale 適用、 node = PCircle +
