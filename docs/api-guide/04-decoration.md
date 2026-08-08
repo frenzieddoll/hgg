@@ -8,7 +8,7 @@ Figure-wide settings (all are `VisualSpec` · `<>` **outside** `purePlot <> … 
 
 Structure of this page (topic index):
 **[Title & Labels](#labels)** | **[theme](#theme)** |
-**[facet](#facet)** | **[subplot](#subplots)** | **[Coordinates](#coord)** |
+**[facet](#facet)** | **[subplot](#subplots)** | **[Coordinates](#coord)** | **[Ternary coordinates](#ternary)** |
 **[Legend, reference lines, helpers](#guides)** | **[Enum values quick reference](#enum-tables)** |
 **[Layering correctly](#overlay)** | **[Advanced figures](#advanced-layering)**
 
@@ -332,6 +332,7 @@ subplots [ layer (scatter "x" "y") <> title "scatter"
 <> coordFlip          -- x↔y flip (horizontal bar etc.)
 <> coordPolar         -- polar coordinates (x = angle)
 <> coordPolarY        -- polar coordinates (y = angle)
+<> coordTernary       -- ternary coordinates (3-part composition encX/encY/encZ)
 <> reverseX           -- reverse x axis
 <> reverseY           -- reverse y axis (y version of reverseX)
 <> coordCartesianX lo hi   -- zoom display range x-only (out-of-range data kept)
@@ -339,7 +340,7 @@ subplots [ layer (scatter "x" "y") <> title "scatter"
 <> coordCartesian x0 x1 y0 y1   -- specify all 4 sides
 ```
 
-> **Types**: `coordFlip` / `coordPolar` / `coordPolarY` / `reverseX` / `reverseY` are `VisualSpec` (no arguments).
+> **Types**: `coordFlip` / `coordPolar` / `coordPolarY` / `coordTernary` / `reverseX` / `reverseY` are `VisualSpec` (no arguments).
 > `coordCartesianX` / `coordCartesianY :: Double -> Double -> VisualSpec`,
 > `coordCartesian :: Double -> Double -> Double -> Double -> VisualSpec` (x0 x1 y0 y1).
 > `coordCartesian*` **changes only visible range, keeps data** (ggplot `coord_cartesian(xlim=)` equivalent).
@@ -352,6 +353,38 @@ purePlot <> layer (bar (inlineCat ["A","B","C"]) (inline [3,7,5])) <> coordFlip
 ```
 
 ![3g coordFlip](images/s3g-coord.svg)
+
+### Ternary coordinates (coordTernary) {#ternary}
+
+`coordTernary` maps 3-part **compositional data** onto barycentric coordinates in an
+equilateral triangle. The parts are given by three positional encodings —
+`encX` (`a`, top vertex), `encY` (`b`, bottom-left vertex), `encZ` (`c`, bottom-right vertex).
+`encZ :: ColRef -> Layer` is the ternary-only third positional column ([encoding](03-encoding-scale.md));
+vertex titles are set with `xLabel` / `yLabel` / `zLabel` (`zLabel :: Text -> VisualSpec`).
+
+- **Normalization**: each row is normalized so the parts sum to 1, i.e.
+  `(a, b, c) → (a, b, c) / (a+b+c)`. Raw quantities whose sum is not 1
+  (counts, non-ratio values) can be passed as-is.
+- **Degenerate rows are dropped**: rows with a negative part or a sum ≤ 0 are
+  treated as missing and **dropped whole** (points are skipped; lines close the gap).
+- **`encZ` is per layer**: when overlaying points and lines, **attach `encZ` to
+  every layer** (a layer without it falls back to `c = 1 - a - b`, which can land
+  on a different point).
+- **Supported marks**: point / line / area (band) / text. Combining any other mark
+  with `coordTernary` emits a warning (the diagnostics described in
+  [backends](05-backends.md)); rendering continues but the result is unspecified.
+
+```haskell
+purePlot
+  <> layer (scatter (inline [0.7, 0.2, 0.2, 0.34])   -- a = encX (top)
+                    (inline [0.2, 0.7, 0.1, 0.33])   -- b = encY (bottom left)
+             <> encZ (inline [0.1, 0.1, 0.7, 0.33])  -- c = encZ (bottom right)
+             <> size 6)
+  <> coordTernary
+  <> xLabel "a" <> yLabel "b" <> zLabel "c"
+```
+
+![3g-2 coordTernary](images/s3g2-ternary.svg)
 
 ## Legend, reference lines, helpers {#guides}
 
@@ -419,7 +452,7 @@ Settings with fixed values (`position` etc.) are listed **completely** here. Def
 | `legendPos` / `themeLegendPos` | `LegendPosition` | `LegendRight` / `LegendRightCenter` (default) / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
 | `themeTickDir` | `TickDir` | `TickOut` (default, outward) / `TickIn` (inward) / `TickBoth` (both sides) |
 | `subplotTags` | `TagStyle` | `TagUpper` ("A"/"B"…) / `TagLower` ("a"/"b"…) / `TagNumeric` ("1"/"2"…) |
-| Coordinates (`coordFlip` / `coordPolar` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` |
+| Coordinates (`coordFlip` / `coordPolar` / `coordTernary` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` / `CoordTernary` |
 | `refLine` | `ReferenceLine` | `RefIdentity` / `RefHorizontalAt c` / `RefVerticalAt c` / `RefLinear slope intercept` |
 
 > Examples: Stacked bar `<> position PosStack`, side-by-side `<> position PosDodge`, 100% stacked `<> position PosFill`. Dashed line `<> linetype LtDashed`. Legend inside top-right `<> legendPos LegendInsideTopRight`.

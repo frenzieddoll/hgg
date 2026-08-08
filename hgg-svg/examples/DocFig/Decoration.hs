@@ -104,6 +104,18 @@ figures =
       <> coordFlip
       <> title "3g. coordFlip (横棒)" <> xLabel "群" <> yLabel "値"
 
+    -- 3g-2 coord: coordTernary (3 成分の組成)。 encX=a 上・encY=b 左下・encZ=c 右下。
+    --   4 点は各頂点付近 + 中心 = 頂点↔成分の対応が読める配置。
+  , fig "s3g2-ternary.svg" $
+         purePlot
+      <> layer (scatter (inline [0.7, 0.2, 0.2, 0.34 :: Double])
+                        (inline [0.2, 0.7, 0.1, 0.33])
+                 <> encZ (inline [0.1, 0.1, 0.7, 0.33])
+                 <> size 6)
+      <> coordTernary
+      <> xLabel "a" <> yLabel "b" <> zLabel "c"
+      <> title "3g-2. coordTernary (3 成分の組成)"
+
     -- 3h 補助: 参照線 + 凡例
   , fig "s3h-guides.svg" $
          purePlot

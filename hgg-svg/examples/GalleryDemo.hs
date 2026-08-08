@@ -451,6 +451,37 @@ main = do
     <> title "coord_polar + pointRange (誤差棒が半径方向)"
     <> xLabel "condition" <> yLabel "mean ± CI"
 
+  -- Phase 64 §3 (A14): coord_ternary (三角座標)。 3 成分 (encX=a 上・encY=b 左下・
+  --   encZ=c 右下) の組成データを正三角形の重心座標へ写す。 各行は成分和 1 に正規化
+  --   (退化行は除外)。 土壌テクスチャ (sand/silt/clay) を色群付き散布で。
+  emit "coord/ternary-scatter.svg" $
+       purePlot
+    <> layer (scatter (inline ([0.6,0.2,0.4,0.1,0.5,0.34] :: [Double]))   -- sand=a
+                      (inline ([0.3,0.6,0.2,0.5,0.2,0.33] :: [Double]))   -- silt=b
+              <> encZ (inline ([0.1,0.2,0.4,0.4,0.3,0.33] :: [Double]))   -- clay=c
+              <> colorBy (inlineCat (["loam","silt","clay","silt","sand","loam"] :: [Text]))
+              <> size 5)
+    <> coordTernary
+    <> xLabel "Sand" <> yLabel "Silt" <> zLabel "Clay"
+    <> title "coord_ternary + scatter (soil texture)"
+
+  -- Phase 64 §3 (A14): coord_ternary + line = 組成の推移を三角形内の path で。
+  --   line/scatter とも encZ を持つ (レイヤーごとに第 3 成分列が要る)。 三角形 clip
+  --   (§2) が接続済 = 数値スピルの安全網 (正規化後は全点内部ゆえ通常は不可視)。
+  emit "coord/ternary-line.svg" $
+       purePlot
+    <> layer (line (inline ([0.8,0.6,0.4,0.2,0.1] :: [Double]))
+                   (inline ([0.1,0.2,0.3,0.5,0.6] :: [Double]))
+              <> encZ (inline ([0.1,0.2,0.3,0.3,0.3] :: [Double]))
+              <> stroke 2)
+    <> layer (scatter (inline ([0.8,0.6,0.4,0.2,0.1] :: [Double]))
+                      (inline ([0.1,0.2,0.3,0.5,0.6] :: [Double]))
+              <> encZ (inline ([0.1,0.2,0.3,0.3,0.3] :: [Double]))
+              <> size 4)
+    <> coordTernary
+    <> xLabel "a" <> yLabel "b" <> zLabel "c"
+    <> title "coord_ternary + line (組成の推移)"
+
   -- Phase 10 A5 ②: waterfall の flip (standalone・自前 baseline/y tick/cat ラベル)。
   emit "coord/waterfall-flip.svg" $
        purePlot

@@ -8,7 +8,7 @@ scale・軸の制御も同ページを参照。
 
 このページの構成 (topic 索引):
 **[タイトル・ラベル](#labels)** ｜ **[theme](#theme)** ｜
-**[facet](#facet)** ｜ **[subplot](#subplots)** ｜ **[座標系](#coord)** ｜
+**[facet](#facet)** ｜ **[subplot](#subplots)** ｜ **[座標系](#coord)** ｜ **[三角座標](#ternary)** ｜
 **[凡例・参照線・補助](#guides)** ｜ **[列挙型 早見表](#enum-tables)** ｜
 **[重畳の書き方](#overlay)** ｜ **[高度な図](#advanced-layering)**
 
@@ -287,6 +287,7 @@ saveSVG "concat.svg" $
 <> coordFlip          -- x↔y 反転 (横棒グラフ等)
 <> coordPolar         -- 極座標 (x 角度)
 <> coordPolarY        -- 極座標 (y 角度)
+<> coordTernary       -- 三角座標 (3 成分の組成 encX/encY/encZ)
 <> reverseX           -- x 軸反転
 <> reverseY           -- y 軸反転 (reverseX の y 版)
 <> coordCartesianX lo hi   -- x 方向だけ表示範囲をズーム (範囲外データは捨てない)
@@ -294,7 +295,7 @@ saveSVG "concat.svg" $
 <> coordCartesian x0 x1 y0 y1   -- 4 辺をまとめて指定
 ```
 
-> **型**: `coordFlip` / `coordPolar` / `coordPolarY` / `reverseX` / `reverseY` は `VisualSpec` (引数なし)。
+> **型**: `coordFlip` / `coordPolar` / `coordPolarY` / `coordTernary` / `reverseX` / `reverseY` は `VisualSpec` (引数なし)。
 > `coordCartesianX` / `coordCartesianY :: Double -> Double -> VisualSpec`、
 > `coordCartesian :: Double -> Double -> Double -> Double -> VisualSpec` (x0 x1 y0 y1)。
 > `coordCartesian*` は **データを捨てずに見える範囲だけ**変える (ggplot `coord_cartesian(xlim=)` 相当)。
@@ -307,6 +308,34 @@ purePlot <> layer (bar (inlineCat ["A","B","C"]) (inline [3,7,5])) <> coordFlip
 ```
 
 ![3g coordFlip](images/s3g-coord.svg)
+
+### 三角座標 (coordTernary) {#ternary}
+
+`coordTernary` は 3 成分の**組成データ**を正三角形の重心座標へ写す。 成分は 3 本の位置
+encoding — `encX` (`a`, 上頂点)・`encY` (`b`, 左下頂点)・`encZ` (`c`, 右下頂点) — で与える。
+`encZ :: ColRef -> Layer` は三角座標専用の第 3 位置列 ([encoding](03-encoding-scale.ja.md))、
+頂点タイトルは `xLabel` / `yLabel` / `zLabel` で付ける (`zLabel :: Text -> VisualSpec`)。
+
+- **正規化**: 各行は成分和が 1 になるよう `(a, b, c) → (a, b, c) / (a+b+c)` に正規化される。
+  和が 1 でない生の量 (件数・比率でない値) をそのまま渡してよい。
+- **退化行の除外**: 負の成分や和 ≤ 0 の行は欠損として**行ごと落とす** (点なら skip、
+  線なら詰める)。
+- **`encZ` はレイヤーごとに要る**: 点と線を重ねるなら**各レイヤーに `encZ` を付ける**
+  (付け忘れたレイヤーは `c = 1 - a - b` で補完されるため、 別の点に落ちうる)。
+- **対応 mark**: point / line / area (band) / text。 これ以外の mark を `coordTernary` と
+  組むと警告 ([backends](05-backends.ja.md) の診断) が出る (描画は継続するが結果は不定)。
+
+```haskell
+purePlot
+  <> layer (scatter (inline [0.7, 0.2, 0.2, 0.34])   -- a = encX (上)
+                    (inline [0.2, 0.7, 0.1, 0.33])   -- b = encY (左下)
+             <> encZ (inline [0.1, 0.1, 0.7, 0.33])  -- c = encZ (右下)
+             <> size 6)
+  <> coordTernary
+  <> xLabel "a" <> yLabel "b" <> zLabel "c"
+```
+
+![3g-2 coordTernary](images/s3g2-ternary.svg)
 
 ## 凡例・参照線・補助 {#guides}
 
@@ -385,7 +414,7 @@ purePlot <> layer (scatter "x" "y")
 | `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeCanvas` / `ThemeCanvasDark` (13 種) |
 | `facetScales` | `FacetScales` | `FacetFixed` / `FacetFreeX` / `FacetFreeY` / `FacetFree` |
 | `legendPos` | `LegendPosition` | `LegendRight` / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
-| 座標系 (`coordFlip` / `coordPolar` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` |
+| 座標系 (`coordFlip` / `coordPolar` / `coordTernary` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` / `CoordTernary` |
 | `refLine` | `ReferenceLine` | `RefIdentity` / `RefHorizontalAt c` / `RefVerticalAt c` / `RefLinear slope intercept` |
 
 > 例: 積み上げ棒 `<> position PosStack`、 横並び `<> position PosDodge`、 100% 積み上げ
