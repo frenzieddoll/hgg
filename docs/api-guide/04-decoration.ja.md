@@ -92,6 +92,9 @@ purePlot <> layer (scatter xs ys <> color (fromHex "#38bdf8") <> size 6) <> them
 | `axisColor` / `textColor` / `stripFill` | `Text -> VisualSpec` | 軸線の色 / 文字色 / strip 背景 (色 hex) |
 | `themeAxisLine` / `panelBorder` / `themeStrip` | `Bool -> VisualSpec` | 軸線 (下・左) / プロット枠線 / facet strip の on/off |
 | `themeAxisTextAngle` | `Double -> VisualSpec` | tick ラベルの回転角 (度) |
+| `themeGridWidth` | `Double -> VisualSpec` | グリッド線 (major) の線幅 pt (ggplot `panel.grid = element_line(linewidth=)`)。 指定すると polar / ternary の grid も同幅に統一。 未指定は座標系別の既定 (Cartesian major 1.0・polar / ternary 0.5) |
+| `themeGridMinorWidth` | `Double -> VisualSpec` | minor グリッド線の線幅 pt (`panel.grid.minor`)。 未指定は major × 0.5 (ggplot `rel(0.5)`) |
+| `themeAxisLineWidth` | `Double -> VisualSpec` | 軸線・プロット枠線・三角座標の辺の線幅 pt (ggplot `axis.line` / `panel.border`。 既定 1.0。 tick mark は対象外) |
 | `titleHjust` | `Double -> VisualSpec` | プロットタイトルの水平揃え (`0`=左 [既定]・`0.5`=中央・`1`=右) |
 | `titleColor` / `tickColor` / `legendKeyBg` | `Text -> VisualSpec` | タイトル文字色 / 軸目盛線 (tick mark) の色 / 凡例キー背景 (色 hex。`""` で塗らない) |
 | `titleFont` / `axisLabelFont` / `tickFont` / `legendFont` | `FontSpec -> VisualSpec` | 各テキストのフォント (下記 combinator で組む) |
@@ -111,6 +114,21 @@ purePlot <> layer (scatter xs ys <> size 6)
 ```
 
 ![theme 要素の部分上書き (太字タイトル・枠線・grid オフ・tick 45°)](images/s3e-theme-override.svg)
+
+グリッド線・軸線の**太さ**は `themeGridWidth` / `themeGridMinorWidth` / `themeAxisLineWidth`
+で変えられる (ggplot `element_line(linewidth=)` 相当)。 `themeGridWidth` は Cartesian の
+major に加え polar / ternary の grid も同幅に統一し、 minor は明示しなければ major × 0.5 に
+追従する。 `themeAxisLineWidth` は軸線・プロット枠線・三角座標の 3 辺をまとめて太らせる
+(tick mark は対象外):
+
+```haskell
+purePlot <> layer (scatter xs ys <> size 5)
+  <> theme ThemeMinimal <> gridColor "#9ca3af" <> panelBorder True
+  <> themeGridWidth 2.5      -- major grid を 2.5pt に (minor は自動で 1.25pt)
+  <> themeAxisLineWidth 2.0  -- 軸線・枠線を 2.0pt に
+```
+
+![grid / 軸線の線幅 (themeGridWidth / themeAxisLineWidth)](images/s3e-theme-linewidth.svg)
 
 facet 図 ([facet](#facet)) では strip (見出し帯) も上書きできる:
 

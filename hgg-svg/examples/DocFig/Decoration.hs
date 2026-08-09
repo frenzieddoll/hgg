@@ -139,6 +139,19 @@ figures =
       <> panelBorder True <> themeGrid False <> themeAxisTextAngle 45
       <> title "theme 要素の部分上書き"
 
+    -- 03 theme: grid / 軸線の線幅 (Phase 68。 element_line(linewidth=) 相当・左=既定 / 右=太らせ)
+  , figW "s3e-theme-linewidth.svg" 960 400 $
+         subplots
+           [ layer (scatter xs ys <> size 5)
+               <> theme ThemeMinimal <> gridColor "#9ca3af" <> panelBorder True
+               <> title "既定 (grid 1.0 / 軸線 1.0)"
+           , layer (scatter xs ys <> size 5)
+               <> theme ThemeMinimal <> gridColor "#9ca3af" <> panelBorder True
+               <> themeGridWidth 2.5 <> themeAxisLineWidth 2.0
+               <> title "themeGridWidth 2.5 <> themeAxisLineWidth 2.0" ]
+      <> subplotCols 2
+      <> title "grid / 軸線の線幅 (element_line(linewidth=))"
+
     -- 03 theme: cowplot 風 preset 3 種 (Phase 63 A8。 panel 別 theme として並置)
   , figW "s3e-theme-cowplot.svg" 1280 420 $
          subplots [ layer (scatter xs ys <> size 5) <> themeCowplot     <> title "themeCowplot"

@@ -87,6 +87,9 @@ After `theme` preset, override individual elements with `<>` (ggplot `theme(...)
 | `themeAxisTextAngleX` / `themeAxisTextAngleY` | `Double -> VisualSpec` | Rotation for x / y axis only (wins over the shared version; per-axis `axisRotate` wins over both) |
 | `themeTickLength` | `Double -> VisualSpec` | Axis tick mark length in pt (default 2.75 = ggplot `axis.ticks.length`) |
 | `themeTickDir` | `TickDir -> VisualSpec` | Tick direction ([enum](#enum-tables); `TickIn` pulls labels closer to the axis) |
+| `themeGridWidth` | `Double -> VisualSpec` | Major grid line width in pt (ggplot `panel.grid = element_line(linewidth=)`). When set, polar / ternary grids use the same width. Unset falls back to per-coordinate defaults (Cartesian major 1.0, polar / ternary 0.5) |
+| `themeGridMinorWidth` | `Double -> VisualSpec` | Minor grid line width in pt (`panel.grid.minor`). Unset follows major × 0.5 (ggplot `rel(0.5)`) |
+| `themeAxisLineWidth` | `Double -> VisualSpec` | Line width in pt for axis lines, the plot frame, and ternary triangle edges (ggplot `axis.line` / `panel.border`; default 1.0; tick marks are unaffected) |
 | `themePlotMargin` | `Double -> Double -> Double -> Double -> VisualSpec` | Outer plot margin t r b l (pt, same order as ggplot `margin(t,r,b,l)`). When set, **replaces** the automatic outer margin (5.5pt per side) |
 | `themeLegendPos` | `LegendPosition -> VisualSpec` | Bake legend position into a theme (figure-level `legendPos` wins if specified) |
 | `themeLegendKeySize` | `Double -> VisualSpec` | Legend key side length (pt, ggplot `legend.key.size` equivalent). Also sets the legend row pitch = line spacing, and propagates to margin reservation (default = 1.2 lines, 17.34pt at base 11) |
@@ -110,6 +113,22 @@ purePlot <> layer (scatter xs ys <> size 6)
 ```
 
 ![Element-level theme override (bold title, frame, grid off, 45° ticks)](images/s3e-theme-override.svg)
+
+The **width** of grid lines and axis lines is controlled by `themeGridWidth` /
+`themeGridMinorWidth` / `themeAxisLineWidth` (ggplot `element_line(linewidth=)`
+equivalent). `themeGridWidth` applies to Cartesian major grids and also unifies
+polar / ternary grids to the same width; minor follows major × 0.5 unless set
+explicitly. `themeAxisLineWidth` thickens axis lines, the plot frame, and the
+three ternary edges together (tick marks are unaffected):
+
+```haskell
+purePlot <> layer (scatter xs ys <> size 5)
+  <> theme ThemeMinimal <> gridColor "#9ca3af" <> panelBorder True
+  <> themeGridWidth 2.5      -- major grid at 2.5pt (minor follows at 1.25pt)
+  <> themeAxisLineWidth 2.0  -- axis lines / frame at 2.0pt
+```
+
+![Grid / axis line width (themeGridWidth / themeAxisLineWidth)](images/s3e-theme-linewidth.svg)
 
 For facet figures ([facet](#facet)), the strip (header bar) is also customizable:
 
