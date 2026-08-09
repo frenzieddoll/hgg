@@ -61,6 +61,7 @@ import           Graphics.Hgg.Spec   (Annotation (..), AxisFormat (..),
                                       ThemeOverride (..), TickDir (..), Margin (..),
                                       VisualSpec (..), YAxisSide (..), axisFormatOf,
                                       axisRotateOf, resolveAxisAngle, axisShowTicksOf,
+                                      axisTextAngleXOf, axisTextAngleYOf,
                                       axShowGrid,
                                       FontSpec (..), orderedCats,
                                       colRefName, distGroupRef, distDodgeRef,
@@ -570,7 +571,26 @@ polarGrid spec layout pal =
       --   (= panel の縁) だったため必ず panel の外へ出てタイトルと重なっていた。
       --   maxR を ggplot2 の npc 0.4 に合わせた今は 'polarOuterFrac' (0.45/0.4) が
       --   そのまま ggplot2 の θ ラベル半径 npc 0.45 に一致し、 panel 内に収まる。
-      tsT = mkFontTS (Just spec) pal TickF AnchorMiddle 0
+      -- ★ Phase 64 A18: θ 軸ラベルの回転を theme の axis.text 角に従わせる
+      --   (ggplot axis.text.x = element_text(angle=))。 θ を担う軸は coord で変わる
+      --   (PolarX=x / PolarY=y) ので、 その軸の 'axisTextAngleXOf'/'axisTextAngleYOf'
+      --   を解決する (Cartesian tick と同じ resolveAxisAngle 経路 = CCW 正 canonical)。
+      --   polar の θ ラベルは npc 0.45 の panel 内配置なので、 Cartesian と違い
+      --   回転マージンの予約は不要 (Layout 側は無改造)。 接線方向への自動回転は
+      --   ggplot に無いので入れない (plan §4-3)。
+      --   [English]: Make the theta-axis label rotation follow the theme's
+      --   axis.text angle (ggplot axis.text.x = element_text(angle=)). Which
+      --   spec axis drives theta depends on the coord (PolarX=x / PolarY=y), so
+      --   resolve that axis's angle via the same resolveAxisAngle path as
+      --   Cartesian ticks (CCW-positive canonical). Polar theta labels sit
+      --   inside the panel at npc 0.45, so unlike Cartesian no rotation-margin
+      --   reservation is needed (Layout untouched). No automatic tangential
+      --   rotation (ggplot has none; plan §4-3).
+      ovT = vsThemeOverride spec
+      thetaRot = case coord of
+        CoordPolarY _ -> resolveAxisAngle (vsYAxis spec) (axisTextAngleYOf ovT)
+        _             -> resolveAxisAngle (vsXAxis spec) (axisTextAngleXOf ovT)
+      tsT = mkFontTS (Just spec) pal TickF AnchorMiddle thetaRot
       thetaLabelFor i v = if not (null thetaCats) && i < length thetaCats
                             then thetaCats !! i else numToText v
       thetaLabels = [ let (lx, ly) = polarPointXY (domFrac thetaScale v) polarOuterFrac

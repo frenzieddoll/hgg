@@ -2304,6 +2304,36 @@ main = hspec $ do
       in all (\y -> y >= rY ar - 1e-6 && y <= rY ar + rH ar + 1e-6) labelYs
            `shouldBe` True
 
+    -- ★ Phase 64 A18 (= §4-3): θ 軸ラベルの回転を theme の axis.text 角に従わせる。
+    --   θ を担う軸は coord で変わる (PolarX=x / PolarY=y)。 既定 (角度未指定) は
+    --   rot 0 のまま = 既存 golden ゼロ diff。 θ ラベルは AnchorMiddle で識別。
+    -- =====================================================================
+    let polarThetaRots extra =
+          let s   = layer (pointRange (inline [1.0, 2, 3, 4, 5, 6])
+                                      (inline [4.0, 5.5, 4.8, 6.2, 5.0, 5.8])
+                                      (inline [0.6, 0.5, 0.8, 0.4, 0.7, 0.5]))
+                      <> extra
+              ps  = renderToPrimitives emptyResolver (computeLayout emptyResolver s) s
+          in [ tsRotate ts | PText _ t ts <- ps
+                           , t `elem` ["1","2","3","4","5","6"]
+                           , tsAnchor ts == AnchorMiddle ]
+
+    it "既定 (角度未指定) の polar θ ラベルは rot 0 (= 既存 golden ゼロ diff)" $
+      let rots = polarThetaRots coordPolar
+      in (length rots, all (== 0) rots) `shouldBe` (6, True)
+
+    it "themeAxisTextAngleX 45 で PolarX の θ ラベルが 45° 回転する" $
+      let rots = polarThetaRots (coordPolar <> themeAxisTextAngleX 45)
+      in (length rots, all (== 45) rots) `shouldBe` (6, True)
+
+    it "PolarY では θ = y 軸なので themeAxisTextAngleY が θ ラベルに効く" $
+      let rots = polarThetaRots (coordPolarY <> themeAxisTextAngleY 30)
+      in all (== 30) rots `shouldBe` True
+
+    it "PolarX の θ ラベルは Y 側角 (themeAxisTextAngleY) では回らない (軸の取り違え防止)" $
+      let rots = polarThetaRots (coordPolar <> themeAxisTextAngleY 60)
+      in all (== 0) rots `shouldBe` True
+
     -- ★ Phase 64 A3: categorical-cross geom 用の投影口 (CrossLoc 系)。
     -- 直線座標系は「旧 geom 内 px 式と bit 一致」 が契約 (golden 差分ゼロの根拠)。
     it "projectCrossPoint Cartesian: Point (sx d + off) (sy v) と bit 一致" $
