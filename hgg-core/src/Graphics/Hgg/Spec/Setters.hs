@@ -34,6 +34,7 @@ module Graphics.Hgg.Spec.Setters
   , plotBg, themePlotBg, panelFill, panelBorder, gridColor, themeGrid, themeAxisLine
   , themeGridMajor, themeGridMinor, themeLegendPos
   , themeTickLength, themeTickDir, themePlotMargin, themeBaseFontSize
+  , themeGridWidth, themeGridMinorWidth, themeAxisLineWidth
   , themeAxisText, themeAxisTitle, themeLegendKeySize
   , axisColor, textColor, tickColor, titleColor, titleHjust
   , stripFill, themeStrip, legendKeyBg
@@ -232,6 +233,42 @@ themeLegendPos p = mempty { vsThemeOverride = mempty { toLegendPos = Last (Just 
 --   reads the effective value).
 themeTickLength :: Double -> VisualSpec
 themeTickLength d = mempty { vsThemeOverride = mempty { toTickLength = Last (Just d) } }
+
+-- | [日本語]: ★ Phase 68: grid 線 (major・全 grid の base) の線幅 (pt) を theme に
+--   焼き込む (ggplot @theme(panel.grid = element_line(linewidth=))@ 相当)。 指定すると
+--   Cartesian major に加え polar / ternary の grid も同じ幅に統一される (panel.grid は
+--   座標系非依存)。 未指定時は各座標系の現状値 (Cartesian major 1.0 / polar・ternary 0.5)。
+--   minor は 'themeGridMinorWidth' 未指定なら自動で major × 0.5 に追従する。
+--   [English]: ★ Phase 68: bakes the grid line width (pt) into the theme (like
+--   ggplot's @theme(panel.grid = element_line(linewidth=))@). Setting it unifies
+--   the Cartesian major with the polar / ternary grid at the same width
+--   (panel.grid is coord-independent). When unspecified each coord keeps its
+--   current literal (Cartesian major 1.0 / polar & ternary 0.5). The minor grid
+--   follows major × 0.5 automatically unless 'themeGridMinorWidth' is set.
+themeGridWidth :: Double -> VisualSpec
+themeGridWidth d = mempty { vsThemeOverride = mempty { toGridWidth = Last (Just d) } }
+
+-- | [日本語]: ★ Phase 68: Cartesian minor grid の線幅 (pt) を独立に上書きする (ggplot
+--   @panel.grid.minor = element_line(linewidth=)@)。 未指定時は 'themeGridWidth'
+--   (major) × 0.5 (ggplot @rel(0.5)@ 準拠・既定 0.5)。
+--   [English]: ★ Phase 68: overrides the Cartesian minor grid width (pt)
+--   independently (ggplot @panel.grid.minor = element_line(linewidth=)@).
+--   When unspecified it is 'themeGridWidth' (major) × 0.5 (ggplot @rel(0.5)@,
+--   default 0.5).
+themeGridMinorWidth :: Double -> VisualSpec
+themeGridMinorWidth d = mempty { vsThemeOverride = mempty { toGridMinorWidth = Last (Just d) } }
+
+-- | [日本語]: ★ Phase 68: 軸線の線幅 (pt) を theme に焼き込む (ggplot @axis.line@ /
+--   @panel.border@ 相当)。 axis.line (下辺/左辺)・panel border・ternary の三辺・
+--   右 Y 軸線を統一して太らせる。 未指定時は現状 1.0。 tick mark は対象外
+--   (ggplot @axis.ticks@ = 別 element)。
+--   [English]: ★ Phase 68: bakes the axis line width (pt) into the theme (like
+--   ggplot's @axis.line@ / @panel.border@). Widens the axis.line (bottom/left),
+--   panel border, ternary edges and the right Y axis uniformly. Defaults to the
+--   current 1.0 when unspecified. Tick marks are excluded (ggplot @axis.ticks@
+--   is a separate element).
+themeAxisLineWidth :: Double -> VisualSpec
+themeAxisLineWidth d = mempty { vsThemeOverride = mempty { toAxisLineWidth = Last (Just d) } }
 
 -- | [日本語]: 軸目盛線の向き ('Graphics.Hgg.Spec.Theme.TickOut' 外 /
 --   'Graphics.Hgg.Spec.Theme.TickIn' 内 / 'Graphics.Hgg.Spec.Theme.TickBoth'

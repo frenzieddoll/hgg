@@ -7,7 +7,9 @@ import           Graphics.Hgg.Layout
 import           Graphics.Hgg.Render
 import           Graphics.Hgg.Render.Common  (pointShapeAt, alphaVector,
                                               resolveTheme, specThemePalette,
-                                              ThemePalette (..))
+                                              ThemePalette (..),
+                                              effectiveGridWidth, effectiveGridMinorWidth,
+                                              effectiveNonCartesianGridWidth, effectiveAxisLineWidth)
 import           Graphics.Hgg.Primitive      (Point (..))
 import           Graphics.Hgg.Render.Special (renderDAGStandalone, primsBBoxDAG, dagToScreen)
 import           Graphics.Hgg.Layout.RangeOf (invNormCdf, qqPoints, ecdfPoints)
@@ -3186,6 +3188,55 @@ main = hspec $ do
                             <- primsOf64 (themeTickDir TickBoth)
                         , x1 == x2 ]
            `shouldBe` True
+
+  describe "Phase 68: grid / 軸線 線幅の theme 化 (themeGridWidth/themeGridMinorWidth/themeAxisLineWidth)" $ do
+    -- === 解決関数の規約 (単一情報源) ===
+    it "未指定 = 各 role の現状値 (golden 保存)" $ do
+      effectiveGridWidth mempty            `shouldBe` 1.0
+      effectiveGridMinorWidth mempty       `shouldBe` 0.5   -- major 1.0 × 0.5
+      effectiveNonCartesianGridWidth mempty `shouldBe` 0.5  -- polar / ternary grid
+      effectiveAxisLineWidth mempty        `shouldBe` 1.0
+    it "toGridWidth 指定で Cartesian major + polar/ternary grid が統一される (座標系非依存)" $ do
+      let ov = vsThemeOverride (themeGridWidth 2.5)
+      effectiveGridWidth ov             `shouldBe` 2.5
+      effectiveNonCartesianGridWidth ov `shouldBe` 2.5
+    it "minor 未指定は major × 0.5 (ggplot rel(0.5)) に追従する" $
+      effectiveGridMinorWidth (vsThemeOverride (themeGridWidth 3.0)) `shouldBe` 1.5
+    it "themeGridMinorWidth は major と独立に上書きできる (major 不変)" $ do
+      let ov = vsThemeOverride (themeGridWidth 3.0 <> themeGridMinorWidth 0.9)
+      effectiveGridMinorWidth ov `shouldBe` 0.9
+      effectiveGridWidth ov      `shouldBe` 3.0
+    it "themeAxisLineWidth は grid に波及しない (逆も同様)" $ do
+      let ov = vsThemeOverride (themeAxisLineWidth 4.0)
+      effectiveAxisLineWidth ov         `shouldBe` 4.0
+      effectiveGridWidth ov             `shouldBe` 1.0
+      effectiveNonCartesianGridWidth ov `shouldBe` 0.5
+    it "後勝ち合成 (Last)" $
+      effectiveGridWidth (vsThemeOverride (themeGridWidth 2 <> themeGridWidth 5)) `shouldBe` 5.0
+    -- === JSON 後方互換 (新 field 無しの既存 spec が読める・Phase 64 A11 と同契約) ===
+    it "JSON 後方互換: 新 field 無しの ThemeOverride は Last Nothing で decode" $ do
+      let dec = eitherDecode "{}" :: Either String ThemeOverride
+      fmap (getLast . toGridWidth)      dec `shouldBe` Right Nothing
+      fmap (getLast . toGridMinorWidth) dec `shouldBe` Right Nothing
+      fmap (getLast . toAxisLineWidth)  dec `shouldBe` Right Nothing
+    it "JSON roundtrip: themeGridWidth 2.0 が encode→decode で保存" $
+      fmap (getLast . toGridWidth)
+           (eitherDecode (encode (vsThemeOverride (themeGridWidth 2.0))) :: Either String ThemeOverride)
+        `shouldBe` Right (Just 2.0)
+    -- === Render レベル (Cartesian grid の実線幅が変わる・既定は不変) ===
+    let base68 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])
+                               (inline [2.0, 4.0, 1.0, 3.0 :: Double]))
+                   <> themeGrid True
+        widthsOf extra =
+          [ lsWidth ls
+          | PLine _ _ ls <- renderToPrimitives emptyResolver
+                              (computeLayout emptyResolver (base68 <> extra)) (base68 <> extra) ]
+    it "render: 既定 grid 線幅に 2.0 は出ない (現状値のみ)" $
+      elem 2.0 (widthsOf mempty) `shouldBe` False
+    it "render: themeGridWidth 2.0 で grid 線が 2.0 になる" $
+      elem 2.0 (widthsOf (themeGridWidth 2.0)) `shouldBe` True
+    it "render: themeGridWidth 未指定は既定と byte 完全一致 (golden ゼロ diff)" $
+      widthsOf (themeGridMinorWidth 0.5 <> themeGridWidth 1.0) `shouldBe` widthsOf mempty
 
   describe "Phase 63 A5: plot margin (themePlotMargin)" $ do
     let base65 = layer (scatter (inline [1.0, 2.0, 3.0, 4.0 :: Double])

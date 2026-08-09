@@ -308,6 +308,7 @@ module Graphics.Hgg.Spec
   , Margin(..)                                                  -- ★ Phase 63 A5
   , themeGrid, themeGridMajor, themeGridMinor, themeLegendPos   -- ★ Phase 63 A2/A3
   , themeTickLength, themeTickDir                               -- ★ Phase 63 A4
+  , themeGridWidth, themeGridMinorWidth, themeAxisLineWidth     -- ★ Phase 68
   , themePlotMargin                                             -- ★ Phase 63 A5
   , themeBaseFontSize                                           -- ★ Phase 63 A12
   , themeCowplot, themeMinimalGrid, themeMap                    -- ★ Phase 63 A8
