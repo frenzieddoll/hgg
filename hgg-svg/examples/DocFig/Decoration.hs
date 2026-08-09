@@ -104,17 +104,28 @@ figures =
       <> coordFlip
       <> title "3g. coordFlip (横棒)" <> xLabel "群" <> yLabel "値"
 
-    -- 3g-2 coord: coordTernary (3 成分の組成)。 encX=a 上・encY=b 左下・encZ=c 右下。
-    --   4 点は各頂点付近 + 中心 = 頂点↔成分の対応が読める配置。
+    -- 3g-2 coord: ternary (Phase 69・ternaryScatter + coord 推論)。 a=上・b=左下・c=右下。
+    --   4 点は各頂点付近 + 中心 = 頂点↔成分の対応が読める配置。 coordTernary は encZ から推論。
   , fig "s3g2-ternary.svg" $
          purePlot
-      <> layer (scatter (inline [0.7, 0.2, 0.2, 0.34 :: Double])
-                        (inline [0.2, 0.7, 0.1, 0.33])
-                 <> encZ (inline [0.1, 0.1, 0.7, 0.33])
+      <> layer (ternaryScatter (inline [0.7, 0.2, 0.2, 0.34 :: Double])
+                               (inline [0.2, 0.7, 0.1, 0.33])
+                               (inline [0.1, 0.1, 0.7, 0.33])
                  <> size 6)
-      <> coordTernary
       <> xLabel "a" <> yLabel "b" <> zLabel "c"
-      <> title "3g-2. coordTernary (3 成分の組成)"
+      <> title "3g-2. ternaryScatter (3 成分の組成)"
+
+    -- 3g-2 向き: coordTernaryWith (Phase 69 A4)。 既定 / clockwise / rotate120 の 3 面比較。
+  , figW "s3g2-ternary-orient.svg" 1280 420 $
+         subplots
+           [ layer (ternaryScatter tA tB tC <> size 6) <> title "既定 (a=上)"
+           , layer (ternaryScatter tA tB tC <> size 6) <> coordTernaryWith True 0
+               <> title "coordTernaryWith True 0 (clockwise)"
+           , layer (ternaryScatter tA tB tC <> size 6) <> coordTernaryWith False 120
+               <> title "coordTernaryWith False 120 (rotate)" ]
+      <> subplotCols 3
+      <> xLabel "a" <> yLabel "b" <> zLabel "c"
+      <> title "三角座標の向き (coordTernaryWith)"
 
     -- 3h 補助: 参照線 + 凡例
   , fig "s3h-guides.svg" $
@@ -221,6 +232,10 @@ figures =
   where
     xs = inline    [1,2,3,4, 1,2,3,4]
     ys = inline    [2,3,1,4, 3,1,4,2]
+    -- Phase 69 ternary 向き図の共通 3 成分 (a 上・b 左下・c 右下)。
+    tA = inline [0.7, 0.2, 0.2, 0.34 :: Double]
+    tB = inline [0.2, 0.7, 0.1, 0.33]
+    tC = inline [0.1, 0.1, 0.7, 0.33]
     gs = inlineCat (concatMap (replicate 4) (["alpha","beta"] :: [Text]))
     cats = inlineCat (["A","B","C"] :: [Text])
     vals = inline [3.0, 7.0, 5.0]

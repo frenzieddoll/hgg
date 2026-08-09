@@ -360,6 +360,8 @@ subplots [ layer (scatter "x" "y") <> title "scatter"
 ```
 
 > **Types**: `coordFlip` / `coordPolar` / `coordPolarY` / `coordTernary` / `reverseX` / `reverseY` are `VisualSpec` (no arguments).
+> `coordPolarWith` / `coordPolarYWith :: Double -> Double -> VisualSpec` (start · direction),
+> `coordTernaryWith :: Bool -> Int -> VisualSpec` (clockwise · rotate).
 > `coordCartesianX` / `coordCartesianY :: Double -> Double -> VisualSpec`,
 > `coordCartesian :: Double -> Double -> Double -> Double -> VisualSpec` (x0 x1 y0 y1).
 > `coordCartesian*` **changes only visible range, keeps data** (ggplot `coord_cartesian(xlim=)` equivalent).
@@ -373,37 +375,54 @@ purePlot <> layer (bar (inlineCat ["A","B","C"]) (inline [3,7,5])) <> coordFlip
 
 ![3g coordFlip](images/s3g-coord.svg)
 
-### Ternary coordinates (coordTernary) {#ternary}
+### Ternary coordinates {#ternary}
 
-`coordTernary` maps 3-part **compositional data** onto barycentric coordinates in an
-equilateral triangle. The parts are given by three positional encodings —
-`encX` (`a`, top vertex), `encY` (`b`, bottom-left vertex), `encZ` (`c`, bottom-right vertex).
-`encZ :: ColRef -> Layer` is the ternary-only third positional column ([encoding](03-encoding-scale.md));
-vertex titles are set with `xLabel` / `yLabel` / `zLabel` (`zLabel :: Text -> VisualSpec`).
-
-- **Normalization**: each row is normalized so the parts sum to 1, i.e.
-  `(a, b, c) → (a, b, c) / (a+b+c)`. Raw quantities whose sum is not 1
-  (counts, non-ratio values) can be passed as-is.
-- **Degenerate rows are dropped**: rows with a negative part or a sum ≤ 0 are
-  treated as missing and **dropped whole** (points are skipped; lines close the gap).
-- **`encZ` is per layer**: when overlaying points and lines, **attach `encZ` to
-  every layer** (a layer without it falls back to `c = 1 - a - b`, which can land
-  on a different point).
-- **Supported marks**: point / line / area (band) / text. Combining any other mark
-  with `coordTernary` emits a warning (the diagnostics described in
-  [backends](05-backends.md)); rendering continues but the result is unspecified.
+Maps 3-part **compositional data** onto barycentric coordinates in an equilateral
+triangle. The minimal form just passes the 3 parts (`a` top vertex, `b` bottom
+left, `c` bottom right) to `ternaryScatter` — **writing `encZ` switches the
+coordinate system to ternary automatically**, so `coordTernary` can be omitted:
 
 ```haskell
 purePlot
-  <> layer (scatter (inline [0.7, 0.2, 0.2, 0.34])   -- a = encX (top)
-                    (inline [0.2, 0.7, 0.1, 0.33])   -- b = encY (bottom left)
-             <> encZ (inline [0.1, 0.1, 0.7, 0.33])  -- c = encZ (bottom right)
-             <> size 6)
-  <> coordTernary
+  <> layer (ternaryScatter (inline [0.7, 0.2, 0.2, 0.34])   -- a (top vertex)
+                           (inline [0.2, 0.7, 0.1, 0.33])   -- b (bottom left)
+                           (inline [0.1, 0.1, 0.7, 0.33]))  -- c (bottom right)
   <> xLabel "a" <> yLabel "b" <> zLabel "c"
 ```
 
-![3g-2 coordTernary](images/s3g2-ternary.svg)
+![ternary (ternaryScatter)](images/s3g2-ternary.svg)
+
+- `ternaryScatter a b c :: ColRef -> ColRef -> ColRef -> Layer` bundles
+  `scatter a b <> encZ c`. For a polyline use `ternaryLine`. You can also
+  compose the parts yourself with `scatter a b <> encZ c`
+  (`encZ :: ColRef -> Layer` is the ternary-only third positional column).
+  Vertex titles are set with `xLabel` (a) / `yLabel` (b) / `zLabel` (c)
+  (`zLabel :: Text -> VisualSpec`).
+- **The coordinate system is inferred from `encZ`**: if any layer carries
+  `encZ`, the plot becomes ternary (`encZ` is ternary-only, so there are no
+  false positives). Explicit settings (`coordTernary` / `coordTernaryWith`)
+  always win. When overlaying points and lines, **attach `encZ` to every
+  layer** (a layer without it falls back to `c = 1 - a - b`, which can land on
+  a different point).
+- **Normalization**: each row is normalized so the parts sum to 1, i.e.
+  `(a, b, c) → (a, b, c) / (a+b+c)`. Raw quantities whose sum is not 1 can be
+  passed as-is.
+- **Degenerate rows are dropped**: rows with a negative part or a sum ≤ 0 are
+  treated as missing and **dropped whole** (points are skipped; lines close the gap).
+- **Supported marks**: point / line / area (band) / text. Combining any other
+  mark with ternary coordinates emits a warning (the diagnostics described in
+  [backends](05-backends.md)); rendering continues but the result is unspecified.
+
+**Changing the orientation** — `coordTernaryWith clockwise rotate :: Bool -> Int -> VisualSpec`
+changes the cyclic direction of the vertices and the rotation (ggtern's
+`theme_clockwise` equivalent; `coordTernary` = `coordTernaryWith False 0`):
+
+```haskell
+<> coordTernaryWith true 0     -- clockwise (swaps bottom-left ↔ bottom-right)
+<> coordTernaryWith false 120  -- rotate which part sits at the top vertex by 120° (0 / 120 / 240)
+```
+
+![ternary orientation (coordTernaryWith)](images/s3g2-ternary-orient.svg)
 
 ## Legend, reference lines, helpers {#guides}
 
