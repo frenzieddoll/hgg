@@ -57,7 +57,7 @@ module Graphics.Hgg.Layout.RangeOf
 
 import           Graphics.Hgg.Spec (ColData (..), ColorEnc (..), Layer (..), MarkKind (..),
                                     Position (..),
-                                    Resolver, histBinning, lyBinCount, lyChain, lyColor, lyDensityNorm,
+                                    Resolver, histBinning, lyBinCount, lyColor, lyDensityNorm,
                                     lyEncX, lyEncY, lyEncY2, lyErrorX, lyHistDensity, lyKind,
                                     lyMaxLag, lyPosition, resolveCol, resolveNum,
                                     vsLayers, VisualSpec)
@@ -418,12 +418,11 @@ histogramYRange r l = case getFirst (lyKind l) of
 -- lag 軸 (autocorr / ess) の x/y range 寄与
 -- ===========================================================================
 
--- | [日本語]: autocorr / ess layer の x 軸 range 候補 (= [0, maxLag] or
---   [0, nChain])。
+-- | [日本語]: autocorr / ess layer の x 軸 range 候補 (= [0, maxLag])。
 --   [English]: The x-axis range candidate for autocorr / ess layers
---   ([0, maxLag] or [0, nChain]).
+--   ([0, maxLag]).
 lagXRange :: Resolver -> Layer -> Vector Double
-lagXRange r l = case getFirst (lyKind l) of
+lagXRange _ l = case getFirst (lyKind l) of
   Just MAutocorr ->
     -- ★ Phase 64 A4-b: lag は連続値ではなく __離散スロット__。 各 lag が幅 1 の
     --   スロットを持つよう ±0.5 を含む range を返す (categorical 軸と同じ規約)。
@@ -431,21 +430,11 @@ lagXRange r l = case getFirst (lyKind l) of
     --   (A4-b の実測: 3.59 px 突出)。
     let maxLag = maybe 40 id (getLast (lyMaxLag l))
     in V.fromList [-0.5, fromIntegral maxLag + 0.5]
-  Just MEss ->
-    -- chain 列が指定されていれば distinct chain 数、 未指定なら 1
-    let nChain = case getLast (lyChain l) of
-          Just cr -> case resolveCol r cr of
-            Just (TxtData v) -> length (uniqList (V.toList v))
-            Just (NumData v) -> length (uniqList (V.toList v))
-            Nothing          -> 1
-          Nothing -> 1
-    -- ★ Phase 64 A4-b: autocorr の lag と同じく、 名前 (chain) も __離散スロット__。
-    --   slot 0..n-1 が各々幅 1 を持つよう ±0.5 を含む range にする。
-    in V.fromList [-0.5, fromIntegral (max 1 nChain) - 0.5]
+  -- ★ Phase 70 A3: MEss の x range 供給を撤去。 現行設計 (ess nameCol essCol) の
+  --   x 軸は encX の categorical 経路 (xCatLabels → [-0.6, n-0.4]) が担う。
+  --   旧設計 (ess vals <> chain) 前提の [-0.5, nChain-0.5] は renderESS の
+  --   CrossAt 0..n-1 (n = 名前数) と乖離し bar が panel 外に出ていた (A2 実測)。
   _ -> V.empty
-  where
-    uniqList :: Eq a => [a] -> [a]
-    uniqList = foldr (\x acc -> if x `elem` acc then acc else x : acc) []
 
 -- | [日本語]: autocorr / ess layer の y 軸 range 候補。
 --   [English]: The y-axis range candidate for autocorr / ess layers.
@@ -453,25 +442,16 @@ lagYRange :: Resolver -> Layer -> Vector Double
 lagYRange r l = case getFirst (lyKind l) of
   Just MAutocorr -> V.fromList [-1.0, 1.0]
   Just MEss ->
-    -- ESS は理論上 [0, N] だが実用上 N/4 程度が上限 (= 強い autocorrelation で更に小)。
-    -- chain 数があれば N/nChain を上限に。
-    let n = case getLast (lyEncX l) of
-          Just cr -> case resolveNum r cr of
-            Just v  -> V.length v
-            Nothing -> 1000
-          Nothing -> 1000
-        nChain = case getLast (lyChain l) of
-          Just cr -> case resolveCol r cr of
-            Just (TxtData v) -> max 1 (length (uniqList (V.toList v)))
-            Just (NumData v) -> max 1 (length (uniqList (V.toList v)))
-            Nothing          -> 1
-          Nothing -> 1
-        upper = fromIntegral (n `div` nChain)
-    in V.fromList [0, upper]
+    -- ★ Phase 70 A3: y range は encY の __実 ESS 値__ から [0, max(100, 最大値)]。
+    --   下限 100 は renderESS の閾値参照線 (100/400) の最小値が常に見えるための床で、
+    --   renderer 側の tick 計算 yMax = maximum (100 : vals) (Render/MCMC.hs) と同一式。
+    --   旧実装は encX の「長さ」を MCMC サンプル数 N と誤用し ESS 実値を不参照だった
+    --   (demo で [0,6]・Text nameCol では n=1000 fallback、 A2 実測)。
+    let vals = case getLast (lyEncY l) of
+          Just cr -> maybe [] V.toList (resolveNum r cr)
+          Nothing -> []
+    in V.fromList [0, maximum (100 : vals)]
   _ -> V.empty
-  where
-    uniqList :: Eq a => [a] -> [a]
-    uniqList = foldr (\x acc -> if x `elem` acc then acc else x : acc) []
 
 -- | [日本語]: Forest layer の x range 寄与 (= estimate ± error + 中央 null
 --   line x=0)。 これを range に含めないと CI 線が plotArea からはみ出す。

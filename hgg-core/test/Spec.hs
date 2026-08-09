@@ -349,6 +349,23 @@ main = hspec $ do
     it "computeLayout default viewport 468x288pt (= 6.5x4in・Phase 33 B8)" $
       let l = computeLayout emptyResolver mempty
       in (vsW (lpViewport l), vsH (lpViewport l)) `shouldBe` (468, 288)
+    -- ★ Phase 70 A3: ess の y domain は encY の実 ESS 値から [0, max(100, 最大値)]
+    --   + baseline (下端 0 固定・上端 5% pad)。 旧実装は encX の長さを MCMC の N と
+    --   誤用し、 Text nameCol では n=1000 fallback で ESS 実値を不参照だった。
+    it "ess の y domain = [0, ESS 最大値 × 1.05] (encY 実値基準・Phase 70 A3)" $
+      let spec = layer (ess (inlineCat (["a", "b", "c"] :: [String]))
+                            (inline [1500, 800, 2000]))
+          l = computeLayout emptyResolver spec
+      in (lsDomainLo (lpYScale l), lsDomainHi (lpYScale l)) `shouldBe` (0, 2100)
+    it "ess の x domain = categorical 経路 [-0.6, n-0.4] (Phase 70 A3)" $
+      let spec = layer (ess (inlineCat (["a", "b", "c"] :: [String]))
+                            (inline [1500, 800, 2000]))
+          l = computeLayout emptyResolver spec
+      in (lsDomainLo (lpXScale l), lsDomainHi (lpXScale l)) `shouldBe` (-0.6, 2.6)
+    it "ess の ESS 値が全て閾値 100 未満でも y domain 上端は 100 起点 (閾値線可視)" $
+      let spec = layer (ess (inlineCat (["a"] :: [String])) (inline [40]))
+          l = computeLayout emptyResolver spec
+      in (lsDomainLo (lpYScale l), lsDomainHi (lpYScale l)) `shouldBe` (0, 105)
     it "spec 指定 size は pt 空間で viewport に反映 (px は dpi で pt 化)" $
       -- ★ Phase 33 B4: layout は純 pt。1024px@96dpi = 768pt / 768px = 576pt
       --   (backend が k=dpi/72=4/3 を掛けて device px を復元するのは B5)。

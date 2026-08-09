@@ -554,7 +554,9 @@ computeLayout r spec0 =
       -- 旧実装は `lo == 0` を一律 0-base 判定にしていたため、 y に 0 を含む scatter 等が
       -- 下軸に貼り付く副作用があった (= 値ベースの heuristic → MarkKind ベースへ)。
       layerKinds   = [ k | l <- vsLayers spec, Just k <- [getFirst (lyKind l)] ]
-      hasYBaseline = any (`elem` [MBar, MHistogram, MDensity, MWaterfall]) layerKinds
+      -- ★ Phase 70 A3: MEss を追加 — ESS bar は 0 起点なので下端 0 固定 + 上端のみ 5%
+      --   (pre-Phase 64 の自前マッピング = 0 が panel 底辺、 と同じ見た目規約)。
+      hasYBaseline = any (`elem` [MBar, MHistogram, MDensity, MWaterfall, MEss]) layerKinds
       hasXBaseline = any (`elem` [MAutocorr, MEss]) layerKinds
       hasHistogram = MHistogram `elem` layerKinds
       -- Phase 8 B3: funnel plot は y=SE。 SE=0 (最精密) を上端・SE 増加で下端へ置くのが

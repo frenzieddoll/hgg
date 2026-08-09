@@ -192,11 +192,13 @@ figures =
       <> subplotCols 2 <> legend
       <> title "trace / traceLines"
 
-    -- MCMC: ess
+    -- MCMC: ess (encX = chain/パラメータ名 (categorical)、 encY = 計算済み ESS 値。
+    -- ★ Phase 70 A3: 旧 demo は nameCol に数値 iter を渡す API 誤用で bar ゼロの空図
+    -- だった。 閾値 3 色 (赤 <100 / 橙 <400 / 緑 ≥400) が全部見える値にする)
   , fig "ess.svg" $
-         purePlot <> layer (ess (inline [100,200,300,400,500,600])
-                                (inline [80,150,210,260,300,330]))
-      <> title "ess (有効サンプルサイズ)" <> xLabel "iter" <> yLabel "ESS"
+         purePlot <> layer (ess (inlineCat (["mu", "tau", "theta1", "theta2"] :: [Text]))
+                                (inline [85, 340, 620, 1450]))
+      <> title "ess (有効サンプルサイズ)" <> xLabel "parameter" <> yLabel "ESS"
 
     -- MCMC: autocorr (AR(1) 風の減衰系列・自己完結式)
   , fig "autocorr.svg" $
