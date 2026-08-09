@@ -1581,10 +1581,24 @@ resolvePosY c p = case p of
 -- projectBarRect を通す。 Cartesian は従来と bit 一致、 Flip は x/y を入替える。
 -- **Coord は位置だけ変換** (= テキスト anchor/font・点半径・bar 厚みは px のまま)。
 
--- | [日本語]: spec の座標系 (Nothing = Cartesian)。
---   [English]: A spec's coordinate system (Nothing means Cartesian).
+-- | [日本語]: spec の座標系。 明示 'vsCoord' 指定が最優先。 未指定でも
+--   ★ Phase 69 A3: encZ を持つ layer があれば 'CoordTernary' と推論する
+--   (encZ は ternary 専用 aesthetic ゆえ他座標系と衝突せず誤爆しない)。 それ以外は Cartesian。
+--   これにより最小形が @layer (ternaryScatter a b c)@ の 1 ピースで済む
+--   (coordTernary を書き忘れて c=0 で潰れる事故も防ぐ)。 明示 coord は常に優先。
+--   [English]: A spec's coordinate system. An explicit 'vsCoord' wins. When
+--   unspecified, ★ Phase 69 A3: infer 'CoordTernary' if any layer carries encZ
+--   (encZ is a ternary-only aesthetic, so it never collides with other coords),
+--   otherwise Cartesian. This lets the minimal form be a single
+--   @layer (ternaryScatter a b c)@ (and prevents the collapse-to-c=0 accident of
+--   forgetting coordTernary). An explicit coord always takes priority.
 coordOf :: VisualSpec -> Coord
-coordOf spec = maybe CoordCartesian id (getLast (vsCoord spec))
+coordOf spec = case getLast (vsCoord spec) of
+  Just c  -> c
+  Nothing
+    | any hasEncZ (vsLayers spec) -> CoordTernary
+    | otherwise                   -> CoordCartesian
+  where hasEncZ l = case getLast (lyEncZ l) of Just _ -> True; Nothing -> False
 
 -- | [日本語]: データ空間 (dx, dy) → px (横, 縦)。 Cartesian は (sx dx, sy dy)、
 --   Flip はデータ x を縦 px・データ y を横 px に (= 軸入替)。

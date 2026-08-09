@@ -75,6 +75,7 @@ module Graphics.Hgg.Spec
   , encX
   , encY
   , encZ
+  , ternaryScatter, ternaryLine   -- ★ Phase 69 A3: 三角座標 mark 束ね
     -- * Layer constructors (= Layer 返却)
   , scatter
   , line

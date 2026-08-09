@@ -27,6 +27,7 @@ module Graphics.Hgg.Spec.Constructors
   , scatterPoints, linePoints, unzipPoint2
     -- * custom mark
   , customMark, customMarkWith, encX, encY, encZ
+  , ternaryScatter, ternaryLine   -- ★ Phase 69 A3: 三角座標 mark 束ね
     -- * 統計 / 分布 mark
   , trace, traceLines, forest, forestNull, funnel, autocorr, autocorrMaxLag, ess
   , violin, strip, swarm, raincloud, ridge
@@ -141,6 +142,23 @@ encY y = mempty { lyEncY = Last (Just y) }
 --   ('normalizeTernary').
 encZ :: ColRef -> Layer
 encZ z = mempty { lyEncZ = Last (Just z) }
+
+-- | [日本語]: ★ Phase 69 A3: 三角座標の散布 mark 束ね。 @scatter a b <> encZ c@ の sugar
+--   で、 3 成分 (a=上/b=左下/c=右下) を mark 1 個で受ける。 coord は 'coordOf' が encZ から
+--   'CoordTernary' と推論するので @coordTernary@ は不要 (向きを変える時だけ 'coordTernaryWith')。
+--   → 最小形 @layer (ternaryScatter a b c)@。
+--   [English]: ★ Phase 69 A3: the ternary scatter mark, sugar for
+--   @scatter a b <> encZ c@, taking the three components (a=top / b=bottom-left /
+--   c=bottom-right) as one mark. The coord is inferred as 'CoordTernary' from encZ
+--   by 'coordOf', so @coordTernary@ is unnecessary (use 'coordTernaryWith' only to
+--   change orientation). Minimal form: @layer (ternaryScatter a b c)@.
+ternaryScatter :: ColRef -> ColRef -> ColRef -> Layer
+ternaryScatter a b c = scatter a b <> encZ c
+
+-- | [日本語]: ★ Phase 69 A3: 三角座標の折れ線 mark 束ね (@line a b <> encZ c@ の sugar)。
+--   [English]: ★ Phase 69 A3: the ternary line mark (sugar for @line a b <> encZ c@).
+ternaryLine :: ColRef -> ColRef -> ColRef -> Layer
+ternaryLine a b c = line a b <> encZ c
 
 -- | [日本語]: 2D scatter ('Point2' 直入れ・3D
 --   'Graphics.Hgg.ThreeD.Spec.scatter3DPoints' と対称)。 内部は

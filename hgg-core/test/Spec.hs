@@ -2063,6 +2063,26 @@ main = hspec $ do
                     , CoordPolarY defaultPolarOpts, CoordTernary ]
         `shouldBe` [False, False, False, False, True]
 
+    -- ★ Phase 69 A3: mark 束ね (ternaryScatter/ternaryLine) + coord 推論。
+    it "Phase 69 A3: ternaryScatter = scatter <> encZ (Layer 等価)" $
+      ternaryScatter (ColByName "a") (ColByName "b") (ColByName "c")
+        `shouldBe` (scatter (ColByName "a") (ColByName "b") <> encZ (ColByName "c"))
+    it "Phase 69 A3: coordOf は encZ から CoordTernary を推論 (coord 未指定)" $
+      coordOf (layer (ternaryScatter (ColByName "a") (ColByName "b") (ColByName "c")))
+        `shouldBe` CoordTernary
+    it "Phase 69 A3: encZ 無しは CoordCartesian (推論しない)" $
+      coordOf (layer (scatter (ColByName "a") (ColByName "b"))) `shouldBe` CoordCartesian
+    it "Phase 69 A3: 明示 coord は推論より優先 (encZ ありでも coordFlip)" $
+      coordOf (layer (ternaryScatter (ColByName "a") (ColByName "b") (ColByName "c")) <> coordFlip)
+        `shouldBe` CoordFlip
+    it "Phase 69 A3: layer (ternaryScatter ...) は明示 coordTernary 形と同一 primitive" $
+      let sa = layer (ternaryScatter (inline [0.2, 0.3, 0.5 :: Double])
+                                     (inline [0.3, 0.4, 0.2]) (inline [0.5, 0.3, 0.3]))
+          sb = layer (scatter (inline [0.2, 0.3, 0.5 :: Double]) (inline [0.3, 0.4, 0.2])
+                        <> encZ (inline [0.5, 0.3, 0.3])) <> coordTernary
+      in renderToPrimitives emptyResolver (computeLayout emptyResolver sa) sa
+           `shouldBe` renderToPrimitives emptyResolver (computeLayout emptyResolver sb) sb
+
     it "normalizeTernary: 合計≠1 は a/(a+b+c) に正規化" $
       normalizeTernary (1, 1, 2) `shouldBe` Just (0.25, 0.25, 0.5)
 
@@ -2184,14 +2204,16 @@ main = hspec $ do
                      (inlineCat ["a", "b" :: Data.Text.Text]) ]
            `shouldBe` [0, 0, 0, 0]
 
-    it "A13 非 ternary は encZ 追加で PCircle 位置不変 (byte 無影響)" $
-      -- Cartesian に encZ を足しても scatter の点位置は変わらない (ternary 専用経路)。
+    it "Phase 69 A3: encZ 追加は coord 推論で ternary 化し PCircle 位置が変わる (旧 A13 no-op 契約を更新)" $
+      -- Phase 64 A13 は「非 ternary で encZ は no-op (位置不変)」だったが、 Phase 69 A3 で
+      -- encZ を CoordTernary の推論トリガに契約変更 (encZ は ternary 専用 aesthetic ゆえ実害なし。
+      -- coordOf に「明示 coord 未指定 + encZ あり → ternary」を追加)。 明示 coord を置けば従来優先。
       let base = layer (scatter (inline [0, 1, 2 :: Double]) (inline [0, 1, 4 :: Double]))
           withZ = layer (scatter (inline [0, 1, 2 :: Double]) (inline [0, 1, 4 :: Double])
                           <> encZ (inline [9, 9, 9 :: Double]))
           centers s = [ (x, y) | PCircle (Point x y) _ _ _ _
                           <- renderToPrimitives emptyResolver (computeLayout emptyResolver s) s ]
-      in centers base `shouldBe` centers withZ
+      in (centers base /= centers withZ) `shouldBe` True
 
     -- ★ Phase 64 A2: 投影層への集約口 (projectSegment / projectBar)
     it "projectSegment Cartesian: 両端 2 点で projectXY と一致" $
