@@ -143,7 +143,7 @@ renderAutocorr r layout thePal ly =
                                  , PText (Point (ax - 8) (ay + 4)) (numToText tv) tsY ]
                             else [ PLine (Point ax ay) (Point ax (ay + 5)) (solid (tpAxis thePal) 1.0)
                                  , PText (Point ax (ay + 18)) (numToText tv) tsY ] ]
-  in axisFrame layout thePal ++ yTicks ++ sigBand ++ bars
+  in axisFrame 1.0 layout thePal ++ yTicks ++ sigBand ++ bars   -- ★ Phase 68: MCMC は theme 幅 override 非対応 = 現状 1.0
   where
     chainGroups :: [String] -> [Double] -> [(String, [Double])]
     chainGroups labels values =
@@ -231,7 +231,7 @@ renderESS r layout thePal ly =
                           , PText (Point (ax - 8) (ay + 4)) (numToText tv) tsY ]
                      else [ PLine (Point ax ay) (Point ax (ay + 5)) (solid (tpAxis thePal) 1.0)
                           , PText (Point ax (ay + 18)) (numToText tv) tsY ] ]
-  in axisFrame layout thePal ++ yTicks ++ refLines
+  in axisFrame 1.0 layout thePal ++ yTicks ++ refLines   -- ★ Phase 68: MCMC は theme 幅 override 非対応 = 現状 1.0
        ++ concatMap (uncurry drawOne) (zip [0..] pairs)
 
 -- ===========================================================================

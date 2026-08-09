@@ -429,7 +429,7 @@ renderSingle r layout spec =
         | polar     = polarGrid spec mainLayout pal
         | ternary   = ternaryGrid spec mainLayout pal
         | otherwise = gridLines mainLayout spec pal
-                   <> axisFrame mainLayout pal
+                   <> axisFrame (effectiveAxisLineWidth (vsThemeOverride spec)) mainLayout pal
                    <> tickMarks (Just spec) mainLayout pal fmtX fmtY rotX rotY showX showY
   in background mainLayout pal
        -- Phase 9 A-1: plot bg の上に panel 背景 (theme_grey/ブランド) → その上に grid。
@@ -443,7 +443,7 @@ renderSingle r layout spec =
        <> labels    layout spec pal
        -- Phase 8 B22: 右 Y 軸対象 layer は yScale を右軸 scale に swap して描画。
        <> coordClip (concatMap (renderLayerDual r mainLayout pal) (vsLayers spec))
-       <> renderRightYAxis mainLayout pal (axisFormatOf (vsYAxisRight spec))
+       <> renderRightYAxis (effectiveAxisLineWidth (vsThemeOverride spec)) mainLayout pal (axisFormatOf (vsYAxisRight spec))
        <> concatMap (renderRefLine annotDpi mainLayout pal) (vsRefLines spec)
        <> concatMap (renderAnnotation annotDpi mainLayout pal) (vsAnnotations spec)
        <> renderLegend r mainLayout pal spec
@@ -664,7 +664,7 @@ renderFaceted r layout spec facetCol =
                               (mkFontTS (Just spec) pal TickF AnchorMiddle 0) ]
              in header
                   <> panelBackground subLayout pal
-                  <> axisFrame subLayout pal
+                  <> axisFrame (effectiveAxisLineWidth (vsThemeOverride spec)) subLayout pal
                   <> gridLines subLayout specPanel pal
                   <> tickMarks (Just specPanel) subLayout pal fmtX fmtY rotX rotY
                                (showXt && gateX) (showYt && gateY)
@@ -824,7 +824,7 @@ renderFacetGrid r layout spec =
                                     CoordFlip -> (isLeft, isBottom)
                                     _         -> (isBottom, isLeft)
              in panelBackground subLayout pal
-                  <> axisFrame subLayout pal
+                  <> axisFrame (effectiveAxisLineWidth (vsThemeOverride spec)) subLayout pal
                   <> gridLines subLayout specPanel pal
                   <> tickMarks (Just specPanel) subLayout pal fmtX fmtY rotX rotY
                                (showXt && gateX) (showYt && gateY)

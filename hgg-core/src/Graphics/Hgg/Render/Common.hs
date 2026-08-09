@@ -431,6 +431,39 @@ scaleRetargetY scale rect = case scale of
   SqrtScale lo hi _ _   -> SqrtScale   lo hi (rY rect + rH rect) (rY rect)
   TimeScale lo hi _ _   -> TimeScale   lo hi (rY rect + rH rect) (rY rect)
 
+-- ===========================================================================
+-- ★ Phase 68: grid / 軸線 線幅の実効値解決 (単一情報源)
+--   ThemeOverride の線幅 field (未指定=各 role の現状決め打ち) を解決する。
+--   未指定時は既存 golden をゼロ diff で保つため現状リテラルへ fallback。
+--   線幅は panel 面積に波及しないので Layout 予約は無く、 Render 側のみで閉じる。
+--   [English]: Phase 68 — effective line widths for grid / axis lines (single
+--   source of truth). Resolves the ThemeOverride width fields, falling back to
+--   each role's current literal when unspecified (zero golden diff). Widths do
+--   not affect panel area, so this is closed on the Render side (no Layout
+--   reservation).
+-- ===========================================================================
+
+-- | Cartesian grid major の線幅。 既定 1.0。
+effectiveGridWidth :: ThemeOverride -> Double
+effectiveGridWidth ov = fromMaybe 1.0 (getLast (toGridWidth ov))
+
+-- | Cartesian grid minor の線幅。 未指定は major × 0.5 (ggplot @panel.grid.minor
+--   = rel(0.5)@)、 'toGridMinorWidth' 明示時はそれを優先。
+effectiveGridMinorWidth :: ThemeOverride -> Double
+effectiveGridMinorWidth ov =
+  fromMaybe (effectiveGridWidth ov * 0.5) (getLast (toGridMinorWidth ov))
+
+-- | polar / ternary grid の線幅。 現状は座標系別の決め打ち 0.5。 'toGridWidth' を
+--   指定した場合は Cartesian major と統一する (ggplot panel.grid は座標系非依存)、
+--   未指定は現状 0.5 を維持 (golden 保存)。 polar・ternary は同挙動なので共用。
+effectiveNonCartesianGridWidth :: ThemeOverride -> Double
+effectiveNonCartesianGridWidth ov = fromMaybe 0.5 (getLast (toGridWidth ov))
+
+-- | axis.line / panel.border / ternary edge / 右 Y 軸線 の線幅。 既定 1.0。
+--   (tick mark は ggplot @axis.ticks@ = 別 element なので本 Phase scope 外・1.0 維持。)
+effectiveAxisLineWidth :: ThemeOverride -> Double
+effectiveAxisLineWidth ov = fromMaybe 1.0 (getLast (toAxisLineWidth ov))
+
 -- | [日本語]: TODO-3b (2026-05-29): C-5 grid line 描画。 PS Render.purs:gridLines を
 --   HS に port。 vsXAxis / vsYAxis の axShowGrid が True なら x/y tick 位置に
 --   薄い grid line を描く。 default false (= 旧 HS 挙動と互換)。
@@ -442,13 +475,16 @@ gridLines :: Layout -> VisualSpec -> ThemePalette -> [Primitive]
 gridLines layout spec pal =
   let area = lpPlotArea layout
       coord = coordOf spec
+      ov = vsThemeOverride spec   -- ★ Phase 68: grid 線幅 override
       sx = scaleApply (lpXScale layout)
       sy = scaleApply (lpYScale layout)
       -- Phase 9 C: flip 時はデータ x が縦 px・データ y が横 px に写る。
       sxF = scaleApply (lpXScaleFlipped layout)
       syF = scaleApply (lpYScaleFlipped layout)
-      majorStyle = solid (tpGrid pal) 1.0
-      minorStyle = solid (tpGrid pal) 0.5   -- G4: minor は major の半分の太さ (ggplot 準拠)
+      -- ★ Phase 68: 決め打ち 1.0/0.5 を theme (toGridWidth/toGridMinorWidth) 実効値へ。
+      --   未指定=現状値 (major 1.0 / minor = major×0.5 = 0.5) で golden ゼロ diff。
+      majorStyle = solid (tpGrid pal) (effectiveGridWidth ov)
+      minorStyle = solid (tpGrid pal) (effectiveGridMinorWidth ov)   -- G4: minor は major の半分 (ggplot 準拠)
       -- Phase 8 C G4: ggplot theme は既定で grid 表示。 axShowGrid 未指定 (Nothing) は
       -- 旧 False → True に (白背景 + 薄グレー major+minor grid = theme_bw/minimal 風)。
       showXGrid = case getLast (axShowGrid (axisOrDef (vsXAxis spec))) of
@@ -535,9 +571,12 @@ polarGrid spec layout pal =
   let coord = coordOf spec
       (cx, cy, maxR) = polarCenter layout
       gridCol = tpGrid pal
-      circleStyle = Just (StrokeStyle gridCol 0.5)
+      -- ★ Phase 68: polar grid (同心円 + 外周円 + スポーク) の線幅を theme 実効値へ。
+      --   未指定 0.5 維持。 toGridWidth 指定時は Cartesian major と統一。 ('ovT' は下で定義)
+      polarGridW = effectiveNonCartesianGridWidth ovT
+      circleStyle = Just (StrokeStyle gridCol polarGridW)
       noFill = FillStyle gridCol 0.0
-      spokeStyle = solid gridCol 0.5
+      spokeStyle = solid gridCol polarGridW
       -- theta / radius を担う scale と tick / category ラベルを coord で選ぶ。
       (thetaScale, thetaTicks, thetaCats, radScale, radTicks) = case coord of
         CoordPolarY _ -> ( lpYScale layout, lpYTicks layout, lpYCategoryLabels layout
@@ -618,10 +657,13 @@ polarGrid spec layout pal =
 ternaryGrid :: VisualSpec -> Layout -> ThemePalette -> [Primitive]
 ternaryGrid spec layout pal =
   let (ctrX, ctrY, _) = ternaryCenter layout
+      ov        = vsThemeOverride spec   -- ★ Phase 68: edge/grid 線幅 override
       gridCol   = tpGrid pal
       axisCol   = tpAxis pal
-      edgeStyle = solid axisCol 1.0
-      gridStyle = solid gridCol 0.5
+      -- ★ Phase 68: 三角形の 3 辺 = axis.line role (toAxisLineWidth・既定 1.0)、
+      --   内部格子 = grid role (toGridWidth 指定で統一・未指定 0.5)。
+      edgeStyle = solid axisCol (effectiveAxisLineWidth ov)
+      gridStyle = solid gridCol (effectiveNonCartesianGridWidth ov)
       tp abc = uncurry Point (ternaryPoint layout abc)
       -- 外周 3 辺 (a=上 A, b=左下 B, c=右下 C)。
       edges = [ PLine (tp (1, 0, 0)) (tp (0, 1, 0)) edgeStyle    -- A→B (c=0)
@@ -719,16 +761,18 @@ panelBackground layout pal
 --   via tpShowAxisLine for theme_classic. border and axisLine are not
 --   mutually exclusive, but classic uses the combination of no border plus an
 --   axisLine.
-axisFrame :: Layout -> ThemePalette -> [Primitive]
-axisFrame layout pal = border ++ axisLine
+-- ★ Phase 68: axisW = axis.line / panel.border の実効線幅 (呼び元が
+--   'effectiveAxisLineWidth' で解決。 theme override 非対応の呼び元 (MCMC) は現状値 1.0)。
+axisFrame :: Double -> Layout -> ThemePalette -> [Primitive]
+axisFrame axisW layout pal = border ++ axisLine
   where
     a = lpPlotArea layout
     border | tpShowBorder pal =
-               [ PRect a (FillStyle (tpBackground pal) 0) (Just (StrokeStyle (tpAxis pal) 1.0)) ]
+               [ PRect a (FillStyle (tpBackground pal) 0) (Just (StrokeStyle (tpAxis pal) axisW)) ]
            | otherwise = []
     axisLine | tpShowAxisLine pal =
-                 [ PLine (Point (rX a) (rY a + rH a)) (Point (rX a + rW a) (rY a + rH a)) (solid (tpAxis pal) 1.0)
-                 , PLine (Point (rX a) (rY a)) (Point (rX a) (rY a + rH a)) (solid (tpAxis pal) 1.0) ]
+                 [ PLine (Point (rX a) (rY a + rH a)) (Point (rX a + rW a) (rY a + rH a)) (solid (tpAxis pal) axisW)
+                 , PLine (Point (rX a) (rY a)) (Point (rX a) (rY a + rH a)) (solid (tpAxis pal) axisW) ]
              | otherwise = []
 
 -- | [日本語]: TODO-3 (2026-05-29): axRotate / axShowTicks 対応 (= PS Render.tickMarksWithShow port)。
@@ -957,18 +1001,22 @@ labels layout spec pal =
 --   [English]: When lpYScaleRight is Just, draws a Y axis line plus ticks at
 --   the right edge of the plot area (same approach as PS renderRightYAxis).
 --   Draws nothing when Nothing.
-renderRightYAxis :: Layout -> ThemePalette -> Maybe AxisFormat -> [Primitive]
-renderRightYAxis layout pal fmtYR = case lpYScaleRight layout of
+-- ★ Phase 68: axisW = 軸線 (右 Y 軸) の実効線幅 (呼び元が 'effectiveAxisLineWidth'
+--   で解決)。 tick mark は scope 外 = 主軸 tick と同じ 1.0 固定 (axis.line と axis.ticks
+--   を分離して統一挙動にする)。
+renderRightYAxis :: Double -> Layout -> ThemePalette -> Maybe AxisFormat -> [Primitive]
+renderRightYAxis axisW layout pal fmtYR = case lpYScaleRight layout of
   Nothing -> []
   Just sR ->
     let a   = lpPlotArea layout
         xR  = rX a + rW a
         ts  = mkFontTS Nothing pal TickF AnchorStart 0
-        axisStyle = solid (tpAxis pal) 1.0
+        axisStyle = solid (tpAxis pal) axisW   -- 軸線 = toAxisLineWidth
+        tickStyle = solid (tpAxis pal) 1.0     -- tick mark = scope 外 (1.0 固定)
         axisLine  = [ PLine (Point xR (rY a)) (Point xR (rY a + rH a)) axisStyle ]
         tickPrim v =
           let py = scaleApply sR v
-          in [ PLine (Point xR py) (Point (xR + 5) py) axisStyle
+          in [ PLine (Point xR py) (Point (xR + 5) py) tickStyle
              , PText (Point (xR + 8) (py + 4)) (formatTick fmtYR v) ts ]
     in axisLine <> concatMap tickPrim (lpYTicksRight layout)
 

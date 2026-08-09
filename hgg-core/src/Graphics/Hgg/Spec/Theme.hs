@@ -338,6 +338,31 @@ data ThemeOverride = ThemeOverride
     --   (resolved by @mkFontTS@). Unlike replacing a whole slot (Last
     --   FontSpec), this doesn't clobber the preset's baked-in fontSize.
   , toFontFamily    :: !(Last Text)    -- text family (全 slot 共通 fallback)
+    -- [日本語]: ★ Phase 68: grid / 軸線の線幅 (ggplot @theme(panel.grid =
+    --   element_line(linewidth=))@ / @axis.line@ / @panel.border@ 相当)。 全て
+    --   @Last@ で、 未指定=各 role の現状決め打ちに fallback (既存 golden ゼロ diff)。
+    --   解決は 'Graphics.Hgg.Render.Common' の @effective*Width@ 群が単一情報源で行う
+    --   (Phase 63 の @effectiveX@ 方式)。 線幅は panel 面積に波及しないので Layout 予約は
+    --   不要 (grid 色 'toGridColor' と同じく純 Render 事項)。 規約:
+    --     * 'toGridWidth' 未指定 = Cartesian major 1.0 / polar・ternary grid 0.5 (座標系別の
+    --       現状値を維持) / 指定時 = 全 grid role を統一値に (ggplot panel.grid は座標系非依存)。
+    --     * 'toGridMinorWidth' 未指定 = major × 0.5 (ggplot @panel.grid.minor = rel(0.5)@)。
+    --     * 'toAxisLineWidth' = axis.line / panel.border / ternary edge / 右 Y 軸線 (未指定 1.0)。
+    --   [English]: ★ Phase 68: line widths for grid / axis lines (ggplot
+    --   @theme(panel.grid = element_line(linewidth=))@ / @axis.line@ /
+    --   @panel.border@). All @Last@; unspecified falls back to each role's
+    --   current literal (zero golden diff). Resolved by the @effective*Width@
+    --   helpers in 'Graphics.Hgg.Render.Common' as the single source of truth
+    --   (Phase 63's @effectiveX@ style). Widths don't affect panel area, so no
+    --   Layout reservation is needed (a pure Render concern, like grid colour).
+    --   Rules: 'toGridWidth' unspecified keeps the per-coord literals (Cartesian
+    --   major 1.0 / polar & ternary grid 0.5), while setting it unifies every
+    --   grid role (ggplot panel.grid is coord-independent). 'toGridMinorWidth'
+    --   defaults to major × 0.5 (ggplot @rel(0.5)@). 'toAxisLineWidth' covers
+    --   axis.line / panel.border / ternary edge / right Y axis (default 1.0).
+  , toGridWidth      :: !(Last Double)  -- panel.grid (major・全 grid の base)
+  , toGridMinorWidth :: !(Last Double)  -- panel.grid.minor (Cartesian minor 独立上書き)
+  , toAxisLineWidth  :: !(Last Double)  -- axis.line / panel.border / ternary edge
   } deriving stock (Generic, Show, Eq)
     -- [日本語]: ★ Phase 43 A3: 全 field が `Last` の素直な per-field 合成なので generic 導出。
     --   位置依存の手書き instance (旧 `a1..p1` を数で揃える形) を撲滅し、 以後の field
