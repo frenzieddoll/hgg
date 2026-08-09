@@ -1729,11 +1729,22 @@ polarPoint l thetaFrac rFrac =
 --   triangle's height @1.5R@ and width @√3 R@ both stay within @min(w,h)@,
 --   leaving margin on all sides for axis labels.
 ternaryCenter :: Layout -> (Double, Double, Double)
-ternaryCenter l = let a = lpPlotArea l
-                      cx = rX a + rW a / 2
-                      cy = rY a + rH a / 2
-                      r  = 0.4 * min (rW a) (rH a)
-                  in (cx, cy, r)
+ternaryCenter l =
+  let a = lpPlotArea l
+      s = sqrt 3 / 2
+      -- ★ Phase 69 A5: 三角図が plotArea に比べて小さく・上寄りだった (user 指摘) のを是正。
+      --   旧: @r = 0.4 * min(w,h)@ (保守的 + min で幅を活かせず) / 中心 = plotArea 中央
+      --   (= 外接中心を置く → 上頂点は r 上・底辺は r/2 下で外接矩形が上へずれ、 下に余白過多)。
+      --   新: 三角形の実アスペクト (幅 √3·r / 高さ 1.5·r) と辺ラベル/頂点タイトル用の外周
+      --   マージンから最大 r を算出し、 外接矩形 (縦幅 1.5r) の中心を plotArea 中心へ揃える。
+      mLabel = 32                      -- 頂点タイトル (outward 22 + 文字) / tick ラベル用の外周余白
+      availW = max 1 (rW a - 2 * mLabel)
+      availH = max 1 (rH a - 2 * mLabel)
+      r  = max 1 (min (availW / (2 * s)) (availH / 1.5))  -- 幅 √3r ≤ availW かつ 高さ 1.5r ≤ availH
+      cx = rX a + rW a / 2
+      -- 外接矩形の縦中心 (cy - r/4) を plotArea 中心へ → cy を r/4 下げて上下均等に。
+      cy = rY a + rH a / 2 + r / 4
+  in (cx, cy, r)
 
 -- | [日本語]: 三角座標の 3 頂点の px。 成分 @(a,b,c)@ と頂点の対応 = **a=上 (12 時)・
 --   b=左下・c=右下** (中心から 90°/210°/330° = 反時計回り)。 'ternaryPoint' /
