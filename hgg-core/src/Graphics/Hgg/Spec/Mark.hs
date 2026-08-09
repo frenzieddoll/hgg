@@ -42,6 +42,8 @@ module Graphics.Hgg.Spec.Mark
   , Coord(..)
   , PolarOpts(..)
   , defaultPolarOpts
+  , TernaryOpts(..)             -- ★ Phase 69 A4
+  , defaultTernaryOpts
   , FacetScales(..)
   , freeScaleX
   , freeScaleY
@@ -433,6 +435,23 @@ data PolarOpts = PolarOpts
 defaultPolarOpts :: PolarOpts
 defaultPolarOpts = PolarOpts { polarStart = 0, polarDirection = 1 }
 
+-- | [日本語]: ★ Phase 69 A4: 三角座標の向きオプション (polar の 'PolarOpts' と同型)。
+--   'ternaryClockwise' = 頂点の巡回方向 (True=時計回り = 左下↔右下 を反転)。
+--   'ternaryRotate' = どの成分を上頂点に置くかの回転 (0/120/240 度・反時計回りに巡回)。
+--   既定 (@clockwise=False, rotate=0@) = a=上・b=左下・c=右下 (Phase 64 の従来配置)。
+--   [English]: ★ Phase 69 A4: ternary orientation options (mirrors polar's
+--   'PolarOpts'). 'ternaryClockwise' flips the vertex precession (True swaps
+--   bottom-left ↔ bottom-right); 'ternaryRotate' cycles which component sits at
+--   the top vertex (0/120/240 degrees, counter-clockwise). The default
+--   (@clockwise=False, rotate=0@) is a=top / b=bottom-left / c=bottom-right.
+data TernaryOpts = TernaryOpts
+  { ternaryClockwise :: !Bool  -- ^ True = 時計回り (左下↔右下 反転)。 既定 False
+  , ternaryRotate    :: !Int   -- ^ 上頂点の回転 0/120/240 度。 既定 0
+  } deriving (Show, Eq, Generic)
+
+defaultTernaryOpts :: TernaryOpts
+defaultTernaryOpts = TernaryOpts { ternaryClockwise = False, ternaryRotate = 0 }
+
 -- | [日本語]: 座標系 (= ggplot coord_*)。 'CoordCartesian' (既定) = 通常の
 --   直交座標。 'CoordFlip' = x/y 軸を入れ替える (= coord_flip、 横棒グラフ等)。
 --   'CoordPolarX' / 'CoordPolarY' = 極座標 (= coord_polar(theta="x"|"y"))。 theta 軸を
@@ -463,7 +482,7 @@ data Coord
   | CoordFlip
   | CoordPolarX !PolarOpts
   | CoordPolarY !PolarOpts
-  | CoordTernary
+  | CoordTernary !TernaryOpts   -- ★ Phase 69 A4: 向き opts を保持 (既定は従来配置)
   deriving (Show, Eq, Generic)
 
 -- | [日本語]: polar coord の 'PolarOpts' を JSON 化する共通部。 既定なら文字列
@@ -478,12 +497,25 @@ polarCoordJson tag o
                        , "start" .= polarStart o
                        , "direction" .= polarDirection o ]
 
+-- | [日本語]: ★ Phase 69 A4: ternary の 'TernaryOpts' を JSON 化。 polar と同方針
+--   (既定なら文字列 tag "ternary"・非既定なら object 形)。 旧 spec の "ternary" 文字列は
+--   既定 opts で読める (後方互換)。
+--   [English]: ★ Phase 69 A4: JSON encoding for ternary's 'TernaryOpts', same
+--   policy as polar (bare string tag "ternary" when default; object form
+--   otherwise). Old specs' "ternary" string read back with the default opts.
+ternaryCoordJson :: TernaryOpts -> Value
+ternaryCoordJson o
+  | o == defaultTernaryOpts = String "ternary"
+  | otherwise = object [ "tag"       .= ("ternary" :: Text)
+                       , "clockwise" .= ternaryClockwise o
+                       , "rotate"    .= ternaryRotate o ]
+
 instance ToJSON Coord where
-  toJSON CoordCartesian  = String "cartesian"
-  toJSON CoordFlip       = String "flip"
-  toJSON CoordTernary    = String "ternary"
-  toJSON (CoordPolarX o) = polarCoordJson "polarx" o
-  toJSON (CoordPolarY o) = polarCoordJson "polary" o
+  toJSON CoordCartesian    = String "cartesian"
+  toJSON CoordFlip         = String "flip"
+  toJSON (CoordTernary o)  = ternaryCoordJson o
+  toJSON (CoordPolarX o)   = polarCoordJson "polarx" o
+  toJSON (CoordPolarY o)   = polarCoordJson "polary" o
 
 instance FromJSON Coord where
   parseJSON (String s) = case s of
@@ -491,16 +523,20 @@ instance FromJSON Coord where
     "flip"      -> pure CoordFlip
     "polarx"    -> pure (CoordPolarX defaultPolarOpts)
     "polary"    -> pure (CoordPolarY defaultPolarOpts)
-    "ternary"   -> pure CoordTernary
+    "ternary"   -> pure (CoordTernary defaultTernaryOpts)
     _           -> fail ("Coord: unknown tag " ++ show s)
   parseJSON v@(Object o) = do
     tag <- o .: "tag"
-    opts <- PolarOpts <$> o .:? "start" .!= polarStart defaultPolarOpts
-                      <*> o .:? "direction" .!= polarDirection defaultPolarOpts
     case (tag :: Text) of
-      "polarx" -> pure (CoordPolarX opts)
-      "polary" -> pure (CoordPolarY opts)
-      _        -> Aeson.typeMismatch "Coord" v
+      "polarx"  -> CoordPolarX <$> parsePolar
+      "polary"  -> CoordPolarY <$> parsePolar
+      "ternary" -> CoordTernary <$> parseTernary
+      _         -> Aeson.typeMismatch "Coord" v
+    where
+      parsePolar = PolarOpts <$> o .:? "start" .!= polarStart defaultPolarOpts
+                             <*> o .:? "direction" .!= polarDirection defaultPolarOpts
+      parseTernary = TernaryOpts <$> o .:? "clockwise" .!= ternaryClockwise defaultTernaryOpts
+                                 <*> o .:? "rotate" .!= ternaryRotate defaultTernaryOpts
   parseJSON v = Aeson.typeMismatch "Coord" v
 
 -- | [日本語]: facet の scale 共有方式 (= ggplot facet_wrap(scales=))。

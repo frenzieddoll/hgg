@@ -59,6 +59,7 @@ module Graphics.Hgg.Spec.Setters
   , palette, paletteGGplot, continuousPalette
   , scaleColorManual, scaleColorGradient2, scaleSize
   , coordFlip, coordPolar, coordPolarY, coordPolarWith, coordPolarYWith, coordTernary
+  , coordTernaryWith   -- ★ Phase 69 A4
   , coordCartesian, coordCartesianX, coordCartesianY
   , reverseX, reverseY, aspectRatio
   , width, height, widthUnit, heightUnit, widthMm, heightMm, dpi
@@ -1223,7 +1224,22 @@ coordPolarYWith start dir =
 --   triangle. Projection/grid are implemented in Phase 64 §3 (A11-A13); at A10
 --   only the 'Coord' constructor and JSON codec exist (rendering not wired up).
 coordTernary :: VisualSpec
-coordTernary = mempty { vsCoord = Last (Just CoordTernary) }
+coordTernary = mempty { vsCoord = Last (Just (CoordTernary defaultTernaryOpts)) }
+
+-- | [日本語]: ★ Phase 69 A4: 三角座標を向きつきで指定する ('coordPolarWith' の対)。
+--   @coordTernaryWith clockwise rotate@ で、 clockwise=True なら左下↔右下 を反転
+--   (巡回方向を逆に)、 rotate=0/120/240 でどの成分を上頂点に置くかを回す。
+--   'coordTernary' は @coordTernaryWith False 0@ と等価。 通常は encZ から coord が
+--   推論されるので、 本 setter は向きを変えたいときだけ足せばよい。
+--   [English]: ★ Phase 69 A4: ternary coordinates with an explicit orientation
+--   (the counterpart of 'coordPolarWith'). @coordTernaryWith clockwise rotate@:
+--   clockwise=True flips bottom-left ↔ bottom-right (reversing the precession),
+--   rotate 0/120/240 cycles which component sits at the top vertex. 'coordTernary'
+--   equals @coordTernaryWith False 0@. Since the coord is normally inferred from
+--   encZ, add this setter only when you want to change the orientation.
+coordTernaryWith :: Bool -> Int -> VisualSpec
+coordTernaryWith clockwise rotate =
+  mempty { vsCoord = Last (Just (CoordTernary (TernaryOpts clockwise rotate))) }
 
 -- | [日本語]: X 軸反転 (= ggplot @scale_x_reverse()@)。 大値が左、 小値が右へ。
 --   coord_flip と独立合成可。

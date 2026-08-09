@@ -373,7 +373,9 @@ validatePlotWith known r spec =
 --   does). Mark-less layers and 'MCustom' are exempt.
 ternaryMarkWarningsFor :: VisualSpec -> [PlotDiagnostic]
 ternaryMarkWarningsFor spec
-  | getLast (vsCoord spec) == Just CoordTernary =
+  -- ★ Phase 69 A4: CoordTernary が opts を持つようになったのでパターンで判定
+  --   (明示 coordTernary 指定時のみ・従来挙動を維持)。
+  | Just (CoordTernary _) <- getLast (vsCoord spec) =
       [ PlotWarning (TernaryUnsupportedMark m) (DiagnosticContext (Just i) (Just m))
       | (i, ly) <- zip [0 ..] (vsLayers spec)
       , Just m <- [getFirst (lyKind ly)]

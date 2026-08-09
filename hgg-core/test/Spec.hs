@@ -1996,7 +1996,7 @@ main = hspec $ do
 
     it "isPolar: polar のみ True" $
       map isPolar [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
-                  , CoordPolarY defaultPolarOpts, CoordTernary ]
+                  , CoordPolarY defaultPolarOpts, CoordTernary defaultTernaryOpts ]
         `shouldBe` [False, False, True, True, False]
 
     it "polarPoint: r=0 は中心、 θ=0 r=1 は真上 (cx, cy-maxR)" $
@@ -2015,14 +2015,14 @@ main = hspec $ do
     --   CoordTernary + polar start/direction。
     it "Coord JSON: 既定 polar / cartesian / flip / ternary は文字列 tag (後方互換)" $
       map encode [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
-                 , CoordPolarY defaultPolarOpts, CoordTernary ]
+                 , CoordPolarY defaultPolarOpts, CoordTernary defaultTernaryOpts ]
         `shouldBe` [ "\"cartesian\"", "\"flip\"", "\"polarx\"", "\"polary\"", "\"ternary\"" ]
 
     it "Coord JSON: 旧 spec の \"polarx\"/\"polary\" 文字列は既定 opts で読める" $
       ( eitherDecode "\"polarx\"", eitherDecode "\"polary\"", eitherDecode "\"ternary\"" )
         `shouldBe` ( Right (CoordPolarX defaultPolarOpts)
                    , Right (CoordPolarY defaultPolarOpts)
-                   , Right CoordTernary )
+                   , Right (CoordTernary defaultTernaryOpts) )
 
     it "Coord JSON: 非既定 start/direction は object 形で往復する (文字列でなくなる)" $
       let c = CoordPolarX (PolarOpts 1.5 (-1))
@@ -2041,7 +2041,35 @@ main = hspec $ do
       , getLast (vsCoord coordTernary) )
         `shouldBe` ( Just (CoordPolarX (PolarOpts 1 (-1)))
                    , Just (CoordPolarY defaultPolarOpts)
-                   , Just CoordTernary )
+                   , Just (CoordTernary defaultTernaryOpts) )
+
+    -- ★ Phase 69 A4: 三角座標の向き opts (TernaryOpts / coordTernaryWith)。
+    it "Phase 69 A4: 既定 opts は \"ternary\" 文字列 (後方互換)・旧文字列を既定で読む" $
+      ( encode (CoordTernary defaultTernaryOpts), eitherDecode "\"ternary\"" )
+        `shouldBe` ( "\"ternary\"", Right (CoordTernary defaultTernaryOpts) )
+    it "Phase 69 A4: 非既定 TernaryOpts は object 形で往復 (文字列でなくなる)" $
+      let c = CoordTernary (TernaryOpts True 120)
+      in ( eitherDecode (encode c), encode c /= "\"ternary\"" ) `shouldBe` ( Right c, True )
+    it "Phase 69 A4: object 形の clockwise/rotate 欠落は既定で補完" $
+      ( eitherDecode "{\"tag\":\"ternary\"}"
+      , eitherDecode "{\"tag\":\"ternary\",\"clockwise\":true}" )
+        `shouldBe` ( Right (CoordTernary defaultTernaryOpts)
+                   , Right (CoordTernary (TernaryOpts True 0)) )
+    it "Phase 69 A4: coordTernaryWith setter が opts を立てる" $
+      getLast (vsCoord (coordTernaryWith True 120))
+        `shouldBe` Just (CoordTernary (TernaryOpts True 120))
+    it "Phase 69 A4: clockwise は左下↔右下 頂点を入れ替える (top 不変)" $
+      let layD = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]] <> coordTernary)
+          layC = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]] <> coordTernaryWith True 0)
+          (aD, bD, cD) = ternaryVertices layD
+          (aC, bC, cC) = ternaryVertices layC
+      in (aD == aC, bD == cC, cD == bC) `shouldBe` (True, True, True)
+    it "Phase 69 A4: rotate 120 は成分→頂点を巡回 (a が旧 b=左下 の位置へ)" $
+      let layD = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]] <> coordTernary)
+          layR = computeLayout emptyResolver (overlay [points [0, 1] [0, 1]] <> coordTernaryWith False 120)
+          (_,  bD, _) = ternaryVertices layD
+          (aR, _,  _) = ternaryVertices layR
+      in aR `shouldBe` bD
 
     it "polarPoint: start=π/2 は θ=0 r=1 を右へ回す (既定の真上から 90° 回転)" $
       let layS = computeLayout emptyResolver
@@ -2060,7 +2088,7 @@ main = hspec $ do
     -- ★ Phase 64 A11 (= §3-2): ternary 第 3 位置 aesthetic (encZ) + 第 3 scale + 正規化。
     it "isTernary: CoordTernary のみ True" $
       map isTernary [ CoordCartesian, CoordFlip, CoordPolarX defaultPolarOpts
-                    , CoordPolarY defaultPolarOpts, CoordTernary ]
+                    , CoordPolarY defaultPolarOpts, CoordTernary defaultTernaryOpts ]
         `shouldBe` [False, False, False, False, True]
 
     -- ★ Phase 69 A3: mark 束ね (ternaryScatter/ternaryLine) + coord 推論。
@@ -2069,7 +2097,7 @@ main = hspec $ do
         `shouldBe` (scatter (ColByName "a") (ColByName "b") <> encZ (ColByName "c"))
     it "Phase 69 A3: coordOf は encZ から CoordTernary を推論 (coord 未指定)" $
       coordOf (layer (ternaryScatter (ColByName "a") (ColByName "b") (ColByName "c")))
-        `shouldBe` CoordTernary
+        `shouldBe` CoordTernary defaultTernaryOpts
     it "Phase 69 A3: encZ 無しは CoordCartesian (推論しない)" $
       coordOf (layer (scatter (ColByName "a") (ColByName "b"))) `shouldBe` CoordCartesian
     it "Phase 69 A3: 明示 coord は推論より優先 (encZ ありでも coordFlip)" $
@@ -2152,7 +2180,7 @@ main = hspec $ do
     it "projectXY CoordTernary: (a,b) は c=1-a-b を補完して ternaryPoint と一致" $
       let layT = computeLayout emptyResolver
                    (overlay [points [0, 1] [0, 1]] <> coordTernary)
-      in projectXY CoordTernary layT 0.5 0.3
+      in projectXY (CoordTernary defaultTernaryOpts) layT 0.5 0.3
            `shouldBe` ternaryPoint layT (0.5, 0.3, 0.2)
 
     -- ★ Phase 64 A13 (= §3-4): geom が encZ を解決し 3 列で ternary 投影する経路。

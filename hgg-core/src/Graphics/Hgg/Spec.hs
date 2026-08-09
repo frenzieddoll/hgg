@@ -263,12 +263,15 @@ module Graphics.Hgg.Spec
   , Coord(..)
   , PolarOpts(..)
   , defaultPolarOpts
+  , TernaryOpts(..)             -- ★ Phase 69 A4
+  , defaultTernaryOpts
   , coordFlip
   , coordPolar
   , coordPolarY
   , coordPolarWith
   , coordPolarYWith
   , coordTernary
+  , coordTernaryWith   -- ★ Phase 69 A4
   , reverseX
   , reverseY
   , coordCartesianX

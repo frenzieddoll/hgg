@@ -128,6 +128,7 @@ import           Graphics.Hgg.Spec (AxisKind (..), AxisSpec (..), ColData (..),
                                     MarkKind (..), Resolver,
                                     ThemeName (..), ThemeOverride (..), TickDir (..),
                                     Margin (..), Coord (..), PolarOpts (..),
+                                    TernaryOpts (..), defaultTernaryOpts,
                                     VisualSpec (..), YAxisSide (..),
                                     applyDiscreteLimits, axisKindOf, ridgeAutoFlip,
                                     axTickValsOf, axTickLabelsOf, distGroupRef,
@@ -1596,7 +1597,7 @@ coordOf :: VisualSpec -> Coord
 coordOf spec = case getLast (vsCoord spec) of
   Just c  -> c
   Nothing
-    | any hasEncZ (vsLayers spec) -> CoordTernary
+    | any hasEncZ (vsLayers spec) -> CoordTernary defaultTernaryOpts
     | otherwise                   -> CoordCartesian
   where hasEncZ l = case getLast (lyEncZ l) of Just _ -> True; Nothing -> False
 
@@ -1619,7 +1620,7 @@ projectXY (CoordPolarY _) l dx dy = polarPoint l (domFrac (lpYScale l) dy) (domF
 --   第 3 成分は @c = 1 - a - b@ と補完する (= a/b を既に fraction で渡す入力様式)。
 --   3 列 (encX/encY/encZ) を直接投影する経路は §3-4 (A13) で geom 側が
 --   'ternaryPoint' を 3 引数で呼ぶ。 grid/tick は 'ternaryPoint' を直接使う。
-projectXY CoordTernary l dx dy = ternaryPoint l (dx, dy, 1 - dx - dy)
+projectXY (CoordTernary _) l dx dy = ternaryPoint l (dx, dy, 1 - dx - dy)
 
 -- | [日本語]: scale の domain における正規化位置 [0,1] (= (v - dLo)/(dHi -
 --   dLo))。 極座標で角度/半径の比率を出すのに使う。 domain が退化していれば
@@ -1745,9 +1746,22 @@ ternaryVertices :: Layout -> ((Double, Double), (Double, Double), (Double, Doubl
 ternaryVertices l =
   let (cx, cy, r) = ternaryCenter l
       s = sqrt 3 / 2
-  in ( (cx, cy - r)               -- a: 上
-     , (cx - r * s, cy + r / 2)    -- b: 左下
-     , (cx + r * s, cy + r / 2) )  -- c: 右下
+      top = (cx, cy - r)             -- 上
+      bl  = (cx - r * s, cy + r / 2) -- 左下
+      br  = (cx + r * s, cy + r / 2) -- 右下
+      -- ★ Phase 69 A4: 向き opts を 'lpCoord' から読む (既定 = a=top/b=bl/c=br の従来配置)。
+      --   clockwise は左下↔右下 を反転 (巡回方向を逆に)、 rotate は成分→頂点の割当を
+      --   反時計回りに 120° ずつ巡回する。
+      (clockwise, rot) = case lpCoord l of
+        CoordTernary o -> (ternaryClockwise o, ternaryRotate o)
+        _              -> (False, 0)
+      base = if clockwise then [top, br, bl] else [top, bl, br]  -- 頂点の巡回列 (CCW / CW)
+      k    = (rot `div` 120) `mod` 3
+      -- 成分 (a,b,c) を base の巡回位置へ割り当てる (k 段ずらす)。
+      rotated = drop k base ++ take k base
+  in case rotated of
+       (pa : pb : pc : _) -> (pa, pb, pc)
+       _                  -> (top, bl, br)
 
 -- | [日本語]: 正規化済み成分 @(a,b,c)@ (合計 1 前提) → px。 重心座標
 --   @P = a*A + b*B + c*C@ ('ternaryVertices' の 3 頂点)。 正規化は呼出側で
@@ -1804,7 +1818,7 @@ projectBarRect (CoordPolarX _) l centerD baseD valueD thicknessPx =
 projectBarRect (CoordPolarY _) l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
 -- ★ Phase 64 §3 (A12) までは ternary も Cartesian placeholder (未 render 経路)。
-projectBarRect CoordTernary l centerD baseD valueD thicknessPx =
+projectBarRect (CoordTernary _) l centerD baseD valueD thicknessPx =
   projectBarRect CoordCartesian l centerD baseD valueD thicknessPx
 
 -- | [日本語]: 扇形 (annular sector) の path。 (tf0..tf1) = 角度 frac 帯、
@@ -2000,7 +2014,7 @@ valueAxisPx (CoordPolarX _) l v =
 valueAxisPx (CoordPolarY _) l v =
   let (_, _, maxR) = polarCenter l in domFrac (lpYScale l) v * (2 * pi * maxR)
 -- ★ Phase 64 §3 (A11) までは ternary の value 軸は Cartesian に fallback。
-valueAxisPx CoordTernary   l v = scaleApply (lpYScale l) v
+valueAxisPx (CoordTernary _) l v = scaleApply (lpYScale l) v
 
 -- | [日本語]: value 一定で cross 方向へ ±半幅の短線 (box の median / whisker cap)。
 --   直線座標系は px 半幅 halfPx の 2 点 (旧式 bit 一致: [base+offPx-halfPx,
@@ -2095,7 +2109,7 @@ catUnitPx CoordFlip      l =
   abs (scaleApply (lpXScaleFlipped l) 1 - scaleApply (lpXScaleFlipped l) 0)
 catUnitPx (CoordPolarX _) l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 catUnitPx (CoordPolarY _) l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
-catUnitPx CoordTernary l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
+catUnitPx (CoordTernary _) l = scaleApply (lpXScale l) 1 - scaleApply (lpXScale l) 0
 
 -- | [日本語]: 軸が物理的にどの辺に来るか。 Cartesian: データ x=下・y=左。
 --   Flip: データ x=左・y=下。 極座標は直交的な辺軸を持たない (Render の polar
@@ -2134,7 +2148,7 @@ isPolar _               = False
 --   orthogonal ticks and to dispatch the grid (Phase 64 §3 A12); analogous to
 --   'isPolar'.
 isTernary :: Coord -> Bool
-isTernary CoordTernary = True
+isTernary (CoordTernary _) = True
 isTernary _            = False
 
 -- | [日本語]: 三角座標の 3 成分 @(a,b,c)@ を合計 1 へ正規化 (= Phase 64 A11)。
