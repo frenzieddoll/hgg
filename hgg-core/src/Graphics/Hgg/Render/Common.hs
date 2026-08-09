@@ -674,22 +674,35 @@ ternaryGrid spec layout pal =
       gridA = [ PLine (tp (t, 1 - t, 0)) (tp (t, 0, 1 - t)) gridStyle | t <- inner ]
       gridB = [ PLine (tp (1 - t, t, 0)) (tp (0, t, 1 - t)) gridStyle | t <- inner ]
       gridC = [ PLine (tp (1 - t, 0, t)) (tp (0, 1 - t, t)) gridStyle | t <- inner ]
-      -- 中心から外向きへ d px 押し出す (tick ラベル/タイトルを辺の外側に置く)。
+      -- 中心から外向きへ d px 押し出す (頂点タイトル用。 頂点は 1 点なので放射方向で正しい)。
       outward (px, py) d =
         let dx = px - ctrX; dy = py - ctrY; m = sqrt (dx * dx + dy * dy)
         in if m < 1e-9 then (px, py) else (px + dx / m * d, py + dy / m * d)
-      -- 三辺の数値 tick ラベル。 a=左辺 A-B / b=下辺 B-C / c=右辺 C-A 上の各 tick 点を
-      --   少し外側へ。
+      -- ★ Phase 69 A2: 辺の外向き法線 (辺 P→Q に垂直・重心から外向き)。 全 tick を
+      --   同一方向へ一定 px 押すことで、 辺上のラベルが辺に平行に整列する。
+      --   旧実装 (重心放射 'outward') は辺中央の tick ほど押し出しが垂直になり、
+      --   底辺の 0.4/0.6 が 0.2/0.8 より下にずれていた (Phase 69 起票の user 指摘)。
+      edgeNormal (x1, y1) (x2, y2) =
+        let ex = x2 - x1; ey = y2 - y1
+            (nx, ny) = (-ey, ex)                 -- 辺に垂直
+            mx = (x1 + x2) / 2; my = (y1 + y2) / 2
+            s  = if nx * (mx - ctrX) + ny * (my - ctrY) < 0 then -1 else 1  -- 外向きへ符号
+            m  = sqrt (nx * nx + ny * ny)
+        in if m < 1e-9 then (0, 0) else (s * nx / m, s * ny / m)
+      vA = ternaryPoint layout (1, 0, 0)
+      vB = ternaryPoint layout (0, 1, 0)
+      vC = ternaryPoint layout (0, 0, 1)
+      -- 三辺の数値 tick ラベル。 a 列の左辺 A-B / b 列の下辺 B-C / c 列の右辺 C-A。
       tsTick = mkFontTS (Just spec) pal TickF AnchorMiddle 0
       -- 端点 (0/1 = 三角形の頂点) は 2 軸の tick が重なる上に頂点タイトルと被るので
       --   除き、 内部 tick (0.2..0.8) のみラベルする。
       edgeLabels = inner
-      mkLabel abc t =
-        let (lx, ly) = outward (ternaryPoint layout abc) 12
-        in PText (Point lx (ly + 3)) (numToText t) tsTick
-      tickA = [ mkLabel (t, 1 - t, 0) t | t <- edgeLabels ]
-      tickB = [ mkLabel (0, t, 1 - t) t | t <- edgeLabels ]
-      tickC = [ mkLabel (1 - t, 0, t) t | t <- edgeLabels ]
+      mkLabelOn (nx, ny) abc t =
+        let (px, py) = ternaryPoint layout abc
+        in PText (Point (px + nx * 12) (py + ny * 12 + 3)) (numToText t) tsTick
+      tickA = [ mkLabelOn (edgeNormal vA vB) (t, 1 - t, 0) t | t <- edgeLabels ]
+      tickB = [ mkLabelOn (edgeNormal vB vC) (0, t, 1 - t) t | t <- edgeLabels ]
+      tickC = [ mkLabelOn (edgeNormal vC vA) (1 - t, 0, t) t | t <- edgeLabels ]
       -- 3 頂点の軸タイトル (vsXLabel/vsYLabel/vsZLabel、 無ければ encX/encY/encZ 列名)。
       tsTitle = mkFontTS (Just spec) pal AxisLabelF AnchorMiddle 0
       firstLay = case vsLayers spec of (l0 : _) -> Just l0; [] -> Nothing
