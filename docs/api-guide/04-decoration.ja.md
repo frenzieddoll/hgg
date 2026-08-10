@@ -1,6 +1,6 @@
 # 装飾 ─ ラベル / theme / facet / subplot / 座標 / 参照線 / 重畳
 
-> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ **04 decoration** ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 appendix](09-appendix.ja.md)
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ **04 decoration** ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 図全体の設定 (いずれも `VisualSpec`・`purePlot <> … <> これ` の**外**で `<>`) を topic 別に並べる。
 mark 自身の見た目・channel は [03 encoding & scale](03-encoding-scale.ja.md#encoding)、色やサイズの

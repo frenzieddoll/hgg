@@ -18,8 +18,8 @@ Comprehensive reference organized by topic. Learning pathways are covered by [tu
 | [06 dataframe](06-dataframe.md) | DataFrame integration (`df \|>> layer …`, nullable columns) |
 | [07 analyze](07-analyze.md) | analyze integration (`toPlot` / `statLm` / HBM extractors) |
 | [08 3d](08-3d.md) | 3D (separate types `Layer3D` / `VisualSpec3D`, response surfaces, general 3D) |
-| [09 appendix](09-appendix.md) | Appendix (layer/page selection / ggplot migration / library extension) + API quick reference |
-| [10 custom marks](10-custom-marks.md) | Custom marks (`customMark`) — add new plot types without modifying core |
+| [09 custom marks](09-custom-marks.md) | Custom marks (`customMark`) — add new plot types without modifying core |
+| [10 appendix](10-appendix.md) | Appendix (layer/page selection / ggplot migration / library extension) + API quick reference |
 
 ## 3 layers of writing (any import gives you all lower layers)
 

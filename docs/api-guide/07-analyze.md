@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](07-analyze.ja.md)
 
-> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | **07 analyze** | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | **07 analyze** | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 Models fitted with the statistical library **hanalyze** can be layered directly onto hgg plots. **All major model types produce visualizations** — regression, GLM, GP, survival, time series, Bayesian, etc. Uncertainty (CI / credible bands / prediction intervals) uses statistically correct values computed by hanalyze.
 

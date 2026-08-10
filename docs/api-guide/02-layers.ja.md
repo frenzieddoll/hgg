@@ -2,7 +2,7 @@
 
 > 🌐 [English](02-layers.md) | **日本語**
 
-> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ **02 layers** ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 appendix](09-appendix.ja.md)
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ **02 layers** ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 合成単位は **layer**、描画の種類は **mark** (型名 `MarkKind`)、個別関数は `scatter` / `line` / `bar` / …。
 mark は `layer (mark <> 修飾子…)` の形で図に重ねる。引数の `ColRef` は **`inline [..]`** (数値)・

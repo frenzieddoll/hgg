@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](03-encoding-scale.ja.md)
 
-> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | **03 encoding & scale** | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | **03 encoding & scale** | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 Covers **encoding (channel)** — mapping data columns to visual attributes — and **scale** — controlling the appearance of that mapping on a single page. The question "which columns go to color, size, and shape" (channel) and "how to display that color and size" (palette / gradient / limits / axis breaks) are related topics, so they are unified into one reference.
 

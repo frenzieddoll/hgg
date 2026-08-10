@@ -1,8 +1,8 @@
 # 付録
 
-> 🌐 [English](09-appendix.md) | **日本語**
+> 🌐 [English](10-appendix.md) | **日本語**
 
-> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ **09 appendix**
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ **10 appendix**
 
 このページの構成:
 **[A: どの層・どのページを使うか](#appendix-layers)** ｜ **[B: ggplot2 ユーザの方へ](#appendix-ggplot)** ｜

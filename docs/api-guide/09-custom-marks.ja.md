@@ -1,6 +1,8 @@
-# 10 custom marks — 自作の mark を足す
+# custom marks — 自作の mark を足す
 
-> 🌐 [English](10-custom-marks.md) | **日本語**
+> 🌐 [English](09-custom-marks.md) | **日本語**
+
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ **09 custom marks** ｜ [10 appendix](10-appendix.ja.md)
 
 組み込み mark (`scatter` / `line` / `bar` / `box` / …) に無いプロット型を、**ライブラリ本体
 (`MarkKind` の列挙) を一切編集せず**自分で定義するための拡張点が **custom mark** (`customMark`)。
@@ -8,7 +10,7 @@
 
 > **いつ使うか**: 既存 mark で描けない図 (dendrogram・独自の annotation・専用ダイアグラム等) を
 > 描きたいとき。 scale / legend / color と深く統合したい本格 mark は core への追加が要る
-> ([09 appendix](09-appendix.ja.md) のライブラリ拡張) が、 「線と文字を自分で置くだけ」の型は
+> ([10 appendix](10-appendix.ja.md) のライブラリ拡張) が、 「線と文字を自分で置くだけ」の型は
 > custom mark が最短。 ggplot の "Extending ggplot2"・matplotlib の Artist helper
 > (`scipy…dendrogram` 等) と同じ発想。
 
@@ -251,4 +253,4 @@ type RenderCtx = { projectXY :: Number -> Number -> { x :: Number, y :: Number }
 - 最小作例: `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`)。
 - 設計背景 (なぜ closure・なぜ Primitive を leaf に): `specification/phases/phase-51-custom-mark-extension.md`。
 - 参考: ggplot "Extending ggplot2" / matplotlib Artist / scipy dendrogram (helper 関数方式)。
-- 本格 mark を core に足す場合: [09 appendix](09-appendix.ja.md) のライブラリ拡張。
+- 本格 mark を core に足す場合: [10 appendix](10-appendix.ja.md) のライブラリ拡張。

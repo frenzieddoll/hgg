@@ -1,12 +1,14 @@
-# 10 custom marks — Add your own marks
+# custom marks — Add your own marks
 
-> 🌐 **English** | [日本語](10-custom-marks.ja.md)
+> 🌐 **English** | [日本語](09-custom-marks.ja.md)
+
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | **09 custom marks** | [10 appendix](10-appendix.md)
 
 For plot types not supported by built-in marks (`scatter` / `line` / `bar` / `box` / …), **custom mark** (`customMark`) is the extension point to define your own **without editing the library core** (`MarkKind` enum).
 Reading this page alone, you can build new marks from start to finish.
 
 > **When to use**: When you want to draw plots not supported by existing marks (dendrogram, custom annotations, specialized diagrams, etc.).
-> Serious marks needing deep integration with scale / legend / color require core additions ([09 appendix](09-appendix.md) library extension),
+> Serious marks needing deep integration with scale / legend / color require core additions ([10 appendix](10-appendix.md) library extension),
 > but types like "just place lines and text yourself" benefit most from custom marks. Same philosophy as ggplot's "Extending ggplot2" and matplotlib's Artist helpers (`scipy…dendrogram` etc.).
 
 ## 1. 30-second version — Minimal custom mark
@@ -246,4 +248,4 @@ type RenderCtx = { projectXY :: Number -> Number -> { x :: Number, y :: Number }
 - Minimal example: `hgg-svg/examples/CustomMarkDemo.hs` (`cabal run custom-mark-demo`).
 - Design rationale (why closures, why Primitive as leaf): `specification/phases/phase-51-custom-mark-extension.md`.
 - References: ggplot "Extending ggplot2" / matplotlib Artist / scipy dendrogram (helper function style).
-- Adding serious marks to core: [09 appendix](09-appendix.md) library extension.
+- Adding serious marks to core: [10 appendix](10-appendix.md) library extension.

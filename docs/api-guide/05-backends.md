@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](05-backends.ja.md)
 
-> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | **05 backends** | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | **05 backends** | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 Output the same `VisualSpec` / `BoundPlot` to different format packages by use case. Backends work independently from the plot core (no extra dependencies like df needed).
 
@@ -141,4 +141,4 @@ savePrimitivesPNG defaultPNGConfig "out.png" 640 480 prims
 plotDF "out.svg" df (layer (scatter "weight" "mpg"))   -- :: FilePath -> DataFrame -> VisualSpec -> IO ()
 ```
 
-> `savePrimitives*` is the output port folding `[Primitive]` (from `renderToPrimitives`) to format, symmetric with SVG version `savePrimitivesSVG` (backend authoring in [Appendix C](09-appendix.md#appendix-extend)). Config types `PNGConfig` / `PNGFonts` set PNG backend. Bundle result typeclass for `df |>>` is `BindableSpec` ([06 dataframe](06-dataframe.md)).
+> `savePrimitives*` is the output port folding `[Primitive]` (from `renderToPrimitives`) to format, symmetric with SVG version `savePrimitivesSVG` (backend authoring in [Appendix C](10-appendix.md#appendix-extend)). Config types `PNGConfig` / `PNGFonts` set PNG backend. Bundle result typeclass for `df |>>` is `BindableSpec` ([06 dataframe](06-dataframe.md)).

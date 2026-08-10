@@ -1,6 +1,6 @@
 # backend ─ SVG / PDF / PNG / Jupyter
 
-> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ **05 backends** ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 appendix](09-appendix.ja.md)
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ **05 backends** ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 同じ `VisualSpec` / `BoundPlot` を、 用途別の backend package で出力する。 backend は
 plot 本体だけで完結する (df 等の追加依存は不要)。
@@ -149,6 +149,6 @@ plotDF "out.svg" df (layer (scatter "weight" "mpg"))   -- :: FilePath -> DataFra
 ```
 
 > `savePrimitives*` は `renderToPrimitives` で得た `[Primitive]` をフォーマットへ畳む口で、
-> SVG 版 `savePrimitivesSVG` と対称 ([付録 C](09-appendix.ja.md#appendix-extend) の backend 自作)。
+> SVG 版 `savePrimitivesSVG` と対称 ([付録 C](10-appendix.ja.md#appendix-extend) の backend 自作)。
 > 設定型 `PNGConfig` / `PNGFonts` は PNG backend の構成。 `df |>>` の束ね結果の型クラスは
 > `BindableSpec` ([06 dataframe](06-dataframe.ja.md))。

@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](01-quickstart.ja.md)
 
-> [📚 Index](README.md) | **01 quickstart** | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | **01 quickstart** | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 Fastest path to one plot in hgg, plus the **3 API layers** (Easy / Grammar / DataFrame). 
 Settings reference: [02 layers](02-layers.md) / [03 encoding & scale](03-encoding-scale.md) / [04 decoration](04-decoration.md).

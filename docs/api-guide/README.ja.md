@@ -21,8 +21,8 @@
 | [06 dataframe](06-dataframe.ja.md) | DataFrame 連携 (`df \|>> layer …`・nullable 列) |
 | [07 analyze](07-analyze.ja.md) | analyze 連携 (`toPlot` / `statLm` / HBM 抽出子) |
 | [08 3d](08-3d.ja.md) | 3D (別型系 `Layer3D` / `VisualSpec3D`・応答曲面・汎用 3D) |
-| [09 appendix](09-appendix.ja.md) | 付録 (層・ページ選択 / ggplot 移行 / ライブラリ拡張) + API 早見表 |
-| [10 custom marks](10-custom-marks.ja.md) | 自作 mark (`customMark`) — core 無改造で新プロット型を足す |
+| [09 custom marks](09-custom-marks.ja.md) | 自作 mark (`customMark`) — core 無改造で新プロット型を足す |
+| [10 appendix](10-appendix.ja.md) | 付録 (層・ページ選択 / ggplot 移行 / ライブラリ拡張) + API 早見表 |
 
 ## 書き方の 3 層 (どの import でも下位層は全部使える)
 

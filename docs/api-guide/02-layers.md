@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](02-layers.ja.md)
 
-> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | **02 layers** | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | **02 layers** | [03 encoding & scale](03-encoding-scale.md) | [04 decoration](04-decoration.md) | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 The composition unit is **layer**, the drawing type is **mark** (type name `MarkKind`), and individual functions are `scatter` / `line` / `bar` / ….
 Marks are composed as `layer (mark <> modifiers…)` stacked onto a plot. Arguments of type `ColRef` are **`inline [..]`** (numeric) / 

@@ -1,6 +1,6 @@
 # encoding & scale ─ チャネルとスケール
 
-> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ **03 encoding & scale** ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 appendix](09-appendix.ja.md)
+> [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ **03 encoding & scale** ｜ [04 decoration](04-decoration.ja.md) ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 データ列を視覚属性へ写す **encoding (channel)** と、その写像の見た目を制御する **scale** を 1 ページにまとめる。
 「どの列を色・サイズ・形に割り当てるか」(channel) と「その色やサイズをどう見せるか」(palette / gradient /

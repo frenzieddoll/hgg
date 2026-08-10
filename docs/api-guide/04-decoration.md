@@ -2,7 +2,7 @@
 
 > 🌐 **English** | [日本語](04-decoration.ja.md)
 
-> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | **04 decoration** | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 appendix](09-appendix.md)
+> [📚 Index](README.md) | [01 quickstart](01-quickstart.md) | [02 layers](02-layers.md) | [03 encoding & scale](03-encoding-scale.md) | **04 decoration** | [05 backends](05-backends.md) | [06 dataframe](06-dataframe.md) | [07 analyze](07-analyze.md) | [08 3d](08-3d.md) | [09 custom marks](09-custom-marks.md) | [10 appendix](10-appendix.md)
 
 Figure-wide settings (all are `VisualSpec` · `<>` **outside** `purePlot <> … <> this`) are organized by topic. Mark appearance and channels are in [03 encoding & scale](03-encoding-scale.md#encoding); color and size scale and axis control are also there.
 
