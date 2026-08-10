@@ -1,5 +1,7 @@
 # 装飾 ─ ラベル / theme / facet / subplot / 座標 / 参照線 / 重畳
 
+> 🌐 [English](04-decoration.md) | **日本語**
+
 > [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ **04 decoration** ｜ [05 backends](05-backends.ja.md) ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 図全体の設定 (いずれも `VisualSpec`・`purePlot <> … <> これ` の**外**で `<>`) を topic 別に並べる。
@@ -58,9 +60,9 @@ purePlot <> layer (scatter xs ys <> size 6)
 | `ThemeDefault` / `ThemeMinimal` | 既定 / 枠なし最小 |
 | `ThemeDark` / `ThemeLight` | 暗 / 明 |
 | `ThemeGrey` / `ThemeBW` | 灰パネル / 白黒 |
-| `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` | 軸線のみ / 枠なし / 細線 |
+| `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` | 軸線のみ / 完全 void (軸線・tick・軸文字とも非表示) / 細線 |
 | `ThemeNoir` / `ThemeLumen` | ブランド暗 / 明 |
-| `ThemeCanvas` / `ThemeCanvasDark` | 羊皮紙 (明 / 暗) |
+| `ThemeParchment` / `ThemeParchmentDark` | 羊皮紙 (明 / 暗) |
 
 ![theme 一覧 (代表テーマ 13 種)](images/s3e-theme-gallery.svg)
 
@@ -87,16 +89,27 @@ purePlot <> layer (scatter xs ys <> color (fromHex "#38bdf8") <> size 6) <> them
 
 | 設定 | 型 (何を渡すか) | 意味 |
 |---|---|---|
-| `themeGrid` | `Bool -> VisualSpec` | グリッド線の on/off |
+| `themeGrid` | `Bool -> VisualSpec` | グリッド線の on/off (major/minor 両方の一括) |
+| `themeGridMajor` / `themeGridMinor` | `Bool -> VisualSpec` | major / minor グリッド線の**個別** on/off (個別 > 一括 `themeGrid` > preset) |
 | `gridColor` / `panelFill` / `plotBg` | `Text -> VisualSpec` | グリッド色 / パネル背景 / 図全体背景 (色 hex) |
+| `themePlotBg` | `Bool -> VisualSpec` | 図全体背景 (plot.background) を**塗るか** (`False` = 透過。 ggplot `plot.background = element_blank()` / cowplot `fill = NA` 相当。 色を変えるのは上の `plotBg`) |
 | `axisColor` / `textColor` / `stripFill` | `Text -> VisualSpec` | 軸線の色 / 文字色 / strip 背景 (色 hex) |
 | `themeAxisLine` / `panelBorder` / `themeStrip` | `Bool -> VisualSpec` | 軸線 (下・左) / プロット枠線 / facet strip の on/off |
-| `themeAxisTextAngle` | `Double -> VisualSpec` | tick ラベルの回転角 (度) |
+| `themeAxisText` / `themeAxisTitle` | `Bool -> VisualSpec` | 軸目盛ラベル文字 (axis.text) / 軸タイトル (axis.title) の on/off (`False` = element_blank 相当で margin 予約も落ちる。 既定は `ThemeVoid` のみ `False`) |
+| `themeAxisTextAngle` | `Double -> VisualSpec` | tick ラベルの回転角 (度・両軸共通) |
+| `themeAxisTextAngleX` / `themeAxisTextAngleY` | `Double -> VisualSpec` | x / y 軸だけの回転角 (共通版より優先。 軸個別の `axisRotate` が更に優先) |
+| `themeTickLength` | `Double -> VisualSpec` | 軸目盛線 (tick mark) の長さ pt (既定 2.75 = ggplot `axis.ticks.length`) |
+| `themeTickDir` | `TickDir -> VisualSpec` | 目盛線の向き ([列挙型](#enum-tables)。`TickIn` はラベルが軸に寄る) |
 | `themeGridWidth` | `Double -> VisualSpec` | グリッド線 (major) の線幅 pt (ggplot `panel.grid = element_line(linewidth=)`)。 指定すると polar / ternary の grid も同幅に統一。 未指定は座標系別の既定 (Cartesian major 1.0・polar / ternary 0.5) |
 | `themeGridMinorWidth` | `Double -> VisualSpec` | minor グリッド線の線幅 pt (`panel.grid.minor`)。 未指定は major × 0.5 (ggplot `rel(0.5)`) |
 | `themeAxisLineWidth` | `Double -> VisualSpec` | 軸線・プロット枠線・三角座標の辺の線幅 pt (ggplot `axis.line` / `panel.border`。 既定 1.0。 tick mark は対象外) |
+| `themePlotMargin` | `Double -> Double -> Double -> Double -> VisualSpec` | 図の外周余白 t r b l (pt・ggplot `margin(t,r,b,l)` と同順)。指定時は自動算出の外周分 (各辺 5.5pt) を**置き換える** |
+| `themeLegendPos` | `LegendPosition -> VisualSpec` | 凡例位置を theme に焼き込む (図レベル `legendPos` が指定されていればそちらが優先) |
+| `themeLegendKeySize` | `Double -> VisualSpec` | 凡例キー 1 辺 (pt・ggplot `legend.key.size` 相当)。 凡例の行 pitch = 行間もこれで決まり、 margin 予約にも波及 (既定 = 1.2 lines、 base 11 で 17.34pt) |
 | `titleHjust` | `Double -> VisualSpec` | プロットタイトルの水平揃え (`0`=左 [既定]・`0.5`=中央・`1`=右) |
 | `titleColor` / `tickColor` / `legendKeyBg` | `Text -> VisualSpec` | タイトル文字色 / 軸目盛線 (tick mark) の色 / 凡例キー背景 (色 hex。`""` で塗らない) |
+| `themeBaseFontSize` | `Double -> VisualSpec` | base font size (pt・ggplot `base_size` 相当、 既定 11)。 各文字 slot の既定サイズと spacing (下記 note) が連動 |
+| `themeFontFamily` | `Text -> VisualSpec` | **全 text slot 共通**の font family (ggplot `theme(text = element_text(family=…))` 相当。 下記 note) |
 | `titleFont` / `axisLabelFont` / `tickFont` / `legendFont` | `FontSpec -> VisualSpec` | 各テキストのフォント (下記 combinator で組む) |
 
 **フォント**は `FontSpec` を返す combinator (`fontSize`/`fontFamily`/`fontWeight`/`fontItalic`/
@@ -146,6 +159,61 @@ purePlot <> layer (scatter "x" "y" <> colorBy "g") <> facet "g"
 > override (`theme*Font`) が setter (`titleFont` 系) より優先されるが、 **レイアウトの文字高
 > 確保は `titleFont` 系のみが効く**ので、 単独で使うなら `titleFont` 系を推奨。
 
+> **文字サイズと spacing の既定は base 派生**: `themeBaseFontSize` (既定 11pt) から
+> 各 slot の既定サイズが相対倍率で派生する (title ×1.2・axis.title ×1・axis.text ×0.8・
+> legend.title ×1・legend.text ×0.8)。 tick 長 (base/4 = 2.75pt) や外周余白
+> (half_line = base/2 = 5.5pt) などの spacing も同じ base から派生して連動する
+> (ggplot `theme_grey(base_size=)` 相当)。 slot 別 font setter の `fontSize` 明示が優先。
+
+> **font family の一括指定**: `themeFontFamily "Noto Sans CJK JP"` は theme の全 text
+> slot (title 系 / axis.title / axis.text / legend) へ family だけを一括適用する。 slot 別
+> `FontSpec` の `fontFamily` 指定が優先され、 preset が焼き込んだ fontSize は潰さない。
+> 実フォントへの解決は backend ごとに異なる: SVG はそのまま CSS `font-family` へ、
+> PNG は family 名からフォントファイルを解決 (不在は既定フォント + 警告・
+> [05 backends](05-backends.ja.md#be-png))、 PDF は Helvetica/Times/Courier の 3 系へ丸め
+> ([05 backends](05-backends.ja.md#be-pdf))。 注釈 (`annotText` 等) の文字は対象外
+> (既定 sans-serif のまま)。
+
+### 自作 theme と cowplot 風 preset {#theme-presets}
+
+上の要素上書き setter はどれも `VisualSpec` を返すので、 **`<>` で束ねて名前を付ければ
+そのまま「自作 theme」になる** (ThemeName の enum を増やす必要はない):
+
+```haskell
+myTheme :: VisualSpec
+myTheme = theme ThemeMinimal <> themeGridMinor False <> titleHjust 0.5
+-- 使う側: purePlot <> layer … <> myTheme  (後ろに setter を足せば個別上書き)
+```
+
+この形の実例として、 R **cowplot** パッケージの theme 3 種に相当する preset を同梱している。
+各 preset には `font_size` 引数つきの **Sized 版** (`Double -> VisualSpec`) があり、 引数なし版は
+その 14pt 適用 (= cowplot 既定・`themeCowplot = themeCowplotSized 14`):
+
+| preset / Sized 版 | 相当 (cowplot) | 内容 |
+|---|---|---|
+| `themeCowplot` / `themeCowplotSized n` | `theme_cowplot(font_size = n)` | grid なし・下/左の黒軸線・外向き tick・黒基調・title bold・背景透過 |
+| `themeMinimalGrid` / `themeMinimalGridSized n` | `theme_minimal_grid(font_size = n)` | major グリッド (grey85) のみ・軸線/枠/tick なし・背景透過 |
+| `themeMap` / `themeMapSized n` | `theme_map(font_size = n)` | 軸線・grid・枠・tick 線に加え**軸文字 (axis.text / axis.title) も消す** (地図・模式図向け)・facet strip は grey80 で残す・背景透過 |
+
+> **Sized 版のスケール規則**: `font_size = n` から title `n×16/14` bold・axis.title `n`・
+> axis.text / legend `n×12/14` の文字と、 tick 長 `n/4`・外周余白 `n/2`・凡例キー
+> `1.1×n` (cowplot `legend.key.size` 明示) が一括で派生する。 **サイズを変えるときは
+> Sized 版を使う** — preset 後置の `themeBaseFontSize` は spacing のみ連動し、 preset が
+> 明示焼き込みした文字サイズは変わらない。 3 preset とも `themePlotBg False` (cowplot の
+> `rect fill = NA` 相当) で図全体背景が透過になる点に注意 (白背景が要るなら後置
+> `themePlotBg True`)。
+
+```haskell
+purePlot <> layer (scatter xs ys) <> themeCowplot
+-- サイズ変更は Sized 版: themeCowplotSized 12
+-- 個別上書きは後置: themeCowplot <> themeTickLength 5 <> themeLegendPos LegendBottom
+```
+
+![cowplot 風 preset 3 種](images/s3e-theme-cowplot.svg)
+
+> cowplot の `plot_grid()` (panel の相対幅 + "A"/"B" タグ) に相当する並置は
+> [subplot](#subplots) の `subplotWidths` / `subplotTags` で組む。
+
 ### theme と subplot の関係
 
 [subplot](#subplots) と組み合わせたとき、 **`theme` を外側 (subplots の外) に置くと全 panel に伝播**する
@@ -188,8 +256,10 @@ subplots [ layer (scatter "x" "y") <> title "散布"
 > `FacetSpace` = `SpaceFixed` / `SpaceFreeX` / `SpaceFreeY` / `SpaceFree`。
 > 完全に別の spec を panel に並べたい場合 (facet でなく独立図の並置) は [subplot](#subplots) を使う。
 
-デモ (`facetWrap "g" 2`)。 facet 列は名前参照なので `Resolver` (または DataFrame) で
-`"g"` を供給する:
+デモ (`facetWrap "g" 2`)。 facet 列・encoding 列は inline (`inline` / `inlineCat`)
+でも名前参照でもよい (encoding が inline でも panel ごとに正しく分割される。
+ただし inline 列は facet 列と同じ長さであること — 長さが違う列は分割されず
+警告が出る)。 名前参照を使う場合は `Resolver` (または DataFrame) で `"g"` を供給する:
 
 ```haskell
 -- r は "x"/"y"/"g" を返す Resolver
@@ -213,6 +283,8 @@ saveSVGWith "out.svg" r $
 |---|---|---|
 | `subplots` | `[VisualSpec] -> VisualSpec` | 各 `VisualSpec` を独立 panel として並べる |
 | `subplotCols` | `Int -> VisualSpec` | 並置の折り返し列数 |
+| `subplotWidths` / `subplotHeights` | `[Double] -> VisualSpec` | 列 / 行の相対サイズ (cowplot `rel_widths` / `rel_heights` 相当。不足分は 1 埋め・全 1 = 等分) |
+| `subplotTags` | `TagStyle -> VisualSpec` | 各 panel 左上に "A"/"B"… を自動付番 (panel 個別の `tag` が優先・[列挙型](#enum-tables)) |
 | `selectPanels` | `[Text] -> VisualSpec` | panel を title 名で選択 + 並べ替え |
 | `repeatFields` | `[Text] -> (Text -> VisualSpec) -> VisualSpec` | フィールド名を反復し各 view を生成 (Vega-Lite `repeat`) |
 | `hconcat` / `vconcat` | `[VisualSpec] -> VisualSpec` | 横 / 縦並び (演算子 `<->` / `<:>` も) |
@@ -292,6 +364,20 @@ saveSVG "concat.svg" $
 > 左端 (col0) と一致し、`d` は 1 行目 3 列ぶんを span してフル幅に伸びる。入れ子
 > (nested subplots) の小図も、外側グリッドの割当セルいっぱいに広がって端が揃う
 
+
+**相対サイズ + panel タグ (cowplot `plot_grid()` 相当)**: `subplotWidths` /
+`subplotHeights` で列・行の幅の比を指定し、 `subplotTags` で各 panel 左上に
+"A"/"B"… を自動付番する。 タグは `tag` ([タイトル・ラベル](#labels)) と同じ位置に
+描かれ、 panel が個別に `tag` を持てばそちらが優先。 26 panel を超えると
+"Z" → "AA" と桁が増える:
+
+```haskell
+subplots [ layer (scatter "x" "y") <> title "散布"
+         , layer (bar "g" "y")     <> title "棒" ]
+<> subplotCols 2 <> subplotWidths [1.3, 1] <> subplotTags TagUpper
+```
+
+![3f-2 subplotWidths + subplotTags (cowplot plot_grid 相当)](images/s3f2-subplot-tags.svg)
 
 > **高度な helper (通常は不要)**: `selectedSubplots :: VisualSpec -> [VisualSpec]` =
 > `selectPanels` 適用後の panel を取り出す。 `bakeSpec :: Resolver -> VisualSpec -> VisualSpec` =
@@ -444,9 +530,11 @@ purePlot <> layer (scatter "x" "y")
 |---|---|---|
 | `position` | `Position` | `PosIdentity` / `PosDodge` / `PosStack` / `PosFill` |
 | `linetype` / `linetypeBy` | `LineType` | `LtSolid` / `LtDashed` / `LtDotted` / `LtDotDash` / `LtLongDash` / `LtTwoDash` |
-| `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeCanvas` / `ThemeCanvasDark` (13 種) |
+| `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeParchment` / `ThemeParchmentDark` (13 種) |
 | `facetScales` | `FacetScales` | `FacetFixed` / `FacetFreeX` / `FacetFreeY` / `FacetFree` |
-| `legendPos` | `LegendPosition` | `LegendRight` / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
+| `legendPos` / `themeLegendPos` | `LegendPosition` | `LegendRight` / `LegendRightCenter` (既定) / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
+| `themeTickDir` | `TickDir` | `TickOut` (既定・外向き) / `TickIn` (内向き) / `TickBoth` (両側) |
+| `subplotTags` | `TagStyle` | `TagUpper` ("A"/"B"…) / `TagLower` ("a"/"b"…) / `TagNumeric` ("1"/"2"…) |
 | 座標系 (`coordFlip` / `coordPolar` / `coordTernary` …) | `Coord` | `CoordCartesian` / `CoordFlip` / `CoordPolarX` / `CoordPolarY` / `CoordTernary` |
 | `refLine` | `ReferenceLine` | `RefIdentity` / `RefHorizontalAt c` / `RefVerticalAt c` / `RefLinear slope intercept` |
 

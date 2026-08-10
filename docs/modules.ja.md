@@ -75,7 +75,7 @@ facet (Trellis、 free scales 対応) / subplots (1D/2D grid) / pairs / inset ax
 
 ### テーマ・配色
 - テーマ: `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight`
-  / `ThemeCanvas` (羊皮紙・明) / `ThemeCanvasDark`
+  / `ThemeParchment` (羊皮紙・明) / `ThemeParchmentDark`
 - series palette: ggplot 標準 hue_pal + 学術 palette + Hgg ブランド (キャラ別 7 系統)
 - `ThemeOverride` で element 単位の上書き
 → 明/暗の出し分け: `cabal run tutorial-05-theme`

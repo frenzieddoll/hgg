@@ -55,6 +55,6 @@
 ## 関連ドキュメント
 
 - **実例ギャラリー** ─ reference から実データ作例へ:
-  [README ギャラリー](../../README.ja.md) (各図クリックで該当エントリへ)
+  [README ギャラリー](../../README.ja.md#ギャラリー) (各図クリックで該当エントリへ)
 - [チュートリアル (R4DS 再現等)](../tutorials/README.ja.md) ─ 学習導線
 - [R4DS 第 1 章](../tutorials/01-visualize/README.ja.md) (penguins 全 24 図 + 再現コード)

@@ -1,5 +1,7 @@
 # backend ─ SVG / PDF / PNG / Jupyter
 
+> 🌐 [English](05-backends.md) | **日本語**
+
 > [📚 索引](README.ja.md) ｜ [01 quickstart](01-quickstart.ja.md) ｜ [02 layers](02-layers.ja.md) ｜ [03 encoding & scale](03-encoding-scale.ja.md) ｜ [04 decoration](04-decoration.ja.md) ｜ **05 backends** ｜ [06 dataframe](06-dataframe.ja.md) ｜ [07 analyze](07-analyze.ja.md) ｜ [08 3d](08-3d.ja.md) ｜ [09 custom marks](09-custom-marks.ja.md) ｜ [10 appendix](10-appendix.ja.md)
 
 同じ `VisualSpec` / `BoundPlot` を、 用途別の backend package で出力する。 backend は
@@ -96,8 +98,10 @@ savePDF "fig1.pdf" (layer (scatter (inline xs) (inline ys)) <> title "Figure 1")
 > ⚠️ **v1 制約: 日本語ラベルは出ない**。 PDF 標準 14 フォント (Helvetica/Times/
 > Courier 系 = Latin) のみのため、 非 Latin-1 文字は警告つきで `?` に置換される。
 > 日本語ラベルの図は PNG backend (`hgg-rasterific`、 TrueType 読込、
-> 次節) を使う。 weight/italic は 4 変種に、 `"serif"`/`"monospace"` 系
-> family は Times/Courier にマップされる。
+> 次節) を使う。 weight/italic は 4 変種に、 font family は標準 3 系へ丸められる:
+> `"serif"` 系 (名前に `Times` を含む場合も) → Times、 `"monospace"`/`Courier` 系 →
+> Courier、 **それ以外 (`themeFontFamily` / `fontFamily` の任意指定を含む) はすべて
+> Helvetica**。 任意の TrueType を使いたい図は PNG backend へ。
 
 ### PNG ─ `savePNG` (Rasterific・日本語可) {#be-png}
 
@@ -128,9 +132,23 @@ savePNGConfigured defaultPNGConfig { pngFontPath = Just "/path/to/font.ttf"
                   "fig1@2x.png" emptyResolver spec
 ```
 
+**font family の解決** (`themeFontFamily` / slot 別 `fontFamily`・[04 decoration](04-decoration.ja.md#theme)):
+spec が使う family ごとにフォントファイルを解決して face を切り替える。 規則 (fontconfig 非依存):
+
+- `sans-serif` / 未指定 → 既定束 (上記候補リスト)
+- `serif` / `monospace` → 系統別の候補リスト (Noto Serif CJK JP / IPA 明朝 /
+  DejaVu Serif ・ HackGen / DejaVu Sans Mono / Hack)
+- その他の family 名 → 正規化 (小文字化 + 空白/ハイフン除去) し、 探索ディレクトリの
+  `<名>.ttf` → `<名>-regular.ttf` (bold は `<名>-bold.ttf`) をファイル名一致で引く
+  (例 `"DejaVu Sans"` → `dejavusans.ttf`)
+- 見つからない family は **stderr 警告 + 既定フォントで代替** (エラーにはしない)。
+  family の bold が不在なら同 family の regular で代替
+- `pngFontPath` 明示時は従来どおり**全 text がそのフォント一括で最優先** (family 解決は行わない)
+
 > ⚠️ **v1 制約**: ① `.ttc` (TrueType Collection・Windows の meiryo/msgothic 等) と
-> CFF 系 OTF は読めない (.ttf のみ)。 ② フォント family は区別せず regular/bold
-> の 2 face のみ (`"bold"` 以外の weight と italic は regular で代替)。
+> CFF 系 OTF は読めない (.ttf のみ)。 ② weight は regular/bold の 2 face のみ
+> (`"bold"` 以外の weight と italic は regular で代替)。 ③ 注釈 (`annotText` 等) の
+> 文字は family 指定の対象外 (既定 sans-serif のまま)。
 
 ### 低レベル出力 / その他 {#be-lowlevel}
 
