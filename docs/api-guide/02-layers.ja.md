@@ -44,6 +44,7 @@ mark を **文法上の役割**でグループ化した索引。各行 = `関数
 | [`scatter`](#e-xy) / [`line`](#e-xy) / [`step`](#e-xy) | `ColRef -> ColRef -> Layer` | 散布 / 折れ線 / 階段 |
 | [`bar`](#e-bar) | `ColRef -> ColRef -> Layer` | 棒 |
 | [`scatterPoints`](#e-points) / [`linePoints`](#e-points) | `[Point2] -> Layer` | `Point2 x y` のリストから直接 |
+| [`ternaryScatter`](#e-ternary) / [`ternaryLine`](#e-ternary) | `ColRef -> ColRef -> ColRef -> Layer` | 三角座標の散布 / 折れ線 (3 成分の組成データ) |
 | [`text`](#e-text) / [`label`](#e-text) | `ColRef -> ColRef -> ColRef -> Layer` | (x, y, ラベル列) のテキスト / ラベル |
 | [`stem`](#e-stem) | `ColRef -> ColRef -> Layer` | 棒付き点 (lollipop) |
 | [`ecdf`](#e-ecdf) | `ColRef -> Layer` | 経験累積分布 (1 列) |
@@ -227,6 +228,35 @@ purePlot <> layer (scatterPoints [Point2 1 2, Point2 2 3.5, Point2 3 3, Point2 4
 ![scatterPoints](images/scatterpoints.svg)
 
 **関連・ggplot** [`scatter` / `line`](#e-xy) (列指定版) ｜ ggplot: `geom_point` / `geom_line`
+
+---
+
+<a id="e-ternary"></a>
+
+### `ternaryScatter` / `ternaryLine` ─ 三角座標の散布 / 折れ線
+
+**シグネチャ** `ternaryScatter, ternaryLine :: ColRef -> ColRef -> ColRef -> Layer`
+
+**何を描くか** 3 成分の組成データ (a, b, c) を正三角形の重心座標に置く散布 / 折れ線。
+`scatter a b <> encZ c` / `line a b <> encZ c` の束ねで、[`encZ`](03-encoding-scale.ja.md#encoding) を持つレイヤーがあると
+座標系は自動で三角座標になる (明示指定は `coordTernary`)。正規化・退化行の除外・
+向きの変更 (`coordTernaryWith`) は [04 の三角座標](04-decoration.ja.md#ternary) が詳説。
+
+**encoding** 必須: a (上頂点), b (左下), c (右下 = `encZ`) ／ 任意: [`colorBy`](03-encoding-scale.ja.md#encoding)・`size`
+
+**最小例**
+
+```haskell
+purePlot
+  <> layer (ternaryScatter (inline [0.7, 0.2, 0.2, 0.34])
+                           (inline [0.2, 0.7, 0.1, 0.33])
+                           (inline [0.1, 0.1, 0.7, 0.33]))
+  <> xLabel "a" <> yLabel "b" <> zLabel "c"
+```
+
+![ternary](images/s3g2-ternary.svg)
+
+**関連・ggplot** [04 三角座標](04-decoration.ja.md#ternary) (coordTernary / coordTernaryWith) ｜ ggplot: ggtern `coord_tern`
 
 ---
 

@@ -331,7 +331,8 @@ purePlot <> layer (bar (inlineCat ["A","B","C"]) (inline [3,7,5])) <> coordFlip
 
 ### 三角座標 (ternary) {#ternary}
 
-3 成分の**組成データ**を正三角形の重心座標へ写す。 最小形は `ternaryScatter` に 3 成分
+3 成分の**組成データ**を正三角形の重心座標へ写す。 最小形は `ternaryScatter`
+(mark エントリ: [02 layers](02-layers.ja.md#e-ternary)) に 3 成分
 (`a` 上頂点・`b` 左下・`c` 右下) を渡すだけ — **`encZ` を書けば座標系は自動で三角座標になる**
 ので `coordTernary` は省略できる:
 

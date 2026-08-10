@@ -379,7 +379,8 @@ purePlot <> layer (bar (inlineCat ["A","B","C"]) (inline [3,7,5])) <> coordFlip
 
 Maps 3-part **compositional data** onto barycentric coordinates in an equilateral
 triangle. The minimal form just passes the 3 parts (`a` top vertex, `b` bottom
-left, `c` bottom right) to `ternaryScatter` — **writing `encZ` switches the
+left, `c` bottom right) to `ternaryScatter` (mark entry:
+[02 layers](02-layers.md#e-ternary)) — **writing `encZ` switches the
 coordinate system to ternary automatically**, so `coordTernary` can be omitted:
 
 ```haskell

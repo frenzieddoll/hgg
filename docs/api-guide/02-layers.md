@@ -44,6 +44,7 @@ Marks grouped by **grammatical role**. Each row = `function :: type | one-line d
 | [`scatter`](#e-xy) / [`line`](#e-xy) / [`step`](#e-xy) | `ColRef -> ColRef -> Layer` | Points / connected line / step line |
 | [`bar`](#e-bar) | `ColRef -> ColRef -> Layer` | Bar |
 | [`scatterPoints`](#e-points) / [`linePoints`](#e-points) | `[Point2] -> Layer` | Direct from `Point2 x y` list |
+| [`ternaryScatter`](#e-ternary) / [`ternaryLine`](#e-ternary) | `ColRef -> ColRef -> ColRef -> Layer` | Ternary scatter / line (3-part compositional data) |
 | [`text`](#e-text) / [`label`](#e-text) | `ColRef -> ColRef -> ColRef -> Layer` | Text / label with background (x, y, label column) |
 | [`stem`](#e-stem) | `ColRef -> ColRef -> Layer` | Stem (lollipop) |
 | [`ecdf`](#e-ecdf) | `ColRef -> Layer` | Empirical cumulative distribution (1 column) |
@@ -227,6 +228,38 @@ purePlot <> layer (scatterPoints [Point2 1 2, Point2 2 3.5, Point2 3 3, Point2 4
 ![scatterPoints](images/scatterpoints.svg)
 
 **Related / ggplot** [`scatter` / `line`](#e-xy) (column-specified version) | ggplot: `geom_point` / `geom_line`
+
+---
+
+<a id="e-ternary"></a>
+
+### `ternaryScatter` / `ternaryLine` — Ternary scatter / line
+
+**Signature** `ternaryScatter, ternaryLine :: ColRef -> ColRef -> ColRef -> Layer`
+
+**What it draws** Scatter / line placing 3-part compositional data (a, b, c) at
+barycentric coordinates in an equilateral triangle. Bundles of
+`scatter a b <> encZ c` / `line a b <> encZ c`; when any layer carries
+[`encZ`](03-encoding-scale.md#encoding), the coordinate system switches to
+ternary automatically (explicit form: `coordTernary`). Normalization, dropping
+of degenerate rows, and orientation (`coordTernaryWith`) are detailed in
+[Ternary coordinates in 04](04-decoration.md#ternary).
+
+**Encoding** Required: a (top vertex), b (bottom left), c (bottom right = `encZ`) ／ Optional: [`colorBy`](03-encoding-scale.md#encoding), `size`
+
+**Minimal example**
+
+```haskell
+purePlot
+  <> layer (ternaryScatter (inline [0.7, 0.2, 0.2, 0.34])
+                           (inline [0.2, 0.7, 0.1, 0.33])
+                           (inline [0.1, 0.1, 0.7, 0.33]))
+  <> xLabel "a" <> yLabel "b" <> zLabel "c"
+```
+
+![ternary](images/s3g2-ternary.svg)
+
+**Related / ggplot** [Ternary coordinates in 04](04-decoration.md#ternary) (coordTernary / coordTernaryWith) | ggplot: ggtern `coord_tern`
 
 ---
 

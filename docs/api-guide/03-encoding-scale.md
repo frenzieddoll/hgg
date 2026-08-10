@@ -64,6 +64,7 @@ in subplots [ layer (scatter xs ys <> colorBy g  <> size 6)    -- category → c
 | Modifier | Type | Meaning |
 |---|---|---|
 | `position` | `Position -> Layer` | Stacking method (`PosIdentity` / `PosDodge` / `PosStack` / `PosFill`) |
+| `encZ` | `ColRef -> Layer` | Ternary-only third positional column (c = bottom-right vertex). When present, the coordinate system switches to ternary automatically ([Ternary coordinates in 04](04-decoration.md#ternary)) |
 | `groupBy` | `ColRef -> Layer` | Grouping without color (slot splitting for distribution marks) |
 | `nudge` | `Double -> Layer` | Offset within same slot for distribution marks (raincloud etc.) |
 | `markWidth` | `Double -> Layer` | Width of distribution mark (box/violin width) |

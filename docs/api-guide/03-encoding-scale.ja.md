@@ -67,6 +67,7 @@ in subplots [ layer (scatter xs ys <> colorBy g  <> size 6)    -- カテゴリ�
 | 修飾子 | 型 | 意味 |
 |---|---|---|
 | `position` | `Position -> Layer` | 積み方 (`PosIdentity` / `PosDodge` / `PosStack` / `PosFill`) |
+| `encZ` | `ColRef -> Layer` | 三角座標専用の第 3 位置列 (c = 右下頂点)。指定があると座標系は自動で三角座標に ([04 三角座標](04-decoration.ja.md#ternary)) |
 | `groupBy` | `ColRef -> Layer` | 色なしの群分け (分布 mark のスロット分割等) |
 | `nudge` | `Double -> Layer` | 分布 mark の同一スロット内ずらし (raincloud 等) |
 | `markWidth` | `Double -> Layer` | 分布 mark の横幅 (箱・violin 幅) |
