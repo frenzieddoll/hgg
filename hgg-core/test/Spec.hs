@@ -2533,6 +2533,43 @@ main = hspec $ do
              == scaleApply (lpYScaleFlipped layF) 0.3 )
            `shouldBe` (True, True)
 
+    -- ★ Phase 71 A2: crossbar の投影層経由化。 旧実装は px 空間の PRect 直書きで、
+    --   flip では pp x (y±e) の第 2 成分が両方 cross 位置になり箱の高さ 0 (実バグ、
+    --   A1 dump 実測: PRect h=0.0 が 6 本)、 polar では平面矩形のままだった。
+    --   primitive の本数は変わらないので count 回帰では捕まらない → 幾何を直接押さえる。
+    it "crossbar flip: 箱が高さ 0 に潰れない (Phase 71 A2)" $
+      let sp = layer (crossbar (inline [1.0, 2, 3]) (inline [4.0, 5, 6])
+                               (inline [0.5, 0.5, 0.5]))
+                 <> coordFlip
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver sp) sp
+          -- crossbar の箱 = fill opacity 0.15 の PRect (panel/背景と区別)
+          boxes = [ (w0, h0) | PRect (Rect _ _ w0 h0) (FillStyle _ o) _ <- ps
+                  , abs (o - 0.15) < 1e-9 ]
+      in (length boxes, all (\(w0, h0) -> w0 > 0 && h0 > 0) boxes)
+           `shouldBe` (3, True)
+
+    it "crossbar polar: 箱が wedge (PPath) + 中央線が弧になる (Phase 71 A2)" $
+      let sp = layer (crossbar (inline [1.0, 2, 3, 4]) (inline [4.0, 5, 6, 5])
+                               (inline [0.5, 0.5, 0.5, 0.5]))
+                 <> coordPolar
+          ps = renderToPrimitives emptyResolver (computeLayout emptyResolver sp) sp
+          wedges = [ () | PPath _ (FillStyle _ o) _ <- ps, abs (o - 0.15) < 1e-9 ]
+      in length wedges `shouldBe` 4
+
+    it "crossbar cartesian: 旧 px 式 (cc±halfW × min/abs) と bit 一致 (Phase 71 A2)" $
+      let sp = layer (crossbar (inline [1.0, 2, 3]) (inline [4.0, 5, 6])
+                               (inline [0.5, 0.5, 0.5]))
+          layC = computeLayout emptyResolver sp
+          ps = renderToPrimitives emptyResolver layC sp
+          sx = scaleApply (lpXScale layC)
+          sy = scaleApply (lpYScale layC)
+          -- markWidth 既定 0.9 × resolution 1 × catUnitPx (crossbar 幅の既定式)
+          halfW = 0.5 * 0.9 * catUnitPx CoordCartesian layC
+          expected x y e = Rect (sx x - halfW) (min (sy (y - e)) (sy (y + e)))
+                                (2 * halfW) (abs (sy (y + e) - sy (y - e)))
+          boxes = [ r | PRect r (FillStyle _ o) _ <- ps, abs (o - 0.15) < 1e-9 ]
+      in boxes `shouldBe` [ expected 1 4 0.5, expected 2 5 0.5, expected 3 6 0.5 ]
+
   -- =========================================================================
   -- Phase 11 A4-b: linetype aesthetic (固定 + categorical 群分け)
   -- =========================================================================

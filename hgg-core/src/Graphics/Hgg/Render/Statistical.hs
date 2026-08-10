@@ -21,6 +21,8 @@ import           Graphics.Hgg.Layout (numToText,
                                       coordOf, isPolar, polarCenter, polarPoint,
                                       domFrac, projectXY, projectRectData,
                                       projectBarRect, projectSegment,
+                                      CrossLoc (..), BarShape (..),
+                                      projectCrossBar, projectCrossSpan,
                                       catUnitPx, resolutionOf,
                                       AxisPlacement (..),
                                       coordXAxisPlacement, coordYAxisPlacement,
@@ -110,12 +112,15 @@ renderEcdf r layout pal ly =
 
 -- | [日本語]: 区間 geom (linerange / pointrange / crossbar)。 各 (x,y) に縦区間
 --   y±errorY を描く。 withPoint=中心点を足す (pointrange)、 asBox=幅付き箱+中央線 (crossbar)。
---   箱の半幅は px 固定 (= error bar cap と同じ px 空間、 連続 x でも安定)。
+--   箱は投影層 ('projectCrossBar' / 'projectCrossSpan') 経由 (Phase 71 A2):
+--   直線座標系は px 半幅 (旧式 byte 一致)、 polar は data 半幅の wedge + 弧。
 --   [English]: A range geom (linerange / pointrange / crossbar). Draws a
 --   vertical interval y±errorY at each (x,y). withPoint adds a center point
 --   (pointrange); asBox draws a box with a width plus a center line
---   (crossbar). The box half-width is fixed in px (the same px space as the
---   error-bar cap, so it stays stable even for continuous x).
+--   (crossbar). The box goes through the projection layer ('projectCrossBar'
+--   / 'projectCrossSpan', Phase 71 A2): linear coordinate systems use the
+--   pixel half-width (byte identical to the old formula), polar uses a wedge
+--   and arcs at the data half-width.
 renderRangeBar :: Resolver -> Layout -> ThemePalette -> Layer -> Bool -> Bool -> [Primitive]
 renderRangeBar r layout pal ly withPoint asBox =
   let xs = V.toList (vecOr (lyEncX ly) r)
@@ -134,20 +139,26 @@ renderRangeBar r layout pal ly withPoint asBox =
       finite v = not (isNaN v) && not (isInfinite v)
       resX = resolutionOf (filter finite xs)
       halfW = 0.5 * capWFactor * resX * catUnitPx coord layout
+      -- ★ Phase 71 A2: crossbar の箱幅は px (halfW) と data (halfD) の両建てで
+      --   投影層へ渡す (boxAtCross と同じ契約: 直線座標系 = halfW px で旧式 byte
+      --   一致、 polar = halfD data 単位の wedge)。
+      halfD = 0.5 * capWFactor * resX
       mkOne i =
         let x = xs !! i; y = ys !! i; e = es !! i
-            Point _ pcyLo = pp x (y - e)
-            Point _ pcyHi = pp x (y + e)
             Point pmx pmy = pp x y
         in if asBox
-             then -- crossbar: 箱 (px 幅) + 中央水平線
-               -- ★ Phase 64 A5: crossbar は箱の半幅が px 固定なので投影層へ寄せて
-               --   いない (data 単位の幅を持つ bar 族と違い、 polar で「px 幅の箱」 は
-               --   意味が定まらない)。 polar 対応は幅の data 単位化とセットで
-               --   §2 以降に送る (下記 linerange 側は A5 で投影層へ移行済)。
-               [ PRect (Rect (pmx - halfW) (min pcyLo pcyHi) (2 * halfW) (abs (pcyHi - pcyLo)))
-                       (FillStyle c 0.15) (Just (StrokeStyle c w))
-               , PLine (Point (pmx - halfW) pmy) (Point (pmx + halfW) pmy) ls ]
+             then -- crossbar: 箱 + 中央線を投影層経由で組む
+               -- ★ Phase 71 A2: 旧実装は px 空間の PRect 直書きで、 polar は平面
+               --   矩形のまま (Phase 64 A5 除外)、 flip は pp x (y±e) の第 2 成分が
+               --   両方 cross 位置になり箱の高さ 0 (実バグ、 md A1 実測) だった。
+               --   'projectCrossBar' / 'projectCrossSpan' 経由で cartesian は旧式
+               --   byte 一致・flip は正しい向きの箱・polar は wedge + 弧になる。
+               let loc = CrossAt x
+                   body = case projectCrossBar coord layout loc 0 halfW halfD (y - e) (y + e) of
+                     BarRect rect  -> PRect rect (FillStyle c 0.15) (Just (StrokeStyle c w))
+                     BarWedge segs -> PPath segs (FillStyle c 0.15) (Just (StrokeStyle c w))
+                   center = projectCrossSpan coord layout loc 0 halfW halfD y
+               in body : [ PLine p q ls | (p, q) <- zip center (drop 1 center) ]
              else -- linerange: 値軸方向の区間。 pointrange は中心点を追加
                -- ★ Phase 64 A5: 旧実装は低端の px x を両端に流用して画面垂直の線分を
                --   組んでいたため、 polar では半径方向にならず・flip では両端が同一点に
