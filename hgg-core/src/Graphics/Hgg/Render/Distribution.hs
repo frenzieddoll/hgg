@@ -205,9 +205,15 @@ renderBox r layout pal ly =
                    (boxFillFor i) (strokeFor i)
   in concat (zipWith mkBox (laneIndices layout groups) groups)
 
--- | Phase 36 B2: dodge box。 位置列 (@groupBy@) × 色列 (@colorBy@) で各位置カテゴリ内に
+-- | [日本語]: dodge box。 位置列 (@groupBy@) × 色列 (@colorBy@) で各位置カテゴリ内に
 --   色サブグループを横並び (= ggplot @position_dodge@)。 色 = colorBy 水準の categorical
---   palette、 枠 = grey20 既定 (明示 'color' があれば枠色優先)。 box 実幅 = sub-slot の 85%。
+--   palette、 枠 = grey20 既定 (明示 'Graphics.Hgg.Spec.Layer.color' があれば枠色優先)。 box 実幅 = sub-slot の 85%。
+--   [English]: A dodge box. Given a position column (@groupBy@) and a color
+--   column (@colorBy@), arranges color sub-groups side by side within each
+--   position category (ggplot's @position_dodge@). Color follows the
+--   categorical palette over colorBy levels; the stroke defaults to grey20
+--   (an explicit 'Graphics.Hgg.Spec.Layer.color' takes priority for the stroke). The actual box
+--   width is 85% of the sub-slot.
 renderBoxDodge :: Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBoxDodge r layout _pal ly =
   let (_positions, colorCats, cells) = dodgeCells layout r ly

@@ -497,10 +497,16 @@ renderBarSimple r layout pal ly =
          BarWedge segs -> PPath segs (FillStyle c a) border
      | (x, y, c) <- zip3 (V.toList xs) (V.toList ys) (V.toList cs) ]
 
--- | Phase 9 B: 群分け bar の position adjustment (dodge / stack / fill)。
+-- | [日本語]: 群分け bar の position adjustment (dodge / stack / fill)。
 --   long-form データ (= 各 row が (x-cat, group, value)) を前提に、 x カテゴリ slot 内で
 --   系列 (= color/group aesthetic) を横並び (dodge) / 縦積み (stack) / 100% 正規化 (fill) する。
---   色は群 index → categorical palette (= 'colorVector' の ColorByCol と同一割当)。
+--   色は群 index → categorical palette (= 'Graphics.Hgg.Render.Common.colorVector' の ColorByCol と同一割当)。
+--   [English]: Position adjustment for grouped bars (dodge / stack / fill).
+--   Assumes long-form data (each row is (x-cat, group, value)); within each
+--   x-category slot, arranges series (the color/group aesthetic) side by side
+--   (dodge), stacked vertically (stack), or normalized to 100% (fill). Color
+--   maps group index to the categorical palette (the same assignment
+--   'Graphics.Hgg.Render.Common.colorVector' uses for ColorByCol).
 renderBarGrouped :: Position -> [Text] -> Resolver -> Layout -> ThemePalette -> Layer -> [Primitive]
 renderBarGrouped pos keys r layout pal ly =
   let xCats = lpXCategoryLabels layout
