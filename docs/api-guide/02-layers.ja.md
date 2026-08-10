@@ -24,7 +24,7 @@ mark は `layer (mark <> 修飾子…)` の形で図に重ねる。引数の `Co
 > 図について: 図つきの最小例を順次補完中。図が未掲載のエントリも、シグネチャ・encoding・コード例で
 > 仕様は完結している。残りの図は `cabal run doc-figures` で生成して追補する。
 
-> **実例で見る**: 多くの mark の実データ作例は [README ギャラリー](../../README.ja.md)
+> **実例で見る**: 多くの mark の実データ作例は [README ギャラリー](../../README.ja.md#ギャラリー)
 > (クリックで各エントリへ) と [R for Data Science 第 1 章](../tutorials/01-visualize/README.ja.md)
 > (penguins 全 24 図 + 再現コード) にあります。
 
@@ -161,7 +161,7 @@ mark を **文法上の役割**でグループ化した索引。各行 = `関数
 
 ```haskell
 purePlot <> layer (scatter (inline [1,2,3,4,5]) (inline [2,4,3,5,7]))
--- 群ごとに色分けするときは <> colorBy (inlineCat [...]) を足す ([encoding channel](03-encoding-scale.md#encoding))
+-- 群ごとに色分けするときは <> colorBy (inlineCat [...]) を足す ([encoding channel](03-encoding-scale.ja.md#encoding))
 ```
 
 ![scatter](images/scatter.svg)
@@ -964,7 +964,7 @@ purePlot <> layer (waterfall (inlineCat ["start","Q1","Q2","Q3"]) (inline [100,3
 ```haskell
 purePlot <> layer (parallelCoords [ inline [1,2,3], inline [4,5,4], inline [2,1,3], inline [5,4,5] ]
                                   <> colorBy (inlineCat ["a","b","a"])) <> legend
--- df 利用時は列名で渡すと各軸にその列名が出る (inline は軸名なし)・[06](06-dataframe.md)
+-- df 利用時は列名で渡すと各軸にその列名が出る (inline は軸名なし)・[06](06-dataframe.ja.md)
 ```
 
 ![parallelCoords](images/parallelcoords.svg)
