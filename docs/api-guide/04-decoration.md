@@ -55,7 +55,7 @@ purePlot <> layer (scatter xs ys <> size 6)
 | `ThemeGrey` / `ThemeBW` | Grey panel / black & white |
 | `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` | Axis lines only / fully void (no axis lines, ticks, or axis text) / fine lines |
 | `ThemeNoir` / `ThemeLumen` | Brand dark / light |
-| `ThemeCanvas` / `ThemeCanvasDark` | Parchment (light / dark) |
+| `ThemeParchment` / `ThemeParchmentDark` | Parchment (light / dark) |
 
 ![theme gallery (13 representative themes)](images/s3e-theme-gallery.svg)
 
@@ -486,7 +486,7 @@ Settings with fixed values (`position` etc.) are listed **completely** here. Def
 |---|---|---|
 | `position` | `Position` | `PosIdentity` / `PosDodge` / `PosStack` / `PosFill` |
 | `linetype` / `linetypeBy` | `LineType` | `LtSolid` / `LtDashed` / `LtDotted` / `LtDotDash` / `LtLongDash` / `LtTwoDash` |
-| `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeCanvas` / `ThemeCanvasDark` (13 types) |
+| `theme` | `ThemeName` | `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight` / `ThemeGrey` / `ThemeBW` / `ThemeClassic` / `ThemeVoid` / `ThemeLinedraw` / `ThemeNoir` / `ThemeLumen` / `ThemeParchment` / `ThemeParchmentDark` (13 types) |
 | `facetScales` | `FacetScales` | `FacetFixed` / `FacetFreeX` / `FacetFreeY` / `FacetFree` |
 | `legendPos` / `themeLegendPos` | `LegendPosition` | `LegendRight` / `LegendRightCenter` (default) / `LegendBottom` / `LegendNone` / `LegendInsideTopRight` / `LegendInsideTopLeft` / `LegendInsideBottomRight` / `LegendInsideBottomLeft` |
 | `themeTickDir` | `TickDir` | `TickOut` (default, outward) / `TickIn` (inward) / `TickBoth` (both sides) |

@@ -75,7 +75,7 @@ facet (Trellis, free scales supported) / subplots (1D/2D grid) / pairs / inset a
 
 ### Themes & Color Palettes
 - Themes: `ThemeDefault` / `ThemeMinimal` / `ThemeDark` / `ThemeLight`
- / `ThemeCanvas` (parchment, light) / `ThemeCanvasDark`
+ / `ThemeParchment` (parchment, light) / `ThemeParchmentDark`
 - Series palette: ggplot standard hue_pal + academic palettes + Hgg brand (7 character-based systems)
 - Element-wise override with `ThemeOverride`
 → Light/dark variants: `cabal run tutorial-05-theme`
