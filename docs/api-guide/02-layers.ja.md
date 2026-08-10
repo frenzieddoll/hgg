@@ -1037,14 +1037,17 @@ ArviZ: `plot_trace`
 
 **シグネチャ** `ess :: ColRef -> ColRef -> Layer`
 
-**何を描くか** (iter, ESS) を描き、サンプリング効率の推移を見る。
+**何を描くか** パラメータ/chain ごとの計算済み ESS を棒で描く。閾値 100 / 400 の参照線と
+色分け (赤 <100 / 橙 <400 / 緑 ≥400) でサンプリング効率が一目で分かる。ESS の計算は
+統計ライブラリ側の責務で、plot は値を棒にするだけ。
 
-**encoding** 必須: iter, ESS ／ 任意: `color`
+**encoding** 必須: パラメータ/chain 名 (categorical), ESS 値 ／ 任意: `color`
 
 **最小例**
 
 ```haskell
-purePlot <> layer (ess (inline [100,200,300,400,500,600]) (inline [80,150,210,260,300,330]))
+purePlot <> layer (ess (inlineCat ["mu","tau","theta1","theta2"])
+                       (inline [85,340,620,1450]))
 ```
 
 ![ess](images/ess.svg)

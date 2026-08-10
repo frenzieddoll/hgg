@@ -1039,14 +1039,18 @@ ArviZ: `plot_trace`
 
 **Signature** `ess :: ColRef -> ColRef -> Layer`
 
-**What it draws** Plot (iter, ESS) to observe sampling efficiency progression.
+**What it draws** Draws the precomputed ESS per parameter/chain as bars. Reference
+lines at the 100 / 400 thresholds and color coding (red <100 / orange <400 /
+green ≥400) make sampling efficiency visible at a glance. Computing ESS is the
+statistics library's responsibility; the plot only turns the values into bars.
 
-**Encoding** Required: iter, ESS ／ Optional: `color`
+**Encoding** Required: parameter/chain name (categorical), ESS value ／ Optional: `color`
 
 **Minimal example**
 
 ```haskell
-purePlot <> layer (ess (inline [100,200,300,400,500,600]) (inline [80,150,210,260,300,330]))
+purePlot <> layer (ess (inlineCat ["mu","tau","theta1","theta2"])
+                       (inline [85,340,620,1450]))
 ```
 
 ![ess](images/ess.svg)
