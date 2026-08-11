@@ -1,6 +1,13 @@
+-- hanalyze は 0.2.0.1 で multi-package 分割済 (hanalyze develop)。
+-- hgg-analyze-bridge / hgg-tutorials が使う closure 8 package を sibling 参照する。
+-- Hanalyze.Plot は hanalyze-plot が提供 (旧 flag plot-integration は廃止)。
+-- hanalyze / hanalyze-plot が Hackage に公開されたらこの file は不要。
 packages:
-  /home/toshiaki/projects/cc/hanalyze
-
--- readme-images (hgg-tutorials) が Hanalyze.Plot を使うため (private repo と同じ dev 既定)
-package hanalyze
-  flags: +plot-integration
+  /home/toshiaki/projects/cc/hanalyze/hanalyze
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-core
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-frame
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-bayes
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-models
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-design
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-viz
+  /home/toshiaki/projects/cc/hanalyze/hanalyze-plot

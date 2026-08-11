@@ -13,8 +13,9 @@
 **[HBM (ベイズ) をプロット](#hbm-plotting)** ｜ **[ルート2: stat-in (`statLm`/`statSmooth`)](#route2)** ｜
 **[実例: 複数モデル重畳](#multi-overlay)**
 
-> セットアップ: analyze 側は `flag plot-integration` を on にして `Hanalyze.Plot` を有効化
-> (`cabal build --project-file=cabal.project.plot`)。 stat-in 経路は `hgg-analyze-bridge`。
+> セットアップ: `Hanalyze.Plot` は `hanalyze-plot` package が提供 (hanalyze 0.2.0.1+。
+> analyze 側では `cabal build --project-file=cabal.project.plot` で build)。
+> stat-in 経路は `hgg-analyze-bridge`。
 
 ### まず fit する ─ `df |-> spec`(推奨) / 生ベクタ {#fit-data}
 

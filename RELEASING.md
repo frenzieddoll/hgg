@@ -81,7 +81,9 @@ against the already-uploaded packages) before publishing.
 
 ## Caveats
 
-- `hgg-tutorials` readme-image generation requires `hanalyze` built with the
-  `+plot-integration` cabal flag; it is repo-only and never uploaded.
+- `hgg-tutorials` readme-image generation requires the `hanalyze-plot` package
+  (split out of `hanalyze` in 0.2.0.1; on Hackage only after hgg itself is
+  published, since `hanalyze-plot` depends on hgg packages). `hgg-tutorials`
+  is repo-only and never uploaded.
 - `hgg-analyze-bridge` needs `hanalyze >= 0.2 && < 0.3` and
   `dataframe-core ^>= 1.1` available on Hackage.

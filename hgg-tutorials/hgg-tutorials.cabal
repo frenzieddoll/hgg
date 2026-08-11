@@ -34,6 +34,9 @@ common tut
                   , hgg-dataframe      ^>= 0.1
                   , hgg-analyze-bridge ^>= 0.1
                   , hanalyze >= 0.2 && < 0.3
+                  -- Hanalyze.Plot は hanalyze 0.2.0.1 の multi-package 分割で
+                  -- hanalyze-plot package へ移動 (readme-images が使用)
+                  , hanalyze-plot >= 0.2 && < 0.3
                   , time                        >= 1.9  && < 1.15
   default-language: Haskell2010
   default-extensions: OverloadedStrings

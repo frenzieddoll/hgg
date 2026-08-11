@@ -11,8 +11,9 @@ Page structure:
 **[Plot HBM (Bayesian)](#hbm-plotting)** | **[Route 2: stat-in (`statLm`/`statSmooth`)](#route2)** |
 **[Example: Overlaying multiple models](#multi-overlay)**
 
-> Setup: On the analyze side, enable `flag plot-integration` to activate `Hanalyze.Plot`
-> (`cabal build --project-file=cabal.project.plot`). The stat-in path uses `hgg-analyze-bridge`.
+> Setup: `Hanalyze.Plot` ships in the `hanalyze-plot` package (hanalyze 0.2.0.1+;
+> on the analyze side it is built via `cabal build --project-file=cabal.project.plot`).
+> The stat-in path uses `hgg-analyze-bridge`.
 
 ### Fit first — `df |-> spec` (recommended) / raw vectors {#fit-data}
 
