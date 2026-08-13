@@ -239,6 +239,12 @@ The full step-by-step walkthrough is in
 
 For which packages are published to Hackage and how, see [RELEASING.md](RELEASING.md).
 
+Version compatibility with the hanalyze analysis ecosystem:
+
+| hgg | hanalyze | integration packages |
+|---|---|---|
+| 0.2.x | 0.2.0.1+ | `hgg-analyze-bridge` 0.2 (plot → analyze) / `hanalyze-plot` 0.2.0.1 (analyze → plot) |
+
 ## Building from source
 
 ```bash

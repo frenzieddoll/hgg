@@ -227,6 +227,12 @@ saveSVGBoundStats "09-final.svg" $
 
 Hackage への公開対象と手順は [RELEASING.md](RELEASING.md) を参照。
 
+hanalyze (解析側) との版数対応:
+
+| hgg | hanalyze | 連携 package |
+|---|---|---|
+| 0.2.x | 0.2.0.1+ | `hgg-analyze-bridge` 0.2 (plot → analyze) / `hanalyze-plot` 0.2.0.1 (analyze → plot) |
+
 ## ビルド (ソースから)
 
 ```bash

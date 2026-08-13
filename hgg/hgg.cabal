@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
                     README.md
 synopsis:           A grammar of graphics plotting library for Haskell
@@ -65,15 +65,15 @@ library
   exposed-modules:  Graphics.Hgg
   hs-source-dirs:   src
   build-depends:    base       >= 4.17 && < 5
-                  , hgg-core  == 0.1.0.0
-                  , hgg-frame == 0.1.0.0
-                  , hgg-svg   == 0.1.0.0
+                  , hgg-core  == 0.2.0.0
+                  , hgg-frame == 0.2.0.0
+                  , hgg-svg   == 0.2.0.0
   if flag(pdf)
-    build-depends:  hgg-pdf == 0.1.0.0
+    build-depends:  hgg-pdf == 0.2.0.0
   if flag(png)
-    build-depends:  hgg-rasterific == 0.1.0.0
+    build-depends:  hgg-rasterific == 0.2.0.0
   if flag(latex)
-    build-depends:  hgg-latex == 0.1.0.0
+    build-depends:  hgg-latex == 0.2.0.0
   if flag(3d)
-    build-depends:  hgg-3d == 0.1.0.0
+    build-depends:  hgg-3d == 0.2.0.0
   default-language: Haskell2010
