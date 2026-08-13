@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-core
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           Core of hgg: VisualSpec / PlotData / Layout / Render primitives
 description:

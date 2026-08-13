@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-tutorials
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           R for Data Science 2e ベースのチュートリアル (図生成プログラム群)
 description:
   docs/tutorials/ の各章チュートリアルの図を生成する実行可能プログラム。
@@ -27,12 +27,12 @@ common tut
                   , dataframe-operations        >= 1.1.1 && < 1.2
                   , dataframe-csv               ^>= 1.0.2
                   , dataframe-parsing           ^>= 1.0.2
-                  , hgg-core           ^>= 0.1
-                  , hgg-frame          ^>= 0.1
-                  , hgg-svg            ^>= 0.1
-                  , hgg-3d             ^>= 0.1
-                  , hgg-dataframe      ^>= 0.1
-                  , hgg-analyze-bridge ^>= 0.1
+                  , hgg-core           ^>= 0.2
+                  , hgg-frame          ^>= 0.2
+                  , hgg-svg            ^>= 0.2
+                  , hgg-3d             ^>= 0.2
+                  , hgg-dataframe      ^>= 0.2
+                  , hgg-analyze-bridge ^>= 0.2
                   , hanalyze >= 0.2 && < 0.3
                   -- Hanalyze.Plot は hanalyze 0.2.0.1 の multi-package 分割で
                   -- hanalyze-plot package へ移動 (readme-images が使用)

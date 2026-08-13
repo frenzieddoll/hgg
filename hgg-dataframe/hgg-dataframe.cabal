@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-dataframe
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           Hackage dataframe binding for hgg (PlotData instance for DataFrame)
 description:
@@ -40,9 +40,9 @@ library
                   , vector              >= 0.13 && < 0.14
                   , dataframe-core       ^>= 1.1
                   , dataframe-operations >= 1.1.1 && < 1.2
-                  , hgg-core   ^>= 0.1
-                  , hgg-frame  ^>= 0.1
-                  , hgg-svg    ^>= 0.1
+                  , hgg-core   ^>= 0.2
+                  , hgg-frame  ^>= 0.2
+                  , hgg-svg    ^>= 0.2
   default-language: Haskell2010
 
 test-suite hgg-dataframe-tests

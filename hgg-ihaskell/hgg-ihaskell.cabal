@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-ihaskell
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           iHaskell (Jupyter) inline display backend for hgg
 description:
@@ -30,9 +30,9 @@ library
   build-depends:    base               >= 4.17 && < 5
                   , text               >= 2.0  && < 2.2
                   , ihaskell           >= 0.11 && < 0.14
-                  , hgg-core  ^>= 0.1
-                  , hgg-frame ^>= 0.1
-                  , hgg-svg   ^>= 0.1
+                  , hgg-core  ^>= 0.2
+                  , hgg-frame ^>= 0.2
+                  , hgg-svg   ^>= 0.2
   default-language: Haskell2010
 
 -- Writes out the SVGs produced by each cell of design/ihaskell/demo.ipynb (for output verification)
@@ -43,8 +43,8 @@ executable ihaskell-demo-svg
   build-depends:    base               >= 4.17 && < 5
                   , text               >= 2.0  && < 2.2
                   , vector             >= 0.13 && < 0.14
-                  , hgg-core  ^>= 0.1
-                  , hgg-svg   ^>= 0.1
+                  , hgg-core  ^>= 0.2
+                  , hgg-svg   ^>= 0.2
   default-language: Haskell2010
 
 test-suite hgg-ihaskell-tests

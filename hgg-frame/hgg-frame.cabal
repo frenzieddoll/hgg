@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-frame
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           DataFrame abstraction (class PlotData) and the df |>> spec binding for hgg
 description:
@@ -38,7 +38,7 @@ library
                   , vector     >= 0.13 && < 0.14
                   , text       >= 2.0  && < 2.2
                   , containers >= 0.6  && < 0.8
-                  , hgg-core ^>= 0.1
+                  , hgg-core ^>= 0.2
   default-language: Haskell2010
 
 test-suite hgg-frame-tests

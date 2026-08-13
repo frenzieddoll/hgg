@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-doe
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           DoE (Design of Experiments) chart helpers built on hgg-core
 description:
   半導体ドメイン特化向けに、 DoE (実験計画) 用の

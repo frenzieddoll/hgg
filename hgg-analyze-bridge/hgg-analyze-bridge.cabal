@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-analyze-bridge
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           Bridge from hanalyze (Hanalyze.Model.HBM.ModelGraph) to hgg DAG rendering
 description:
@@ -36,9 +36,9 @@ library
                   , containers           >= 0.6  && < 0.8
                   , vector               >= 0.12 && < 0.14
                   , dataframe-core       ^>= 1.1
-                  , hgg-core    ^>= 0.1
-                  , hgg-frame   ^>= 0.1
-                  , hgg-svg     ^>= 0.1
+                  , hgg-core    ^>= 0.2
+                  , hgg-frame   ^>= 0.2
+                  , hgg-svg     ^>= 0.2
                   , hanalyze >= 0.2 && < 0.3
                   , hmatrix              >= 0.20 && < 0.21
   default-language: Haskell2010

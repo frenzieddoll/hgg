@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-semi
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           Semiconductor-domain charts for hgg (WaferMap / ControlChart / ProbabilityPlot / ParetoChart / BoxCoxPlot)
 description:
   hgg のドメイン特化 add-on。 半導体製造で多用するチャート

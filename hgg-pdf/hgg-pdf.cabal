@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hgg-pdf
-version:            0.1.0.0
+version:            0.2.0.0
 extra-doc-files:    CHANGELOG.md
 synopsis:           PDF backend for hgg (HPDF)
 description:
@@ -30,8 +30,8 @@ library
   build-depends:    base               >= 4.17 && < 5
                   , text               >= 2.0  && < 2.2
                   , HPDF               >= 1.7  && < 1.9
-                  , hgg-core  ^>= 0.1
-                  , hgg-frame ^>= 0.1
+                  , hgg-core  ^>= 0.2
+                  , hgg-frame ^>= 0.2
   default-language: Haskell2010
 
 test-suite hgg-pdf-tests
